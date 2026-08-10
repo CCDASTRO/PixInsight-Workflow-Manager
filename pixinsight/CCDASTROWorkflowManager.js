@@ -8,7 +8,7 @@
 #engine v8
 
 #feature-id    CCDASTRO > Workflow Manager
-#feature-info  Configurable OSC post-processing workflow with metadata-assisted plate solving and starless branches.
+#feature-info  Configurable color-master post-processing workflow with metadata-assisted plate solving and starless branches.
 
 #define SETTINGS_MODULE "CCDASTROWorkflowManager"
 #define SOLVER_SETTINGS_MODULE "ImageSolver"
@@ -19,11 +19,25 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.4.5"
+#define VERSION "0.4.6"
 
 var SYQON_PARALLAX_ICON = "CCDASTRO_Parallax";
 var SYQON_PRISM_ICON = "CCDASTRO_Prism";
 var SYQON_STARLESS_ICON = "CCDASTRO_Starless";
+
+var adapterHelp = {
+   gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
+   graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
+   plateSolve: "Add an astrometric solution only when the active image is not already solved.",
+   spcc: "Use SpectrophotometricColorCalibration. The image must have an astrometric solution.",
+   blurXTerminator: "Use BlurXTerminator for deconvolution and structure recovery while the image is linear.",
+   syqonParallax: "Run the configured CCDASTRO_Parallax process icon for structure recovery.",
+   noiseXTerminator: "Use NoiseXTerminator for the main noise-reduction pass.",
+   syqonPrism: "Run the configured CCDASTRO_Prism process icon for the main noise-reduction pass.",
+   starXTerminator: "Use StarXTerminator and request a separate stars-only image.",
+   starNet2: "Use StarNet2 in linear mode and request a separate stars-only image.",
+   syqonStarless: "Run the configured CCDASTRO_Starless process icon; it must generate a stars-only image."
+};
 
 function imageHasAstrometricSolution(window)
 {
@@ -473,7 +487,7 @@ PreflightValidator.prototype.validate = function()
    if (!this.dialog.linearConfirmation.checked)
       result.errors.push("Confirm that the input is an unstretched linear integrated master.");
    if (!window.mainView.image.isColor)
-      result.errors.push("This workflow expects an OSC/RGB color master.");
+      result.errors.push("This workflow expects an integrated color master.");
 
    var anyEnabled = false;
    for (var i = 0; i < this.dialog.rows.length; ++i)
@@ -692,6 +706,10 @@ function WorkflowRow(parent, step)
       this.setup.toolTip = "Review metadata-derived ImageSolver seed values.";
    }
    this.adapterId = function() { return this.step.adapterIds[this.choice.currentItem]; };
+   this.refreshChoiceHelp = function()
+   {
+      this.choice.toolTip = adapterHelp[this.adapterId()] || this.step.note;
+   };
    this.refreshStatus = function()
    {
       if (this.step.id === "plateSolve" && imageHasAstrometricSolution(ImageWindow.activeWindow))
@@ -701,6 +719,9 @@ function WorkflowRow(parent, step)
             ? "Ready" : "Setup needed";
       else
          this.status.text = adapters[this.adapterId()].available() ? "Available" : "Setup needed";
+      this.status.toolTip = this.status.text === "Setup needed"
+         ? adapters[this.adapterId()].requirement()
+         : "The selected process is ready for preflight validation.";
    };
    this.sizer = new HorizontalSizer;
    this.sizer.spacing = 8;
@@ -709,9 +730,14 @@ function WorkflowRow(parent, step)
    if (this.setup !== null)
       this.sizer.add(this.setup);
    this.sizer.add(this.status);
+   this.refreshChoiceHelp();
    this.refreshStatus();
    var self = this;
-   this.choice.onItemSelected = function() { self.refreshStatus(); };
+   this.choice.onItemSelected = function()
+   {
+      self.refreshChoiceHelp();
+      self.refreshStatus();
+   };
    if (this.setup !== null)
       this.setup.onClick = function()
       {
@@ -720,7 +746,7 @@ function WorkflowRow(parent, step)
       };
 }
 
-function labeledCombo(parent, label, items, selected)
+function labeledCombo(parent, label, items, selected, toolTip)
 {
    var control = {};
    control.label = new Label(parent);
@@ -732,6 +758,8 @@ function labeledCombo(parent, label, items, selected)
    for (var i = 0; i < items.length; ++i)
       control.combo.addItem(items[i]);
    control.combo.currentItem = selected;
+   control.label.toolTip = toolTip;
+   control.combo.toolTip = toolTip;
    control.sizer = new HorizontalSizer;
    control.sizer.spacing = 8;
    control.sizer.add(control.label);
@@ -749,7 +777,7 @@ constructor()
 
    this.title = new Label(this);
    this.title.useRichText = true;
-   this.title.text = "<b>OSC Post-Processing Workflow v" + VERSION + "</b>";
+   this.title.text = "<b>Color Post-Processing Workflow v" + VERSION + "</b>";
    this.help = new Label(this);
    this.help.wordWrapping = true;
    this.help.text = "Choose the desired tools. Plate Solve if needed uses metadata-derived " +
@@ -760,8 +788,10 @@ constructor()
    this.inputLabel.margin = 6;
    this.inputLabel.text = "Active view: " +
       (ImageWindow.activeWindow.isNull ? "<none>" : ImageWindow.activeWindow.currentView.fullId);
+   this.inputLabel.toolTip = "The workflow processes the active main image view in place.";
    this.linearConfirmation = new CheckBox(this);
-   this.linearConfirmation.text = "I confirm this is an unstretched, integrated linear OSC/RGB master";
+   this.linearConfirmation.text = "I confirm this is an unstretched, integrated linear color master";
+   this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";
 
    this.stepsBox = new GroupBox(this);
    this.stepsBox.title = "Linear workflow";
@@ -784,7 +814,8 @@ constructor()
    }
 
    var noisePlacementControl = labeledCombo(this, "Noise placement:",
-      ["Before star separation", "Starless branch"], 1);
+      ["Before star separation", "Starless branch"], 1,
+      "Choose whether the main denoise pass affects the complete image or only the starless branch.");
    this.noisePlacement = noisePlacementControl.combo;
    this.stepsBox.sizer.add(noisePlacementControl.sizer);
 
@@ -794,14 +825,17 @@ constructor()
    this.branchesBox.sizer.margin = 8;
    this.branchesBox.sizer.spacing = 6;
    var starlessStretchControl = labeledCombo(this, "Starless stretch:",
-      ["Keep linear", "Linked Auto Histogram"], 1);
+      ["Keep linear", "Linked Auto Histogram"], 1,
+      "Keep the starless image linear or apply a linked automatic histogram stretch.");
    this.starlessStretch = starlessStretchControl.combo;
    var starsStretchControl = labeledCombo(this, "Stars stretch:",
-      ["Keep linear", "Gentle Linked Auto Histogram"], 1);
+      ["Keep linear", "Gentle Linked Auto Histogram"], 1,
+      "Keep the stars linear or apply a gentler linked automatic histogram stretch.");
    this.starsStretch = starsStretchControl.combo;
    this.recombine = new CheckBox(this);
    this.recombine.text = "Recombine branches automatically (screen blend after stretching)";
    this.recombine.checked = true;
+   this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
    this.branchesBox.sizer.add(starlessStretchControl.sizer);
    this.branchesBox.sizer.add(starsStretchControl.sizer);
    this.branchesBox.sizer.add(this.recombine);
@@ -819,9 +853,11 @@ constructor()
    this.validateButton = new PushButton(this);
    this.validateButton.text = "Validate";
    this.validateButton.icon = this.scaledResource(":/icons/check.png");
+   this.validateButton.toolTip = "Check the active image, selected processes, setup requirements, and workflow dependencies without processing.";
    this.runButton = new PushButton(this);
    this.runButton.text = "Run Workflow";
    this.runButton.icon = this.scaledResource(":/icons/play.png");
+   this.runButton.toolTip = "Validate and execute the enabled workflow stages in the displayed order.";
    this.closeButton = new PushButton(this);
    this.closeButton.text = "Close";
    this.closeButton.icon = this.scaledResource(":/icons/close.png");

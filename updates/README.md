@@ -13,7 +13,7 @@ package, exit PixInsight to apply it, and restart. The script appears under
 The package and `updates.xri` are generated from the repository root with:
 
 ```powershell
-.\packaging\build-pixinsight-package.ps1 -Version 0.4.5
+.\packaging\build-pixinsight-package.ps1 -Version 0.4.6
 ```
 
 The builder validates the source version, ZIP layout, SHA-1, XML, release date,

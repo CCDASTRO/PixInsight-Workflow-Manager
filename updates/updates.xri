@@ -2,14 +2,15 @@
 <xri version="1.0">
   <description>
     <p>CCDASTRO PixInsight Scripts</p>
-    <p>Configurable post-processing workflows for integrated OSC/RGB images.</p>
+    <p>Configurable post-processing workflows for integrated color master images.</p>
   </description>
   <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-    <package fileName="CCDASTROWorkflowManager-0.4.5.zip" sha1="8d7e55f94621fff3fff4877df2a86ef5c7dc9910" type="script" releaseDate="20260803">
-      <title>CCDASTRO Workflow Manager 0.4.5</title>
+    <package fileName="CCDASTROWorkflowManager-0.4.6.zip" sha1="9cfa7fde4151dda016b5f6ba83676f0671202f17" type="script" releaseDate="20260810">
+      <title>CCDASTRO Workflow Manager 0.4.6</title>
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.4.6 uses color-master terminology and adds contextual mouse-over help</li>
           <li>v0.4.5 ports dialogs to V8 class inheritance</li>
           <li>v0.4.4 uses native V8 UI classes and enumerations</li>
           <li>v0.4.3 normalizes Windows script line endings for PixInsight preprocessing</li>

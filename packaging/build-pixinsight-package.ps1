@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.4.5'
+    [string] $Version = '0.4.6'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -80,7 +80,7 @@ $manifest = @"
 <xri version="1.0">
   <description>
     <p>CCDASTRO PixInsight Scripts</p>
-    <p>Configurable post-processing workflows for integrated OSC/RGB images.</p>
+    <p>Configurable post-processing workflows for integrated color master images.</p>
   </description>
   <platform os="all" arch="noarch" version="1.9.4:2.0.0">
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
@@ -88,6 +88,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.4.6 uses color-master terminology and adds contextual mouse-over help</li>
           <li>v0.4.5 ports dialogs to V8 class inheritance</li>
           <li>v0.4.4 uses native V8 UI classes and enumerations</li>
           <li>v0.4.3 normalizes Windows script line endings for PixInsight preprocessing</li>

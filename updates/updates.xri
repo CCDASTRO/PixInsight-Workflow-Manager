@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xri version="1.0">
+  <description>
+    <p>CCDASTRO PixInsight Scripts</p>
+    <p>Configurable post-processing workflows for integrated OSC/RGB images.</p>
+  </description>
+  <platform os="all" arch="noarch" version="1.9.4:2.0.0">
+    <package fileName="CCDASTROWorkflowManager-0.4.5.zip" sha1="8d7e55f94621fff3fff4877df2a86ef5c7dc9910" type="script" releaseDate="20260803">
+      <title>CCDASTRO Workflow Manager 0.4.5</title>
+      <description>
+        <p>Configurable PixInsight post-processing workflow manager.</p>
+        <ul>
+          <li>v0.4.5 ports dialogs to V8 class inheritance</li>
+          <li>v0.4.4 uses native V8 UI classes and enumerations</li>
+          <li>v0.4.3 normalizes Windows script line endings for PixInsight preprocessing</li>
+          <li>v0.4.2 selects the required PixInsight V8 JavaScript engine</li>
+          <li>v0.4.1 ImageSolver preprocessing compatibility fix</li>
+          <li>Metadata-assisted ImageSolver adapter with setup dialog</li>
+          <li>GradientCorrection and GraXpert choices</li>
+          <li>BlurXTerminator and SyQon Parallax choices</li>
+          <li>NoiseXTerminator and SyQon Prism choices</li>
+          <li>Starless and stars-only workflow branches</li>
+          <li>Independent stretching and PixelMath recombination</li>
+        </ul>
+      </description>
+    </package>
+  </platform>
+</xri>

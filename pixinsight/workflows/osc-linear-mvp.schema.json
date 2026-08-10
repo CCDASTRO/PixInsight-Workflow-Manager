@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccastro.com/schemas/pixinsight-workflow-v2.schema.json",
+  "title": "CCDASTRO PixInsight Workflow v2",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "input", "lanes", "steps"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "input": {
+      "type": "object",
+      "required": ["stage", "colorModel"],
+      "properties": {
+        "stage": { "const": "linear-integrated" },
+        "colorModel": { "const": "OSC-RGB" },
+        "sampleFormat": { "enum": ["float32", "float64", "any-float"] }
+      },
+      "additionalProperties": false
+    },
+    "lanes": {
+      "type": "array",
+      "items": { "enum": ["main", "starless", "stars"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "order", "enabled", "stage", "lane", "selectedAdapter", "adapters"],
+        "properties": {
+          "id": { "type": "string" },
+          "order": { "type": "integer", "minimum": 1 },
+          "enabled": { "type": "boolean" },
+          "stage": { "enum": ["linear", "nonlinear", "branch"] },
+          "lane": { "enum": ["main", "starless", "stars"] },
+          "selectedAdapter": { "type": "string" },
+          "adapters": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "kind"],
+              "properties": {
+                "id": { "type": "string" },
+                "kind": { "enum": ["process", "processIcon", "internal"] },
+                "processClass": { "type": "string" },
+                "iconId": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "requires": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "mustPrecede": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "mustFollow": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "parameters": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

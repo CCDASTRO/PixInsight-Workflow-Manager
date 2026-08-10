@@ -1,0 +1,154 @@
+{
+  "$schema": "./osc-linear-mvp.schema.json",
+  "schemaVersion": 2,
+  "id": "osc-linear-v0.4",
+  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.4",
+  "description": "Post-integration workflow with metadata-assisted plate solving, selectable tools, and starless/stars branches.",
+  "input": {
+    "stage": "linear-integrated",
+    "colorModel": "OSC-RGB",
+    "sampleFormat": "any-float"
+  },
+  "lanes": ["main", "starless", "stars"],
+  "steps": [
+    {
+      "id": "gradient",
+      "order": 10,
+      "enabled": true,
+      "stage": "linear",
+      "lane": "main",
+      "selectedAdapter": "gradientCorrection",
+      "adapters": [
+        { "id": "gradientCorrection", "kind": "process", "processClass": "GradientCorrection" },
+        { "id": "graxpert", "kind": "process", "processClass": "GraXpert" }
+      ],
+      "requires": ["linear", "rgb"],
+      "mustPrecede": ["plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
+      "parameters": {}
+    },
+    {
+      "id": "plateSolve",
+      "order": 20,
+      "enabled": true,
+      "stage": "linear",
+      "lane": "main",
+      "selectedAdapter": "imageSolver",
+      "adapters": [
+        { "id": "imageSolver", "kind": "internal" }
+      ],
+      "requires": ["linear", "rgb", "approximateCoordinates", "imageScale"],
+      "mustFollow": ["gradient"],
+      "mustPrecede": ["colorCalibration"],
+      "parameters": {
+        "onlyIfNeeded": true,
+        "metadataAutofill": true,
+        "catalogMode": "automatic",
+        "autoLimitMagnitude": true
+      }
+    },
+    {
+      "id": "colorCalibration",
+      "order": 30,
+      "enabled": true,
+      "stage": "linear",
+      "lane": "main",
+      "selectedAdapter": "spcc",
+      "adapters": [
+        { "id": "spcc", "kind": "process", "processClass": "SpectrophotometricColorCalibration" }
+      ],
+      "requires": ["linear", "rgb", "astrometricSolution"],
+      "mustFollow": ["gradient", "plateSolve"],
+      "mustPrecede": ["deconvolution", "noiseReduction", "starSeparation"],
+      "parameters": { "catalogId": "GaiaDR3SP", "autoLimitMagnitude": true }
+    },
+    {
+      "id": "deconvolution",
+      "order": 40,
+      "enabled": true,
+      "stage": "linear",
+      "lane": "main",
+      "selectedAdapter": "blurXTerminator",
+      "adapters": [
+        { "id": "blurXTerminator", "kind": "process", "processClass": "BlurXTerminator" },
+        { "id": "syqonParallax", "kind": "processIcon", "iconId": "CCDASTRO_Parallax" }
+      ],
+      "requires": ["linear", "rgb", "starsPresent"],
+      "mustFollow": ["gradient"],
+      "mustPrecede": ["noiseReduction", "starSeparation"],
+      "parameters": {}
+    },
+    {
+      "id": "noiseReduction",
+      "order": 50,
+      "enabled": true,
+      "stage": "branch",
+      "lane": "starless",
+      "selectedAdapter": "noiseXTerminator",
+      "adapters": [
+        { "id": "noiseXTerminator", "kind": "process", "processClass": "NoiseXTerminator" },
+        { "id": "syqonPrism", "kind": "processIcon", "iconId": "CCDASTRO_Prism" }
+      ],
+      "requires": ["rgb"],
+      "mustFollow": ["deconvolution"],
+      "parameters": { "placement": "starless", "denoise": 0.75, "iterations": 2 }
+    },
+    {
+      "id": "starSeparation",
+      "order": 60,
+      "enabled": true,
+      "stage": "linear",
+      "lane": "main",
+      "selectedAdapter": "starXTerminator",
+      "adapters": [
+        { "id": "starXTerminator", "kind": "process", "processClass": "StarXTerminator" },
+        { "id": "starNet2", "kind": "process", "processClass": "StarNet2" },
+        { "id": "syqonStarless", "kind": "processIcon", "iconId": "CCDASTRO_Starless" }
+      ],
+      "requires": ["linear", "rgb"],
+      "mustFollow": ["deconvolution"],
+      "parameters": { "generateStars": true, "linearSubtraction": true }
+    },
+    {
+      "id": "starlessStretch",
+      "order": 70,
+      "enabled": true,
+      "stage": "nonlinear",
+      "lane": "starless",
+      "selectedAdapter": "linkedAutoHistogram",
+      "adapters": [
+        { "id": "linkedAutoHistogram", "kind": "internal" }
+      ],
+      "requires": ["starlessView"],
+      "mustFollow": ["starSeparation", "noiseReduction"],
+      "parameters": { "targetBackground": 0.25 }
+    },
+    {
+      "id": "starsStretch",
+      "order": 80,
+      "enabled": true,
+      "stage": "nonlinear",
+      "lane": "stars",
+      "selectedAdapter": "linkedAutoHistogram",
+      "adapters": [
+        { "id": "linkedAutoHistogram", "kind": "internal" }
+      ],
+      "requires": ["starsView"],
+      "mustFollow": ["starSeparation"],
+      "parameters": { "targetBackground": 0.35 }
+    },
+    {
+      "id": "recombine",
+      "order": 90,
+      "enabled": true,
+      "stage": "nonlinear",
+      "lane": "main",
+      "selectedAdapter": "pixelMathScreen",
+      "adapters": [
+        { "id": "pixelMathScreen", "kind": "internal" }
+      ],
+      "requires": ["starlessView", "starsView"],
+      "mustFollow": ["starlessStretch", "starsStretch"],
+      "parameters": { "mode": "screen" }
+    }
+  ]
+}

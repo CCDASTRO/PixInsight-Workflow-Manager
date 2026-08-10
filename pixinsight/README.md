@@ -1,9 +1,9 @@
-# CCDASTRO PixInsight Workflow Manager v0.4.5
+# CCDASTRO PixInsight Workflow Manager v0.4.6
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
-manager for an integrated linear OSC/RGB master.
+manager for an integrated linear color master.
 
-## v0.4.5 capabilities
+## v0.4.6 capabilities
 
 - Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
   separation.
@@ -20,6 +20,7 @@ manager for an integrated linear OSC/RGB master.
 - Preflight validation for input state, astrometry, installed process classes,
   configured SyQon icons, and branch dependencies.
 - Version 2 workflow schema with `main`, `starless`, and `stars` lanes.
+- Contextual mouse-over help for processing choices and branch controls.
 
 The default order is:
 
@@ -38,7 +39,7 @@ and SPCC requires a plate-solved image.
 ## Requirements
 
 - PixInsight 1.9.4 or newer, including the standard ImageSolver script.
-- An integrated, unstretched OSC/RGB master, preferably 32-bit floating-point
+- An integrated, unstretched color master, preferably 32-bit floating-point
   XISF.
 - For SPCC, either an existing astrometric solution or approximate coordinates
   and image-scale metadata for the Plate Solve adapter.
@@ -143,7 +144,7 @@ view was created before continuing.
 6. Choose whether denoise runs before separation or on the starless branch.
 6. Choose the starless and stars stretch options.
 7. Enable automatic recombination if desired.
-8. Confirm that the input is an unstretched integrated linear OSC/RGB master.
+8. Confirm that the input is an unstretched integrated linear color master.
 9. Click **Validate** and resolve every error.
 10. Save a copy or confirm that PixInsight swap-file undo is enabled.
 11. Click **Run Workflow**.

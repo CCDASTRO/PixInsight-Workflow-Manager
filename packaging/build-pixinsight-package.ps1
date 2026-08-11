@@ -148,5 +148,6 @@ Remove-Item -LiteralPath $stageRoot -Recurse -Force
 Write-Host "Built: $packagePath"
 Write-Host "SHA-1: $sha1"
 Write-Host "Manifest: $manifestPath"
+Write-Warning 'updates.xri is unsigned. Sign it with PixInsight CodeSign before publishing the repository.'
 Write-Host 'Repository URL after merge:'
 Write-Host 'https://raw.githubusercontent.com/CCDASTRO/PixInsight-Workflow-Manager/main/updates/'

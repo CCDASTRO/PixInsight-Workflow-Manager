@@ -18,3 +18,7 @@ The package and `updates.xri` are generated from the repository root with:
 
 The builder validates the source version, ZIP layout, SHA-1, XML, release date,
 and UTF-8 encoding without a byte-order mark.
+
+After building a release, sign `updates/updates.xri` with PixInsight's CodeSign
+utility before committing or publishing it. CodeSign embeds the repository
+signature directly in the `.xri` file.

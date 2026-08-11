@@ -1,3 +1,5 @@
 pixinsight/*.js text eol=crlf
 pixinsight/**/*.js text eol=crlf
 packaging/*.ps1 text eol=crlf
+pixinsight/*.xsgn -text
+updates/*.xri -text

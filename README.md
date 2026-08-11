@@ -1,9 +1,9 @@
-# CCDASTRO PixInsight Workflow Manager v0.4.6
+# CCDASTRO PixInsight Workflow Manager v0.4.7
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v0.4.6 capabilities
+## v0.4.7 capabilities
 
 - Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
   separation.
@@ -21,6 +21,7 @@ manager for an integrated linear color master.
   configured SyQon icons, and branch dependencies.
 - Version 2 workflow schema with `main`, `starless`, and `stars` lanes.
 - Contextual mouse-over help for processing choices and branch controls.
+- Certified PixInsight code-signing support for trusted Update Manager packages.
 
 The default order is:
 
@@ -182,6 +183,7 @@ when either automatic stretch is applied.
 ## Files
 
 - `CCDASTROWorkflowManager.js` - installable PJSR script.
+- `CCDASTROWorkflowManager.xsgn` - certified signature generated for the final release script.
 - `workflows/osc-linear-mvp.json` - version 2 workflow definition.
 - `workflows/osc-linear-mvp.schema.json` - JSON Schema.
 - `tools/validate-workflow.js` - dependency-free structure/order validator.

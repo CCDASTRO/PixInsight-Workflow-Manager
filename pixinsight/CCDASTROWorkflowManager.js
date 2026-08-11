@@ -7,7 +7,7 @@
 
 #engine v8
 
-#feature-id    CCDASTRO > Workflow Manager
+#feature-id    CCDASTROWorkflowManager : CCDASTRO > Workflow Manager
 #feature-info  Configurable color-master post-processing workflow with metadata-assisted plate solving and starless branches.
 
 #define SETTINGS_MODULE "CCDASTROWorkflowManager"
@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.4.6"
+#define VERSION "0.4.7"
 
 var SYQON_PARALLAX_ICON = "CCDASTRO_Parallax";
 var SYQON_PRISM_ICON = "CCDASTRO_Prism";

@@ -2,13 +2,14 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.4.6'
+    [string] $Version = '0.4.7'
 )
 
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $sourceScript = Join-Path $repositoryRoot 'pixinsight\CCDASTROWorkflowManager.js'
+$sourceSignature = Join-Path $repositoryRoot 'pixinsight\CCDASTROWorkflowManager.xsgn'
 $updatesDirectory = Join-Path $repositoryRoot 'updates'
 $stageRoot = Join-Path $PSScriptRoot '.stage'
 $stageScriptDirectory = Join-Path $stageRoot 'src\scripts\CCDASTRO'
@@ -20,6 +21,9 @@ $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
 
 if (-not (Test-Path -LiteralPath $sourceScript -PathType Leaf)) {
     throw "Workflow script not found: $sourceScript"
+}
+if (-not (Test-Path -LiteralPath $sourceSignature -PathType Leaf)) {
+    throw "Certified PixInsight signature not found: $sourceSignature. Sign the final script before building the release."
 }
 
 $sourceText = [System.IO.File]::ReadAllText($sourceScript)
@@ -39,18 +43,23 @@ New-Item -ItemType Directory -Path $stageScriptDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $updatesDirectory -Force | Out-Null
 
 $stagedScriptPath = Join-Path $stageScriptDirectory 'CCDASTROWorkflowManager.js'
-$normalizedSource = $sourceText.Replace("`r`n", "`n").Replace("`r", "`n").Replace("`n", "`r`n")
-[System.IO.File]::WriteAllText($stagedScriptPath, $normalizedSource, $utf8WithoutBom)
+$stagedSignaturePath = Join-Path $stageScriptDirectory 'CCDASTROWorkflowManager.xsgn'
+Copy-Item -LiteralPath $sourceScript -Destination $stagedScriptPath
+Copy-Item -LiteralPath $sourceSignature -Destination $stagedSignaturePath
 $stagedSource = [System.IO.File]::ReadAllText($stagedScriptPath)
 if ([regex]::IsMatch($stagedSource, '(?<!\r)\n')) {
-    throw 'Staged PixInsight script contains bare LF line endings.'
+    throw 'Signed PixInsight script contains bare LF line endings. Normalize the final source before signing it.'
 }
 $stagedBytes = [System.IO.File]::ReadAllBytes($stagedScriptPath)
 if ($stagedBytes.Length -ge 3 -and
     $stagedBytes[0] -eq 0xEF -and
     $stagedBytes[1] -eq 0xBB -and
     $stagedBytes[2] -eq 0xBF) {
-    throw 'Staged PixInsight script must be UTF-8 without a BOM.'
+    throw 'Signed PixInsight script must be UTF-8 without a BOM.'
+}
+$signatureText = [System.IO.File]::ReadAllText($stagedSignaturePath)
+if ($signatureText -notmatch '<Signature\b') {
+    throw 'The .xsgn file does not contain a PixInsight signature document.'
 }
 
 if (Test-Path -LiteralPath $packagePath) {
@@ -62,9 +71,14 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($packagePath)
 try {
     $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
-    $requiredEntry = 'src/scripts/CCDASTRO/CCDASTROWorkflowManager.js'
-    if ($entries -notcontains $requiredEntry) {
-        throw "Package is missing required entry: $requiredEntry. Found: $($entries -join ', ')"
+    $requiredEntries = @(
+        'src/scripts/CCDASTRO/CCDASTROWorkflowManager.js',
+        'src/scripts/CCDASTRO/CCDASTROWorkflowManager.xsgn'
+    )
+    foreach ($requiredEntry in $requiredEntries) {
+        if ($entries -notcontains $requiredEntry) {
+            throw "Package is missing required entry: $requiredEntry. Found: $($entries -join ', ')"
+        }
     }
 } finally {
     $archive.Dispose()
@@ -88,6 +102,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.4.7 adds certified CCDASTRO code signing</li>
           <li>v0.4.6 uses color-master terminology and adds contextual mouse-over help</li>
           <li>v0.4.5 ports dialogs to V8 class inheritance</li>
           <li>v0.4.4 uses native V8 UI classes and enumerations</li>

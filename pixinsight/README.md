@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v0.4.7
+# CCDASTRO PixInsight Workflow Manager v0.4.8
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -88,6 +88,11 @@ not a blind-solve service.
 4. Install the CCDASTRO package.
 5. Exit PixInsight so its updater can apply the package, then restart.
 6. Open **Script > CCDASTRO > Workflow Manager**.
+
+If the `CCDASTRO` menu is missing after the first installation, open
+**Script > Feature Scripts**, click **Add**, and select PixInsight's installed
+`src/scripts` directory. This forces PixInsight to scan and register newly
+installed script folders. Restart PixInsight after the scan.
 
 ## Install manually as a Feature Script
 

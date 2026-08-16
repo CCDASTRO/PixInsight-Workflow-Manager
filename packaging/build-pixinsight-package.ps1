@@ -102,6 +102,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.4.8 refreshes the certified package and documents first-install script registration</li>
           <li>v0.4.7 adds certified CCDASTRO code signing</li>
           <li>v0.4.6 uses color-master terminology and adds contextual mouse-over help</li>
           <li>v0.4.5 ports dialogs to V8 class inheritance</li>

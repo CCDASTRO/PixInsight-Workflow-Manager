@@ -3,6 +3,14 @@
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
+## Workflow Manager interface
+
+Select the processing steps with the checkboxes, choose the desired tool for
+each step, and click **Run Workflow**. The manager runs the selected steps in
+the required order.
+
+![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager-0.4.8.png)
+
 ## v0.4.8 capabilities
 
 - Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star

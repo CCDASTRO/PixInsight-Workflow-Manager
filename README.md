@@ -16,7 +16,7 @@ the required order.
 - Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
   separation.
 - Optional **Plate Solve if needed** step before SPCC, with a dedicated setup
-  dialog and automatic seed-value extraction from FITS/XISF metadata.
+  dialog and automatic seed-value extraction from FITS/XISF metadata (approximate information ImageSolver needs to begin matching the image against a star catalog).
 - GradientCorrection or GraXpert.
 - BlurXTerminator or SyQon Parallax.
 - NoiseXTerminator or SyQon Prism/DeepPrism.

@@ -151,8 +151,8 @@ view was created before continuing.
 6. Choose the starless and stars stretch options.
 7. Enable automatic recombination if desired.
 8. Confirm that the input is an unstretched integrated linear color master.
-9. Click **Validate** and resolve every error.
-10. Save a copy or confirm that PixInsight swap-file undo is enabled.
+9. Click Validate: Check the workflow settings, file paths, and required inputs.  Resolve every reported error before running the workflow. Warnings should also be reviewed, although they may not prevent processing.
+10. Protect your original image: Save a copy of the current image before continuing, or confirm that PixInsight’s swap-file–based undo system is enabled and has sufficient disk space. This gives you a way to reverse changes if the result is not satisfactory.
 11. Click **Run Workflow**.
 
 Progress is written to the PixInsight Process Console. Execution stops at the

@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.3"
+#define VERSION "0.5.4"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -100,13 +100,13 @@ function parseOptionalNumber(text)
 
 function rememberWorkflowStateEnabled()
 {
-   var value = Settings.read(WORKFLOW_REMEMBER_KEY, DataType_Boolean);
+   var value = Settings.read(WORKFLOW_REMEMBER_KEY, DataType.Boolean);
    return typeof value === "boolean" ? value : true;
 }
 
 function setRememberWorkflowState(enabled)
 {
-   Settings.write(WORKFLOW_REMEMBER_KEY, DataType_Boolean, enabled);
+   Settings.write(WORKFLOW_REMEMBER_KEY, DataType.Boolean, enabled);
    if (!enabled)
       Settings.remove(WORKFLOW_STATE_KEY);
 }
@@ -149,7 +149,7 @@ function saveWorkflowState(dialog, resumeAfterCrop)
       return;
    try
    {
-      Settings.write(WORKFLOW_STATE_KEY, DataType_String,
+      Settings.write(WORKFLOW_STATE_KEY, DataType.String,
          JSON.stringify(captureWorkflowState(dialog, resumeAfterCrop)));
    }
    catch (e)
@@ -164,7 +164,7 @@ function restoreWorkflowState(dialog)
       return false;
    try
    {
-      var text = Settings.read(WORKFLOW_STATE_KEY, DataType_String);
+      var text = Settings.read(WORKFLOW_STATE_KEY, DataType.String);
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
@@ -207,7 +207,7 @@ function restoreWorkflowState(dialog)
          plateSolveSettings.source = typeof savedPlateSolve.source === "string"
             ? savedPlateSolve.source : "Restored after crop";
          state.resumeAfterCrop = false;
-         Settings.write(WORKFLOW_STATE_KEY, DataType_String, JSON.stringify(state));
+         Settings.write(WORKFLOW_STATE_KEY, DataType.String, JSON.stringify(state));
       }
       for (var r = 0; r < dialog.rows.length; ++r)
       {

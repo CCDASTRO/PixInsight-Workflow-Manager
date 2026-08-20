@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v0.5.0
+# CCDASTRO PixInsight Workflow Manager v0.5.1
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v0.5.0 capabilities
+## v0.5.1 capabilities
 
-- Optional configured DynamicCrop icon and preflight detection of likely
+- Interactive DynamicCrop handoff and preflight detection of likely
   integration borders.
 - Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
   separation.
@@ -27,7 +27,7 @@ manager for an integrated linear color master.
 
 The default order is:
 
-1. Optional configured DynamicCrop process icon
+1. Optional interactive DynamicCrop handoff
 2. GradientCorrection or GraXpert
 3. ImageSolver when the image does not already have an astrometric solution
 4. SpectrophotometricColorCalibration (SPCC)
@@ -43,10 +43,9 @@ The validator warns when it detects high-confidence zero or nonfinite pixels
 along the image borders. Crop integration and registration borders before
 GradientCorrection.
 
-To let the workflow apply a known crop, create a DynamicCrop process icon named
-`CCDASTRO_Crop`. Configure it to replace the target image rather than create a
-new image. Enable **Crop integration borders** only for images with compatible
-dimensions and framing; DynamicCrop geometry is specific to the source image.
+To crop the current image, enable **Open DynamicCrop before workflow** and click
+**Run Workflow**. The workflow closes and opens DynamicCrop. Draw and apply the
+crop, then launch the workflow again and run **Validate** before processing.
 
 Deblur runs before the main denoise pass. Gradient correction precedes SPCC,
 and SPCC requires a plate-solved image.

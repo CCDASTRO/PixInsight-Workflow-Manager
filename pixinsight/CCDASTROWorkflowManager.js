@@ -19,15 +19,14 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.0"
+#define VERSION "0.5.1"
 
-var CROP_ICON = "CCDASTRO_Crop";
 var SYQON_PARALLAX_ICON = "CCDASTRO_Parallax";
 var SYQON_PRISM_ICON = "CCDASTRO_Prism";
 var SYQON_STARLESS_ICON = "CCDASTRO_Starless";
 
 var adapterHelp = {
-   cropIcon: "Run the configured CCDASTRO_Crop DynamicCrop process icon before all other stages.",
+   interactiveCrop: "Close the workflow and open DynamicCrop for the active image.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
@@ -291,43 +290,27 @@ ProcessIconAdapter.prototype.execute = function(view)
       throw new Error(this.label + " did not complete successfully.");
 };
 
-function CropIconAdapter()
+function InteractiveCropAdapter()
 {
-   ProcessIconAdapter.call(this, "cropIcon", "Configured DynamicCrop", CROP_ICON);
+   this.id = "interactiveCrop";
+   this.label = "Open DynamicCrop";
 }
 
-CropIconAdapter.prototype = Object.create(ProcessIconAdapter.prototype);
-CropIconAdapter.prototype.constructor = CropIconAdapter;
-
-CropIconAdapter.prototype.requirement = function()
+InteractiveCropAdapter.prototype.available = function()
 {
-   return "Create a DynamicCrop process icon named '" + CROP_ICON +
-      "' and configure it to replace the target image.";
+   return typeof DynamicCrop !== "undefined";
 };
 
-CropIconAdapter.prototype.execute = function(view)
+InteractiveCropAdapter.prototype.requirement = function()
 {
-   if (!this.available())
-      throw new Error(this.requirement());
-   var process = ProcessInstance.fromIcon(this.iconId);
-   if (process === null)
-      throw new Error("Could not load process icon " + this.iconId + ".");
-   var width = view.image.width;
-   var height = view.image.height;
-   logLine("Running configured crop process icon on " + view.fullId);
-   if (!process.executeOn(view))
-      throw new Error("Configured crop did not complete successfully.");
-   if (view.image.width >= width && view.image.height >= height)
-      throw new Error("CCDASTRO_Crop did not reduce the target dimensions. " +
-         "Configure the DynamicCrop icon to replace the target image, not create a new image.");
-   logLine("Cropped " + width + "x" + height + " to " +
-      view.image.width + "x" + view.image.height + ".");
+   return this.available() ? "DynamicCrop is available."
+      : "Install or restore PixInsight's standard DynamicCrop process.";
 };
 
 var plateSolveSettings = new PlateSolveSettings;
 
 var adapters = {
-   cropIcon: new CropIconAdapter,
+   interactiveCrop: new InteractiveCropAdapter,
 
    gradientCorrection: new ProcessAdapter(
       "gradientCorrection", "GradientCorrection", ["GradientCorrection"], function(p)
@@ -404,9 +387,9 @@ function WorkflowStep(id, label, adapterIds, defaultAdapter, note, enabled)
 function defaultWorkflow()
 {
    return [
-      new WorkflowStep("crop", "0. Crop integration borders",
-         ["cropIcon"], "cropIcon",
-         "Optional: runs the configured CCDASTRO_Crop icon before all other stages.", false),
+      new WorkflowStep("crop", "0. Open DynamicCrop before workflow",
+         ["interactiveCrop"], "interactiveCrop",
+         "Optional: closes this workflow and opens DynamicCrop for the active image.", false),
       new WorkflowStep("gradient", "1. Gradient correction",
          ["gradientCorrection", "graxpert"], "gradientCorrection",
          "Runs before color calibration."),
@@ -602,7 +585,7 @@ PreflightValidator.prototype.validate = function()
       {
          if (possibleIntegrationBorders(window.mainView))
             result.warnings.push("Possible zero or nonfinite integration borders detected. " +
-               "Crop the linear master before GradientCorrection, or enable the configured CCDASTRO_Crop icon.");
+               "Crop the linear master before GradientCorrection, or enable Open DynamicCrop before workflow.");
       }
       catch (e)
       {
@@ -907,6 +890,7 @@ class WorkflowDialog extends Dialog
 constructor()
 {
    super();
+   this.launchCropRequested = false;
    this.windowTitle = TITLE + " " + VERSION;
    this.minWidth = 760;
 
@@ -1035,6 +1019,16 @@ constructor()
          (new MessageBox(resultText(result), TITLE, StdIcon.Error, StdButton.Ok)).execute();
          return;
       }
+      if (self.rowsById.crop.enabled.checked)
+      {
+         if ((new MessageBox("The workflow will close and open DynamicCrop for the active image. " +
+             "Apply the crop, then launch this workflow again and run Validate.\n\nOpen DynamicCrop now?",
+             TITLE, StdIcon.Information, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
+            return;
+         self.launchCropRequested = true;
+         self.ok();
+         return;
+      }
       if ((new MessageBox(resultText(result) + "\n\nRun on the active view?", TITLE,
           StdIcon.Warning, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
          return;
@@ -1044,7 +1038,7 @@ constructor()
       try
       {
          var view = ImageWindow.activeWindow.currentView;
-         var linearOrder = ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution"];
+         var linearOrder = ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
          for (var i = 0; i < linearOrder.length; ++i)
          {
             var linearRow = self.rowsById[linearOrder[i]];
@@ -1104,7 +1098,13 @@ constructor()
 function main()
 {
    Console.hide();
-   (new WorkflowDialog).execute();
+   var dialog = new WorkflowDialog;
+   dialog.execute();
+   if (dialog.launchCropRequested)
+   {
+      logLine("Opening DynamicCrop. Apply the crop, then launch the workflow again.");
+      (new DynamicCrop).launch();
+   }
 }
 
 main();

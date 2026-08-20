@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-0.4.8.zip" sha1="6140d2555610516a1952b7fe8b42c44180664a0a" type="script" releaseDate="20260816">
-         <title>CCDASTRO Workflow Manager 0.4.8</title>
+      <package fileName="CCDASTROWorkflowManager-0.4.9.zip" sha1="456fdb1d1f6e4fbb8b818738c7159bf6edef18ce" type="script" releaseDate="20260820">
+         <title>CCDASTRO Workflow Manager 0.4.9</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v0.4.9 handles missing ImageSolver metadata and reports nonstandard exceptions</li>
                <li>v0.4.8 refreshes the certified package and documents first-install script registration</li>
                <li>v0.4.7 adds certified CCDASTRO code signing</li>
                <li>v0.4.6 uses color-master terminology and adds contextual mouse-over help</li>
@@ -29,4 +30,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-08-16T00:20:09.669Z" encoding="Base64">21b2dKnPt0BTiriMw2p9L010041nbvY3eRKAdF/Y1IM5YghF8PJ1nbol4IoblO58XiCoHiuZUhGroel5p7hjAw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-08-20T13:18:42.953Z" encoding="Base64">B/zKAIBoNbDuKh+BgQKnCZD4DRx7kX1RI1UkSquoEdwlPRVkQm33amBxaU5kCZqJFMq/prqRu+BnkICGiS8wBg==</Signature>

@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v0.5.2
+# CCDASTRO PixInsight Workflow Manager v0.5.3
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -11,10 +11,11 @@ the required order.
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager-0.4.8.png)
 
-## v0.5.2 capabilities
+## v0.5.3 capabilities
 
 - Interactive DynamicCrop handoff and preflight detection of likely
   integration borders.
+- Persistent last-used workflow selections with a Reset to Defaults control.
 - Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
   separation.
 - Optional **Plate Solve if needed** step before SPCC, with a dedicated setup
@@ -55,6 +56,12 @@ To crop the current image, enable **Open DynamicCrop before workflow** and click
 **Run Workflow**. The workflow applies a display-only linked AutoSTF, closes,
 and opens DynamicCrop. Draw and apply the crop, then launch the workflow again
 and run **Validate** before processing. AutoSTF does not alter the linear pixels.
+
+With **Remember workflow settings** enabled, the workflow restores enabled
+steps, selected tools, denoise placement, stretch choices, and recombination
+after the crop handoff or a normal restart. The crop option is restored off and
+the linear-image safety confirmation must always be selected again. Click
+**Reset Defaults** to clear the saved state.
 
 Deblur runs before the main denoise pass. Gradient correction precedes SPCC,
 and SPCC requires a plate-solved image.

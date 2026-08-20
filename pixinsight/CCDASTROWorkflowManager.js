@@ -19,7 +19,10 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.2"
+#define VERSION "0.5.3"
+
+var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
+var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
 
 var SYQON_PARALLAX_ICON = "CCDASTRO_Parallax";
 var SYQON_PRISM_ICON = "CCDASTRO_Prism";
@@ -93,6 +96,156 @@ function parseOptionalNumber(text)
 {
    var value = parseFloat(text.trim());
    return isFinite(value) ? value : NaN;
+}
+
+function rememberWorkflowStateEnabled()
+{
+   var value = Settings.read(WORKFLOW_REMEMBER_KEY, DataType_Boolean);
+   return typeof value === "boolean" ? value : true;
+}
+
+function setRememberWorkflowState(enabled)
+{
+   Settings.write(WORKFLOW_REMEMBER_KEY, DataType_Boolean, enabled);
+   if (!enabled)
+      Settings.remove(WORKFLOW_STATE_KEY);
+}
+
+function captureWorkflowState(dialog, resumeAfterCrop)
+{
+   var state = {
+      schemaVersion: 1,
+      resumeAfterCrop: resumeAfterCrop === true,
+      steps: {},
+      noisePlacement: dialog.noisePlacement.currentItem,
+      starlessStretch: dialog.starlessStretch.currentItem,
+      starsStretch: dialog.starsStretch.currentItem,
+      recombine: dialog.recombine.checked
+   };
+   for (var i = 0; i < dialog.rows.length; ++i)
+   {
+      var row = dialog.rows[i];
+      if (row.step.id !== "crop")
+         state.steps[row.step.id] = {
+            enabled: row.enabled.checked,
+            adapterId: row.adapterId()
+         };
+   }
+   if (state.resumeAfterCrop)
+      state.plateSolve = {
+         ra: plateSolveSettings.ra,
+         dec: plateSolveSettings.dec,
+         focal: plateSolveSettings.focal,
+         pixelSize: plateSolveSettings.pixelSize,
+         resolution: plateSolveSettings.resolution,
+         source: plateSolveSettings.source
+      };
+   return state;
+}
+
+function saveWorkflowState(dialog, resumeAfterCrop)
+{
+   if (!dialog.rememberSettings.checked)
+      return;
+   try
+   {
+      Settings.write(WORKFLOW_STATE_KEY, DataType_String,
+         JSON.stringify(captureWorkflowState(dialog, resumeAfterCrop)));
+   }
+   catch (e)
+   {
+      logLine("Workflow settings could not be saved: " + errorMessage(e));
+   }
+}
+
+function restoreWorkflowState(dialog)
+{
+   if (!dialog.rememberSettings.checked)
+      return false;
+   try
+   {
+      var text = Settings.read(WORKFLOW_STATE_KEY, DataType_String);
+      if (typeof text !== "string" || text.length === 0)
+         return false;
+      var state = JSON.parse(text);
+      if (!state || state.schemaVersion !== 1 || !state.steps)
+         return false;
+      for (var i = 0; i < dialog.rows.length; ++i)
+      {
+         var row = dialog.rows[i];
+         if (row.step.id === "crop")
+         {
+            row.enabled.checked = false;
+            continue;
+         }
+         var saved = state.steps[row.step.id];
+         if (!saved)
+            continue;
+         row.enabled.checked = saved.enabled === true;
+         for (var a = 0; a < row.step.adapterIds.length; ++a)
+            if (row.step.adapterIds[a] === saved.adapterId)
+            {
+               row.choice.currentItem = a;
+               break;
+            }
+      }
+      if (state.noisePlacement >= 0 && state.noisePlacement < dialog.noisePlacement.numberOfItems)
+         dialog.noisePlacement.currentItem = state.noisePlacement;
+      if (state.starlessStretch >= 0 && state.starlessStretch < dialog.starlessStretch.numberOfItems)
+         dialog.starlessStretch.currentItem = state.starlessStretch;
+      if (state.starsStretch >= 0 && state.starsStretch < dialog.starsStretch.numberOfItems)
+         dialog.starsStretch.currentItem = state.starsStretch;
+      dialog.recombine.checked = state.recombine === true;
+      if (state.resumeAfterCrop && state.plateSolve)
+      {
+         var savedPlateSolve = state.plateSolve;
+         plateSolveSettings.ra = finiteNumber(savedPlateSolve.ra) ? savedPlateSolve.ra : NaN;
+         plateSolveSettings.dec = finiteNumber(savedPlateSolve.dec) ? savedPlateSolve.dec : NaN;
+         plateSolveSettings.focal = finiteNumber(savedPlateSolve.focal) ? savedPlateSolve.focal : NaN;
+         plateSolveSettings.pixelSize = finiteNumber(savedPlateSolve.pixelSize) ? savedPlateSolve.pixelSize : NaN;
+         plateSolveSettings.resolution = finiteNumber(savedPlateSolve.resolution) ? savedPlateSolve.resolution : NaN;
+         plateSolveSettings.source = typeof savedPlateSolve.source === "string"
+            ? savedPlateSolve.source : "Restored after crop";
+         state.resumeAfterCrop = false;
+         Settings.write(WORKFLOW_STATE_KEY, DataType_String, JSON.stringify(state));
+      }
+      for (var r = 0; r < dialog.rows.length; ++r)
+      {
+         dialog.rows[r].refreshChoiceHelp();
+         dialog.rows[r].refreshStatus();
+      }
+      return true;
+   }
+   catch (e)
+   {
+      logLine("Saved workflow settings could not be restored: " + errorMessage(e));
+      return false;
+   }
+}
+
+function resetWorkflowControls(dialog)
+{
+   Settings.remove(WORKFLOW_STATE_KEY);
+   Settings.remove(WORKFLOW_REMEMBER_KEY);
+   dialog.rememberSettings.checked = true;
+   dialog.linearConfirmation.checked = false;
+   for (var i = 0; i < dialog.rows.length; ++i)
+   {
+      var row = dialog.rows[i];
+      row.enabled.checked = row.step.id === "crop" ? false : row.step.enabled;
+      for (var a = 0; a < row.step.adapterIds.length; ++a)
+         if (row.step.adapterIds[a] === row.step.defaultAdapter)
+         {
+            row.choice.currentItem = a;
+            break;
+         }
+      row.refreshChoiceHelp();
+      row.refreshStatus();
+   }
+   dialog.noisePlacement.currentItem = 1;
+   dialog.starlessStretch.currentItem = 1;
+   dialog.starsStretch.currentItem = 1;
+   dialog.recombine.checked = true;
 }
 
 function PlateSolveSettings()
@@ -938,6 +1091,11 @@ constructor()
    this.linearConfirmation = new CheckBox(this);
    this.linearConfirmation.text = "I confirm this is an unstretched, integrated linear color master";
    this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";
+   this.rememberSettings = new CheckBox(this);
+   this.rememberSettings.text = "Remember workflow settings";
+   this.rememberSettings.toolTip = "Restore the last-used process selections and branch options. " +
+      "The crop handoff and linear-image confirmation are never restored.";
+   this.rememberSettings.checked = rememberWorkflowStateEnabled();
 
    this.stepsBox = new GroupBox(this);
    this.stepsBox.title = "Linear workflow";
@@ -1007,8 +1165,12 @@ constructor()
    this.closeButton = new PushButton(this);
    this.closeButton.text = "Close";
    this.closeButton.icon = this.scaledResource(":/icons/close.png");
+   this.resetButton = new PushButton(this);
+   this.resetButton.text = "Reset Defaults";
+   this.resetButton.toolTip = "Clear saved workflow settings and restore the built-in defaults.";
    this.buttonSizer = new HorizontalSizer;
    this.buttonSizer.spacing = 8;
+   this.buttonSizer.add(this.resetButton);
    this.buttonSizer.addStretch();
    this.buttonSizer.add(this.validateButton);
    this.buttonSizer.add(this.runButton);
@@ -1021,14 +1183,28 @@ constructor()
    this.sizer.add(this.help);
    this.sizer.add(this.inputLabel);
    this.sizer.add(this.linearConfirmation);
+   this.sizer.add(this.rememberSettings);
    this.sizer.add(this.stepsBox);
    this.sizer.add(this.branchesBox);
    this.sizer.add(this.statusBox);
    this.sizer.add(this.buttonSizer);
 
    var self = this;
+   if (restoreWorkflowState(this))
+      this.statusText.text = "Restored last-used workflow settings. Confirm the linear input, then Validate.";
+   this.rememberSettings.onCheck = function(checked)
+   {
+      try { setRememberWorkflowState(checked); }
+      catch (e) { logLine("Remember-settings preference could not be changed: " + errorMessage(e)); }
+   };
+   this.resetButton.onClick = function()
+   {
+      resetWorkflowControls(self);
+      self.statusText.text = "Workflow settings reset to defaults.";
+   };
    this.validateButton.onClick = function()
    {
+      saveWorkflowState(self, false);
       for (var i = 0; i < self.rows.length; ++i)
          self.rows[i].refreshStatus();
       var result = new PreflightValidator(self).validate();
@@ -1052,6 +1228,7 @@ constructor()
              "Apply the crop, then launch this workflow again and run Validate.\n\nOpen DynamicCrop now?",
              TITLE, StdIcon.Information, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
             return;
+         saveWorkflowState(self, true);
          self.launchCropRequested = true;
          self.ok();
          return;
@@ -1059,6 +1236,8 @@ constructor()
       if ((new MessageBox(resultText(result) + "\n\nRun on the active view?", TITLE,
           StdIcon.Warning, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
          return;
+
+      saveWorkflowState(self, false);
 
       Console.show();
       self.enabled = false;
@@ -1116,7 +1295,11 @@ constructor()
       finally { self.enabled = true; }
    };
 
-   this.closeButton.onClick = function() { self.cancel(); };
+   this.closeButton.onClick = function()
+   {
+      saveWorkflowState(self, false);
+      self.cancel();
+   };
    this.adjustToContents();
    this.setFixedWidth(this.width);
 }

@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.5.4'
+    [string] $Version = '0.5.5'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +102,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.5.5 adds linked or unlinked automatic histogram stretch choices</li>
           <li>v0.5.4 fixes persistent Settings data types for the PixInsight 1.9.4 V8 API</li>
           <li>v0.5.3 restores last-used workflow selections and adds Reset to Defaults</li>
           <li>v0.5.2 applies a display-only linked AutoSTF before opening DynamicCrop</li>

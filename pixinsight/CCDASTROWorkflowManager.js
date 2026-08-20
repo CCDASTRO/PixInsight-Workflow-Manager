@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.1"
+#define VERSION "0.5.2"
 
 var SYQON_PARALLAX_ICON = "CCDASTRO_Parallax";
 var SYQON_PRISM_ICON = "CCDASTRO_Prism";
@@ -478,6 +478,33 @@ function applyLinkedAutoHistogram(view, targetBackground)
    if (!process.executeOn(view))
       throw new Error("Histogram stretch failed on " + view.fullId + ".");
 };
+
+function applyLinkedAutoSTF(view, targetBackground)
+{
+   var median = view.computeOrFetchProperty("Median");
+   var mad = view.computeOrFetchProperty("MAD");
+   mad.mul(1.4826);
+   var channels = view.image.isColor ? 3 : 1;
+   var shadows = 0;
+   var center = 0;
+   for (var c = 0; c < channels; ++c)
+   {
+      shadows += median.at(c) - 2.8*mad.at(c);
+      center += median.at(c);
+   }
+   shadows = Math.range(shadows/channels, 0.0, 1.0);
+   center /= channels;
+   if (center <= shadows || center >= 1)
+      throw new Error("Cannot calculate a safe screen stretch for " + view.fullId + ".");
+   var midtones = Math.mtf(targetBackground, center - shadows);
+   view.stf = [
+      [midtones, shadows, 1.0, 0.0, 1.0],
+      [midtones, shadows, 1.0, 0.0, 1.0],
+      [midtones, shadows, 1.0, 0.0, 1.0],
+      [0.0, 1.0, 0.5, 0.0, 1.0]
+   ];
+   logLine("Applied a display-only linked AutoSTF for interactive cropping.");
+}
 
 function borderPixelIsInvalid(image, x, y)
 {
@@ -1102,6 +1129,14 @@ function main()
    dialog.execute();
    if (dialog.launchCropRequested)
    {
+      try
+      {
+         applyLinkedAutoSTF(ImageWindow.activeWindow.currentView, 0.25);
+      }
+      catch (e)
+      {
+         logLine("Automatic screen stretch could not be applied: " + errorMessage(e));
+      }
       logLine("Opening DynamicCrop. Apply the crop, then launch the workflow again.");
       (new DynamicCrop).launch();
    }

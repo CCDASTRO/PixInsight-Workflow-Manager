@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.4"
+#define VERSION "0.5.5"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -632,6 +632,41 @@ function applyLinkedAutoHistogram(view, targetBackground)
       throw new Error("Histogram stretch failed on " + view.fullId + ".");
 };
 
+function applyUnlinkedAutoHistogram(view, targetBackground)
+{
+   if (!view.image.isColor)
+   {
+      applyLinkedAutoHistogram(view, targetBackground);
+      return;
+   }
+   var median = view.computeOrFetchProperty("Median");
+   var mad = view.computeOrFetchProperty("MAD");
+   mad.mul(1.4826);
+   var rows = [];
+   for (var c = 0; c < 3; ++c)
+   {
+      var shadows = Math.range(median.at(c) - 2.8*mad.at(c), 0.0, 1.0);
+      var center = median.at(c);
+      if (center <= shadows || center >= 1)
+         throw new Error("Cannot calculate a safe unlinked automatic stretch for channel " +
+            (c + 1) + " of " + view.fullId + ".");
+      rows.push([shadows, Math.mtf(targetBackground, center - shadows), 1.0, 0.0, 1.0]);
+   }
+   var process = new HistogramTransformation;
+   process.H = [rows[0], rows[1], rows[2], [0, 0.5, 1, 0, 1], [0, 0.5, 1, 0, 1]];
+   logLine("Applying unlinked automatic histogram stretch to " + view.fullId);
+   if (!process.executeOn(view))
+      throw new Error("Unlinked histogram stretch failed on " + view.fullId + ".");
+};
+
+function applySelectedAutoHistogram(view, selection, targetBackground)
+{
+   if (selection === 1)
+      applyLinkedAutoHistogram(view, targetBackground);
+   else if (selection === 2)
+      applyUnlinkedAutoHistogram(view, targetBackground);
+}
+
 function applyLinkedAutoSTF(view, targetBackground)
 {
    var median = view.computeOrFetchProperty("Median");
@@ -1129,12 +1164,12 @@ constructor()
    this.branchesBox.sizer.margin = 8;
    this.branchesBox.sizer.spacing = 6;
    var starlessStretchControl = labeledCombo(this, "Starless stretch:",
-      ["Keep linear", "Linked Auto Histogram"], 1,
-      "Keep the starless image linear or apply a linked automatic histogram stretch.");
+      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 1,
+      "Keep the starless image linear, preserve color balance with a linked stretch, or neutralize channel backgrounds with an unlinked stretch.");
    this.starlessStretch = starlessStretchControl.combo;
    var starsStretchControl = labeledCombo(this, "Stars stretch:",
-      ["Keep linear", "Gentle Linked Auto Histogram"], 1,
-      "Keep the stars linear or apply a gentler linked automatic histogram stretch.");
+      ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 1,
+      "Keep the stars linear, preserve color balance with a linked stretch, or neutralize channel backgrounds with a gentler unlinked stretch.");
    this.starsStretch = starsStretchControl.combo;
    this.recombine = new CheckBox(this);
    this.recombine.text = "Recombine branches automatically (screen blend after stretching)";
@@ -1268,12 +1303,14 @@ constructor()
             var nonlinear = false;
             if (self.starlessStretch.currentItem > 0)
             {
-               applyLinkedAutoHistogram(branches.starlessView, 0.25);
+               applySelectedAutoHistogram(branches.starlessView,
+                  self.starlessStretch.currentItem, 0.25);
                nonlinear = true;
             }
             if (self.starsStretch.currentItem > 0)
             {
-               applyLinkedAutoHistogram(branches.starsView, 0.35);
+               applySelectedAutoHistogram(branches.starsView,
+                  self.starsStretch.currentItem, 0.35);
                nonlinear = true;
             }
             if (self.recombine.checked)

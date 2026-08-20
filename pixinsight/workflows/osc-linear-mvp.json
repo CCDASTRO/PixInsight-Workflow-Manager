@@ -1,8 +1,8 @@
 {
   "$schema": "./osc-linear-mvp.schema.json",
   "schemaVersion": 2,
-  "id": "osc-linear-v0.5.4",
-  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.4",
+  "id": "osc-linear-v0.5.5",
+  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.5",
   "description": "Post-integration workflow with metadata-assisted plate solving, selectable tools, and starless/stars branches.",
   "input": {
     "stage": "linear-integrated",
@@ -131,7 +131,8 @@
       "lane": "starless",
       "selectedAdapter": "linkedAutoHistogram",
       "adapters": [
-        { "id": "linkedAutoHistogram", "kind": "internal" }
+        { "id": "linkedAutoHistogram", "kind": "internal" },
+        { "id": "unlinkedAutoHistogram", "kind": "internal" }
       ],
       "requires": ["starlessView"],
       "mustFollow": ["starSeparation", "noiseReduction"],
@@ -145,7 +146,8 @@
       "lane": "stars",
       "selectedAdapter": "linkedAutoHistogram",
       "adapters": [
-        { "id": "linkedAutoHistogram", "kind": "internal" }
+        { "id": "linkedAutoHistogram", "kind": "internal" },
+        { "id": "unlinkedAutoHistogram", "kind": "internal" }
       ],
       "requires": ["starsView"],
       "mustFollow": ["starSeparation"],

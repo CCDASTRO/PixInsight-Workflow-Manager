@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.4.9'
+    [string] $Version = '0.5.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +102,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.5.0 adds integration-border warnings and an optional configured DynamicCrop stage</li>
           <li>v0.4.9 handles missing ImageSolver metadata and reports nonstandard exceptions</li>
           <li>v0.4.8 refreshes the certified package and documents first-install script registration</li>
           <li>v0.4.7 adds certified CCDASTRO code signing</li>

@@ -1,8 +1,8 @@
 {
   "$schema": "./osc-linear-mvp.schema.json",
   "schemaVersion": 2,
-  "id": "osc-linear-v0.4",
-  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.4",
+  "id": "osc-linear-v0.5",
+  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5",
   "description": "Post-integration workflow with metadata-assisted plate solving, selectable tools, and starless/stars branches.",
   "input": {
     "stage": "linear-integrated",
@@ -11,6 +11,20 @@
   },
   "lanes": ["main", "starless", "stars"],
   "steps": [
+    {
+      "id": "crop",
+      "order": 5,
+      "enabled": false,
+      "stage": "linear",
+      "lane": "main",
+      "selectedAdapter": "cropIcon",
+      "adapters": [
+        { "id": "cropIcon", "kind": "processIcon", "iconId": "CCDASTRO_Crop" }
+      ],
+      "requires": ["linear", "rgb"],
+      "mustPrecede": ["gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
+      "parameters": { "replaceTarget": true }
+    },
     {
       "id": "gradient",
       "order": 10,
@@ -23,6 +37,7 @@
         { "id": "graxpert", "kind": "process", "processClass": "GraXpert" }
       ],
       "requires": ["linear", "rgb"],
+      "mustFollow": ["crop"],
       "mustPrecede": ["plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
       "parameters": {}
     },

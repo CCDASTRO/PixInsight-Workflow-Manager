@@ -1,8 +1,8 @@
 {
   "$schema": "./osc-linear-mvp.schema.json",
   "schemaVersion": 2,
-  "id": "osc-linear-v0.5",
-  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5",
+  "id": "osc-linear-v0.5.1",
+  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.1",
   "description": "Post-integration workflow with metadata-assisted plate solving, selectable tools, and starless/stars branches.",
   "input": {
     "stage": "linear-integrated",
@@ -17,13 +17,13 @@
       "enabled": false,
       "stage": "linear",
       "lane": "main",
-      "selectedAdapter": "cropIcon",
+      "selectedAdapter": "interactiveCrop",
       "adapters": [
-        { "id": "cropIcon", "kind": "processIcon", "iconId": "CCDASTRO_Crop" }
+        { "id": "interactiveCrop", "kind": "internal" }
       ],
       "requires": ["linear", "rgb"],
       "mustPrecede": ["gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
-      "parameters": { "replaceTarget": true }
+      "parameters": { "launchInterface": true, "resume": "rerunWorkflow" }
     },
     {
       "id": "gradient",

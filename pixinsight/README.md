@@ -1,10 +1,12 @@
-# CCDASTRO PixInsight Workflow Manager v0.4.9
+# CCDASTRO PixInsight Workflow Manager v0.5.0
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v0.4.9 capabilities
+## v0.5.0 capabilities
 
+- Optional configured DynamicCrop icon and preflight detection of likely
+  integration borders.
 - Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
   separation.
 - Optional **Plate Solve if needed** step before SPCC, with a dedicated setup
@@ -25,14 +27,26 @@ manager for an integrated linear color master.
 
 The default order is:
 
-1. GradientCorrection or GraXpert
-2. ImageSolver when the image does not already have an astrometric solution
-3. SpectrophotometricColorCalibration (SPCC)
-4. BlurXTerminator or SyQon Parallax
-5. StarXTerminator, StarNet2, or SyQon Starless
-6. NoiseXTerminator or SyQon Prism on the starless branch
-7. Independent starless and stars stretches
-8. PixelMath screen recombination
+1. Optional configured DynamicCrop process icon
+2. GradientCorrection or GraXpert
+3. ImageSolver when the image does not already have an astrometric solution
+4. SpectrophotometricColorCalibration (SPCC)
+5. BlurXTerminator or SyQon Parallax
+6. StarXTerminator, StarNet2, or SyQon Starless
+7. NoiseXTerminator or SyQon Prism on the starless branch
+8. Independent starless and stars stretches
+9. PixelMath screen recombination
+
+## Configure optional cropping
+
+The validator warns when it detects high-confidence zero or nonfinite pixels
+along the image borders. Crop integration and registration borders before
+GradientCorrection.
+
+To let the workflow apply a known crop, create a DynamicCrop process icon named
+`CCDASTRO_Crop`. Configure it to replace the target image rather than create a
+new image. Enable **Crop integration borders** only for images with compatible
+dimensions and framing; DynamicCrop geometry is specific to the source image.
 
 Deblur runs before the main denoise pass. Gradient correction precedes SPCC,
 and SPCC requires a plate-solved image.
@@ -99,7 +113,7 @@ installed script folders. Restart PixInsight after the scan.
 1. Download or clone this repository.
 2. Locate PixInsight's installed `src/scripts` directory.
 3. Create `src/scripts/CCDASTRO` and copy `CCDASTROWorkflowManager.js` into it.
-   This sibling location is required because v0.4 uses PixInsight's installed
+   This sibling location is required because the workflow uses PixInsight's installed
    `src/scripts/ImageSolver` library.
 4. Start PixInsight and choose **Script > Feature Scripts**.
 5. Click **Add** and select the new `src/scripts/CCDASTRO` directory.

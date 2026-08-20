@@ -19,13 +19,15 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.4.9"
+#define VERSION "0.5.0"
 
+var CROP_ICON = "CCDASTRO_Crop";
 var SYQON_PARALLAX_ICON = "CCDASTRO_Parallax";
 var SYQON_PRISM_ICON = "CCDASTRO_Prism";
 var SYQON_STARLESS_ICON = "CCDASTRO_Starless";
 
 var adapterHelp = {
+   cropIcon: "Run the configured CCDASTRO_Crop DynamicCrop process icon before all other stages.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
@@ -289,9 +291,44 @@ ProcessIconAdapter.prototype.execute = function(view)
       throw new Error(this.label + " did not complete successfully.");
 };
 
+function CropIconAdapter()
+{
+   ProcessIconAdapter.call(this, "cropIcon", "Configured DynamicCrop", CROP_ICON);
+}
+
+CropIconAdapter.prototype = Object.create(ProcessIconAdapter.prototype);
+CropIconAdapter.prototype.constructor = CropIconAdapter;
+
+CropIconAdapter.prototype.requirement = function()
+{
+   return "Create a DynamicCrop process icon named '" + CROP_ICON +
+      "' and configure it to replace the target image.";
+};
+
+CropIconAdapter.prototype.execute = function(view)
+{
+   if (!this.available())
+      throw new Error(this.requirement());
+   var process = ProcessInstance.fromIcon(this.iconId);
+   if (process === null)
+      throw new Error("Could not load process icon " + this.iconId + ".");
+   var width = view.image.width;
+   var height = view.image.height;
+   logLine("Running configured crop process icon on " + view.fullId);
+   if (!process.executeOn(view))
+      throw new Error("Configured crop did not complete successfully.");
+   if (view.image.width >= width && view.image.height >= height)
+      throw new Error("CCDASTRO_Crop did not reduce the target dimensions. " +
+         "Configure the DynamicCrop icon to replace the target image, not create a new image.");
+   logLine("Cropped " + width + "x" + height + " to " +
+      view.image.width + "x" + view.image.height + ".");
+};
+
 var plateSolveSettings = new PlateSolveSettings;
 
 var adapters = {
+   cropIcon: new CropIconAdapter,
+
    gradientCorrection: new ProcessAdapter(
       "gradientCorrection", "GradientCorrection", ["GradientCorrection"], function(p)
       {
@@ -354,19 +391,22 @@ var adapters = {
       "syqonStarless", "SyQon Starless", SYQON_STARLESS_ICON)
 };
 
-function WorkflowStep(id, label, adapterIds, defaultAdapter, note)
+function WorkflowStep(id, label, adapterIds, defaultAdapter, note, enabled)
 {
    this.id = id;
    this.label = label;
    this.adapterIds = adapterIds;
    this.defaultAdapter = defaultAdapter;
    this.note = note;
-   this.enabled = true;
+   this.enabled = typeof enabled === "boolean" ? enabled : true;
 }
 
 function defaultWorkflow()
 {
    return [
+      new WorkflowStep("crop", "0. Crop integration borders",
+         ["cropIcon"], "cropIcon",
+         "Optional: runs the configured CCDASTRO_Crop icon before all other stages.", false),
       new WorkflowStep("gradient", "1. Gradient correction",
          ["gradientCorrection", "graxpert"], "gradientCorrection",
          "Runs before color calibration."),
@@ -456,6 +496,51 @@ function applyLinkedAutoHistogram(view, targetBackground)
       throw new Error("Histogram stretch failed on " + view.fullId + ".");
 };
 
+function borderPixelIsInvalid(image, x, y)
+{
+   var channels = Math.min(image.numberOfChannels, 3);
+   var allZero = true;
+   for (var c = 0; c < channels; ++c)
+   {
+      var value = image.sample(x, y, c);
+      if (!finiteNumber(value))
+         return true;
+      if (Math.abs(value) > 1.0e-12)
+         allZero = false;
+   }
+   return allZero;
+}
+
+function possibleIntegrationBorders(view)
+{
+   var image = view.image;
+   var width = image.width;
+   var height = image.height;
+   if (width < 32 || height < 32)
+      return false;
+   var offsets = [0, 1, 2, 4, 8, 16];
+   var samples = 128;
+   var invalid = 0;
+   var total = 0;
+   for (var o = 0; o < offsets.length; ++o)
+   {
+      var offset = offsets[o];
+      if (offset >= width/2 || offset >= height/2)
+         continue;
+      for (var i = 0; i < samples; ++i)
+      {
+         var x = Math.round(i*(width - 1)/(samples - 1));
+         var y = Math.round(i*(height - 1)/(samples - 1));
+         if (borderPixelIsInvalid(image, x, offset)) ++invalid;
+         if (borderPixelIsInvalid(image, x, height - 1 - offset)) ++invalid;
+         if (borderPixelIsInvalid(image, offset, y)) ++invalid;
+         if (borderPixelIsInvalid(image, width - 1 - offset, y)) ++invalid;
+         total += 4;
+      }
+   }
+   return total > 0 && invalid/total >= 0.01;
+}
+
 function recombineScreen(starlessView, starsView, nonlinear)
 {
    if (starlessView.image.width !== starsView.image.width ||
@@ -510,6 +595,19 @@ PreflightValidator.prototype.validate = function()
       result.errors.push("Confirm that the input is an unstretched linear integrated master.");
    if (!window.mainView.image.isColor)
       result.errors.push("This workflow expects an integrated color master.");
+
+   var cropRow = this.dialog.rowsById.crop;
+   if (!cropRow.enabled.checked)
+      try
+      {
+         if (possibleIntegrationBorders(window.mainView))
+            result.warnings.push("Possible zero or nonfinite integration borders detected. " +
+               "Crop the linear master before GradientCorrection, or enable the configured CCDASTRO_Crop icon.");
+      }
+      catch (e)
+      {
+         logLine("Integration-border check could not be completed: " + errorMessage(e));
+      }
 
    var anyEnabled = false;
    for (var i = 0; i < this.dialog.rows.length; ++i)
@@ -734,6 +832,12 @@ function WorkflowRow(parent, step)
    };
    this.refreshStatus = function()
    {
+      if (!this.enabled.checked)
+      {
+         this.status.text = this.step.id === "crop" ? "Optional" : "Skipped";
+         this.status.toolTip = "This workflow stage is disabled.";
+         return;
+      }
       if (this.step.id === "plateSolve" && imageHasAstrometricSolution(ImageWindow.activeWindow))
          this.status.text = "Already solved";
       else if (this.step.id === "plateSolve")
@@ -755,6 +859,7 @@ function WorkflowRow(parent, step)
    this.refreshChoiceHelp();
    this.refreshStatus();
    var self = this;
+   this.enabled.onCheck = function() { self.refreshStatus(); };
    this.choice.onItemSelected = function()
    {
       self.refreshChoiceHelp();
@@ -939,7 +1044,7 @@ constructor()
       try
       {
          var view = ImageWindow.activeWindow.currentView;
-         var linearOrder = ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
+         var linearOrder = ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution"];
          for (var i = 0; i < linearOrder.length; ++i)
          {
             var linearRow = self.rowsById[linearOrder[i]];

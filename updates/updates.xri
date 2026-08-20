@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-0.5.3.zip" sha1="cc7865a798e778246960d25d112fb1e117e975f4" type="script" releaseDate="20260820">
-         <title>CCDASTRO Workflow Manager 0.5.3</title>
+      <package fileName="CCDASTROWorkflowManager-0.5.4.zip" sha1="703ea77bf20355be37dc6dff67e37110d28ca1ea" type="script" releaseDate="20260820">
+         <title>CCDASTRO Workflow Manager 0.5.4</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v0.5.4 fixes persistent Settings data types for the PixInsight 1.9.4 V8 API</li>
                <li>v0.5.3 restores last-used workflow selections and adds Reset to Defaults</li>
                <li>v0.5.2 applies a display-only linked AutoSTF before opening DynamicCrop</li>
                <li>v0.5.1 replaces the fixed crop icon with an interactive DynamicCrop handoff</li>
@@ -34,4 +35,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-08-20T15:06:53.596Z" encoding="Base64">eax1CWO+xw8IqoxgYRBMXibkVMWFfAAo7N4PhyXYF7gQnLXqpbNXqWW9rh+FyZU4t0qCVXtYSz5uDzr+RKWhAw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-08-20T15:11:19.804Z" encoding="Base64">0V4E9vQohSC0azhq/28MVyRBiPYVLffA4plnf7YGvpueSIUAPYwma/K9EjupxbfvgWflvQtlMVDFD6GpAfgUCg==</Signature>

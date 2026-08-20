@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v0.5.4
+# CCDASTRO PixInsight Workflow Manager v0.5.5
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -11,7 +11,7 @@ the required order.
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager-0.4.8.png)
 
-## v0.5.4 capabilities
+## v0.5.5 capabilities
 
 - Interactive DynamicCrop handoff and preflight detection of likely
   integration borders.
@@ -25,8 +25,8 @@ the required order.
 - NoiseXTerminator or SyQon Prism/DeepPrism.
 - StarXTerminator, StarNet2, or SyQon Starless.
 - Main denoise placement before star separation or on the starless branch.
-- Independent linked automatic histogram stretches for starless and stars-only
-  views.
+- Independent linked or unlinked automatic histogram stretches for starless
+  and stars-only views.
 - Linear-add or nonlinear screen-blend PixelMath recombination.
 - Preflight validation for input state, astrometry, installed process classes,
   configured SyQon icons, and branch dependencies.
@@ -177,12 +177,14 @@ view was created before continuing.
    metadata-derived values.
 5. Select the desired tool in each remaining enabled stage.
 6. Choose whether denoise runs before separation or on the starless branch.
-6. Choose the starless and stars stretch options.
-7. Enable automatic recombination if desired.
-8. Confirm that the input is an unstretched integrated linear color master.
-9. Click Validate: Check the workflow settings, file paths, and required inputs.  Resolve every reported error before running the workflow. Warnings should also be reviewed, although they may not prevent processing.
-10. Protect your original image: Save a copy of the current image before continuing, or confirm that PixInsight’s swap-file–based undo system is enabled and has sufficient disk space. This gives you a way to reverse changes if the result is not satisfactory.
-11. Click **Run Workflow**.
+7. Choose the starless and stars stretch options. Linked preserves the relative
+   channel balance; unlinked calculates each RGB channel independently to
+   neutralize unequal channel backgrounds.
+8. Enable automatic recombination if desired.
+9. Confirm that the input is an unstretched integrated linear color master.
+10. Click Validate: Check the workflow settings, file paths, and required inputs. Resolve every reported error before running the workflow. Warnings should also be reviewed, although they may not prevent processing.
+11. Protect your original image: Save a copy of the current image before continuing, or confirm that PixInsight’s swap-file–based undo system is enabled and has sufficient disk space. This gives you a way to reverse changes if the result is not satisfactory.
+12. Click **Run Workflow**.
 
 Progress is written to the PixInsight Process Console. Execution stops at the
 first failed stage.

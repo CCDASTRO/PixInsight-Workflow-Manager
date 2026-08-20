@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.4.8"
+#define VERSION "0.4.9"
 
 var SYQON_PARALLAX_ICON = "CCDASTRO_Parallax";
 var SYQON_PRISM_ICON = "CCDASTRO_Prism";
@@ -51,19 +51,41 @@ function imageHasAstrometricSolution(window)
    }
 }
 
+function finiteNumber(value)
+{
+   return typeof value === "number" && isFinite(value);
+}
+
 function finitePositive(value)
 {
-   return isFinite(value) && value > 0;
+   return finiteNumber(value) && value > 0;
 }
 
 function finiteCoordinate(value)
 {
-   return isFinite(value);
+   return finiteNumber(value);
 }
 
 function formatNumber(value, precision)
 {
-   return isFinite(value) ? value.toFixed(precision) : "";
+   return finiteNumber(value) ? value.toFixed(precision) : "";
+}
+
+function errorMessage(error)
+{
+   if (error === null || typeof error === "undefined")
+      return "Unknown error.";
+   if (typeof error.message === "string" && error.message.length > 0)
+      return error.message;
+   try
+   {
+      var text = String(error);
+      return text.length > 0 ? text : "Unknown error.";
+   }
+   catch (conversionError)
+   {
+      return "Unknown error.";
+   }
 }
 
 function parseOptionalNumber(text)
@@ -653,7 +675,7 @@ constructor(settings)
       }
       catch (e)
       {
-         (new MessageBox(e.message, "Plate Solve Setup", StdIcon.Error, StdButton.Ok)).execute();
+         (new MessageBox(errorMessage(e), "Plate Solve Setup", StdIcon.Error, StdButton.Ok)).execute();
       }
    };
    this.okButton.onClick = function()
@@ -661,7 +683,7 @@ constructor(settings)
       try { self.saveSettings(); self.ok(); }
       catch (e)
       {
-         (new MessageBox(e.message, "Plate Solve Setup", StdIcon.Error, StdButton.Ok)).execute();
+         (new MessageBox(errorMessage(e), "Plate Solve Setup", StdIcon.Error, StdButton.Ok)).execute();
       }
    };
    this.cancelButton.onClick = function()
@@ -741,8 +763,16 @@ function WorkflowRow(parent, step)
    if (this.setup !== null)
       this.setup.onClick = function()
       {
-         (new PlateSolveSetupDialog(plateSolveSettings)).execute();
-         self.refreshStatus();
+         try
+         {
+            (new PlateSolveSetupDialog(plateSolveSettings)).execute();
+            self.refreshStatus();
+         }
+         catch (e)
+         {
+            (new MessageBox(errorMessage(e), "Plate Solve Setup",
+               StdIcon.Error, StdButton.Ok)).execute();
+         }
       };
 }
 
@@ -803,7 +833,7 @@ constructor()
    if (!ImageWindow.activeWindow.isNull &&
        !imageHasAstrometricSolution(ImageWindow.activeWindow))
       try { plateSolveSettings.autofill(ImageWindow.activeWindow); }
-      catch (e) { logLine("Plate-solve metadata autofill needs review: " + e.message); }
+      catch (e) { logLine("Plate-solve metadata autofill needs review: " + errorMessage(e)); }
    var workflow = defaultWorkflow();
    for (var i = 0; i < workflow.length; ++i)
    {
@@ -952,7 +982,7 @@ constructor()
       }
       catch (e)
       {
-         var message = "Workflow stopped: " + e.message;
+         var message = "Workflow stopped: " + errorMessage(e);
          self.statusText.text = message;
          Console.criticalln("<end><cbr><b>[CCDASTRO] " + message + "</b>");
          (new MessageBox(message, TITLE, StdIcon.Error, StdButton.Ok)).execute();

@@ -1,13 +1,14 @@
-# CCDASTRO PixInsight Workflow Manager v0.5.5
+# CCDASTRO PixInsight Workflow Manager v0.5.6
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v0.5.5 capabilities
+## v0.5.6 capabilities
 
 - Interactive DynamicCrop handoff and preflight detection of likely
   integration borders.
 - Persistent last-used workflow selections with a Reset to Defaults control.
+- Safe cancellation from the PixInsight Process Console between workflow stages.
 - Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
   separation.
 - Optional **Plate Solve if needed** step before SPCC, with a dedicated setup
@@ -19,6 +20,8 @@ manager for an integrated linear color master.
 - Main denoise placement before star separation or on the starless branch.
 - Independent linked or unlinked automatic histogram stretches for starless
   and stars-only views.
+- Stars remain linear by default; their optional automatic stretch uses a
+  conservative target to avoid amplifying subtraction residuals.
 - Linear-add or nonlinear screen-blend PixelMath recombination.
 - Preflight validation for input state, astrometry, installed process classes,
   configured SyQon icons, and branch dependencies.

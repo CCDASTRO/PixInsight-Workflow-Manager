@@ -1,8 +1,8 @@
 {
   "$schema": "./osc-linear-mvp.schema.json",
   "schemaVersion": 2,
-  "id": "osc-linear-v0.5.9",
-  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.9",
+  "id": "osc-linear-v0.5.10",
+  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.10",
   "description": "Post-integration workflow with metadata-assisted plate solving, selectable tools, and starless/stars branches.",
   "input": {
     "stage": "linear-integrated",

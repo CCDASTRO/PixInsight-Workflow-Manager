@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.9"
+#define VERSION "0.5.10"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -810,22 +810,25 @@ function applyBlanshanStarReduction(targetView, starlessView, iterations, mode)
    process.createNewImage = false;
    process.rescale = false;
    process.truncate = true;
-   process.symbols = "";
+   process.symbols = "I,M,Img1,E1,E2,E3,E4,E5,E6,E7,E8,E9,E10";
    var img1 = starlessView.fullId;
    var iterationValue = String(iterations);
    var modeValue = String(mode);
    process.expression =
-      "E1=$T*~(~(" + img1 + "/$T)*~$T);" +
+      "Img1=" + img1 + ";" +
+      "I=" + iterationValue + ";" +
+      "M=" + modeValue + ";" +
+      "E1=$T*~(~(Img1/$T)*~$T);" +
       "E2=max(E1,($T*E1)+(E1*~E1));" +
-      "E3=E1*~(~(" + img1 + "/E1)*~E1);" +
+      "E3=E1*~(~(Img1/E1)*~E1);" +
       "E4=max(E3,($T*E3)+(E3*~E3));" +
-      "E5=E3*~(~(" + img1 + "/E3)*~E3);" +
+      "E5=E3*~(~(Img1/E3)*~E3);" +
       "E6=max(E5,($T*E5)+(E5*~E5));" +
-      "E7=iif(" + iterationValue + "==1,E1,iif(" + iterationValue + "==2,E3,E5));" +
-      "E8=iif(" + iterationValue + "==1,E2,iif(" + iterationValue + "==2,E4,E6));" +
-      "E9=mean($T-($T-iif(" + iterationValue + "==1,E2,iif(" + iterationValue + "==2,E4,E6)))," +
-         "$T*~($T-iif(" + iterationValue + "==1,E2,iif(" + iterationValue + "==2,E4,E6))));" +
-      "max(" + img1 + ",iif(" + modeValue + "==1,E7,iif(" + modeValue + "==2,E8,E9)))";
+      "E7=iif(I==1,E1,iif(I==2,E3,E5));" +
+      "E8=iif(I==1,E2,iif(I==2,E4,E6));" +
+      "E9=mean($T-($T-iif(I==1,E2,iif(I==2,E4,E6)))," +
+         "$T*~($T-iif(I==1,E2,iif(I==2,E4,E6))));" +
+      "max(Img1,iif(M==1,E7,iif(M==2,E8,E9)))";
    var names = ["Strong", "Moderate", "Soft"];
    logLine("Applying Bill Blanshan Star Method V2: " + names[mode - 1] +
       ", " + iterations + " iteration" + (iterations === 1 ? "" : "s"));

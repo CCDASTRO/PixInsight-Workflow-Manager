@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-0.5.7.zip" sha1="78d2852d6181df065a172d94327dce5e2550e8a5" type="script" releaseDate="20260821">
-         <title>CCDASTRO Workflow Manager 0.5.7</title>
+      <package fileName="CCDASTROWorkflowManager-0.5.8.zip" sha1="6169053cd79b4cccc6bfbd755f30871e5339f439" type="script" releaseDate="20260821">
+         <title>CCDASTRO Workflow Manager 0.5.8</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v0.5.8 fixes temporary starless-reference creation on the PixInsight 1.9.4 V8 API</li>
                <li>v0.5.7 adds optional Bill Blanshan Star Method V2 reduction controls after recombination</li>
                <li>v0.5.6 adds safe cancellation, resets the crop AutoSTF, and uses conservative stars-only stretching</li>
                <li>v0.5.5 adds linked or unlinked automatic histogram stretch choices</li>
@@ -38,4 +39,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-08-21T01:59:59.128Z" encoding="Base64">Mj1VMP4GrCXioLSfmqODxGdV3nAD2eQQhJh2wZUBJWvSGTuAu2irj8gTf9vectsdjrXLakGiVXkve35BL2LrBQ==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-08-21T02:13:13.582Z" encoding="Base64">0bv4c1kyL1ye0heTsH89krxUOaLDugdsuna+RdL+DaBsy0e9YFri6Ug82gnpQft3UjrB3pxqSiWtk4kZUVGPBg==</Signature>

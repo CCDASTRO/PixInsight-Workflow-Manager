@@ -1,8 +1,8 @@
 {
   "$schema": "./osc-linear-mvp.schema.json",
   "schemaVersion": 2,
-  "id": "osc-linear-v0.5.6",
-  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.6",
+  "id": "osc-linear-v0.5.7",
+  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.7",
   "description": "Post-integration workflow with metadata-assisted plate solving, selectable tools, and starless/stars branches.",
   "input": {
     "stage": "linear-integrated",
@@ -141,7 +141,7 @@
     {
       "id": "starsStretch",
       "order": 80,
-      "enabled": false,
+      "enabled": true,
       "stage": "nonlinear",
       "lane": "stars",
       "selectedAdapter": "linkedAutoHistogram",
@@ -166,6 +166,20 @@
       "requires": ["starlessView", "starsView"],
       "mustFollow": ["starlessStretch", "starsStretch"],
       "parameters": { "mode": "screen" }
+    },
+    {
+      "id": "starReduction",
+      "order": 95,
+      "enabled": false,
+      "stage": "nonlinear",
+      "lane": "main",
+      "selectedAdapter": "blanshanStarMethodV2",
+      "adapters": [
+        { "id": "blanshanStarMethodV2", "kind": "internal" }
+      ],
+      "requires": ["starlessView", "recombinedView"],
+      "mustFollow": ["recombine"],
+      "parameters": { "method": "moderate", "iterations": 1 }
     }
   ]
 }

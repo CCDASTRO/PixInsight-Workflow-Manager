@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.6"
+#define VERSION "0.5.7"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -131,13 +131,16 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       resumeAfterCrop: resumeAfterCrop === true,
       steps: {},
       noisePlacement: dialog.noisePlacement.currentItem,
       starlessStretch: dialog.starlessStretch.currentItem,
       starsStretch: dialog.starsStretch.currentItem,
-      recombine: dialog.recombine.checked
+      recombine: dialog.recombine.checked,
+      starReduction: dialog.starReduction.checked,
+      starReductionMethod: dialog.starReductionMethod.currentItem,
+      starReductionIterations: dialog.starReductionIterations.value
    };
    for (var i = 0; i < dialog.rows.length; ++i)
    {
@@ -185,7 +188,7 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || state.schemaVersion !== 2 || !state.steps)
+      if (!state || state.schemaVersion !== 3 || !state.steps)
          return false;
       for (var i = 0; i < dialog.rows.length; ++i)
       {
@@ -213,6 +216,13 @@ function restoreWorkflowState(dialog)
       if (state.starsStretch >= 0 && state.starsStretch < dialog.starsStretch.numberOfItems)
          dialog.starsStretch.currentItem = state.starsStretch;
       dialog.recombine.checked = state.recombine === true;
+      dialog.starReduction.checked = state.starReduction === true;
+      if (state.starReductionMethod >= 0 &&
+          state.starReductionMethod < dialog.starReductionMethod.numberOfItems)
+         dialog.starReductionMethod.currentItem = state.starReductionMethod;
+      if (state.starReductionIterations >= 1 && state.starReductionIterations <= 3)
+         dialog.starReductionIterations.value = state.starReductionIterations;
+      dialog.refreshStarReductionControls();
       if (state.resumeAfterCrop && state.plateSolve)
       {
          var savedPlateSolve = state.plateSolve;
@@ -261,8 +271,12 @@ function resetWorkflowControls(dialog)
    }
    dialog.noisePlacement.currentItem = 1;
    dialog.starlessStretch.currentItem = 1;
-   dialog.starsStretch.currentItem = 0;
+   dialog.starsStretch.currentItem = 1;
    dialog.recombine.checked = true;
+   dialog.starReduction.checked = false;
+   dialog.starReductionMethod.currentItem = 1;
+   dialog.starReductionIterations.value = 1;
+   dialog.refreshStarReductionControls();
 }
 
 function PlateSolveSettings()
@@ -776,6 +790,47 @@ function recombineScreen(starlessView, starsView, nonlinear)
       throw new Error("Star recombination failed.");
 }
 
+function cloneViewForStarReduction(view)
+{
+   var image = view.image;
+   var window = new ImageWindow(image.width, image.height, image.numberOfChannels,
+      image.bitsPerSample, image.sampleType === SampleType_Real, image.isColor,
+      "CCDASTRO_StarlessReference");
+   window.mainView.beginProcess(UndoFlag.NoSwapFile);
+   try { window.mainView.image.assign(image); }
+   finally { window.mainView.endProcess(); }
+   return window;
+}
+
+function applyBlanshanStarReduction(targetView, starlessView, iterations, mode)
+{
+   // Star Reduction using PixelMath, Star Method V2, by Bill Blanshan.
+   var process = new PixelMath;
+   process.useSingleExpression = true;
+   process.createNewImage = false;
+   process.rescale = false;
+   process.truncate = true;
+   process.symbols = "Img1=" + starlessView.fullId +
+      ",I=" + iterations + ",M=" + mode;
+   process.expression =
+      "E1=$T*~(~(Img1/$T)*~$T);" +
+      "E2=max(E1,($T*E1)+(E1*~E1));" +
+      "E3=E1*~(~(Img1/E1)*~E1);" +
+      "E4=max(E3,($T*E3)+(E3*~E3));" +
+      "E5=E3*~(~(Img1/E3)*~E3);" +
+      "E6=max(E5,($T*E5)+(E5*~E5));" +
+      "E7=iif(I==1,E1,iif(I==2,E3,E5));" +
+      "E8=iif(I==1,E2,iif(I==2,E4,E6));" +
+      "E9=mean($T-($T-iif(I==1,E2,iif(I==2,E4,E6)))," +
+         "$T*~($T-iif(I==1,E2,iif(I==2,E4,E6))));" +
+      "max(Img1,iif(M==1,E7,iif(M==2,E8,E9)))";
+   var names = ["Strong", "Moderate", "Soft"];
+   logLine("Applying Bill Blanshan Star Method V2: " + names[mode - 1] +
+      ", " + iterations + " iteration" + (iterations === 1 ? "" : "s"));
+   if (!process.executeOn(targetView))
+      throw new Error("Star reduction failed.");
+}
+
 function PreflightResult()
 {
    this.errors = [];
@@ -855,6 +910,8 @@ PreflightValidator.prototype.validate = function()
         this.dialog.starsStretch.currentItem > 0 ||
         this.dialog.recombine.checked) && !separationEnabled)
       result.errors.push("Branch stretching and recombination require star separation.");
+   if (this.dialog.starReduction.checked && !this.dialog.recombine.checked)
+      result.errors.push("Bill Blanshan star reduction requires automatic branch recombination.");
    if (this.dialog.starsStretch.currentItem > 0)
       result.warnings.push("Automatic stretching of a stars-only branch can amplify subtraction residuals. " +
          "Keep the stars linear unless a separate stars stretch is clearly needed.");
@@ -1188,16 +1245,51 @@ constructor()
       "Keep the starless image linear, preserve color balance with a linked stretch, or neutralize channel backgrounds with an unlinked stretch.");
    this.starlessStretch = starlessStretchControl.combo;
    var starsStretchControl = labeledCombo(this, "Stars stretch:",
-      ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 0,
+      ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 1,
       "Keep the stars linear, preserve color balance with a linked stretch, or neutralize channel backgrounds with a gentler unlinked stretch.");
    this.starsStretch = starsStretchControl.combo;
    this.recombine = new CheckBox(this);
    this.recombine.text = "Recombine branches automatically (screen blend after stretching)";
    this.recombine.checked = true;
    this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
+   this.starReduction = new CheckBox(this);
+   this.starReduction.text = "Apply Bill Blanshan Star Method V2 after recombination";
+   this.starReduction.checked = false;
+   this.starReduction.toolTip = "Optionally reduce stars on the final recombined image while protecting the starless structures.";
+   var starReductionMethodControl = labeledCombo(this, "Star reduction method:",
+      ["Strong", "Moderate", "Soft"], 1,
+      "Strong removes more small stars; Moderate retains more stars; Soft makes the mildest reduction.");
+   this.starReductionMethod = starReductionMethodControl.combo;
+   this.starReductionIterationsLabel = new Label(this);
+   this.starReductionIterationsLabel.text = "Iterations:";
+   this.starReductionIterationsLabel.minWidth = 210;
+   this.starReductionIterationsLabel.textAlignment = TextAlignment.Right | TextAlignment.VertCenter;
+   this.starReductionIterations = new SpinBox(this);
+   this.starReductionIterations.minValue = 1;
+   this.starReductionIterations.maxValue = 3;
+   this.starReductionIterations.value = 1;
+   this.starReductionIterations.toolTip = "Use 1 to 3 iterations. Begin with one; additional iterations produce stronger reduction.";
+   this.starReductionIterationsSizer = new HorizontalSizer;
+   this.starReductionIterationsSizer.spacing = 8;
+   this.starReductionIterationsSizer.add(this.starReductionIterationsLabel);
+   this.starReductionIterationsSizer.add(this.starReductionIterations);
+   this.starReductionIterationsSizer.addStretch();
+   var self = this;
+   this.refreshStarReductionControls = function()
+   {
+      var enabled = self.starReduction.checked;
+      self.starReductionMethod.enabled = enabled;
+      self.starReductionIterationsLabel.enabled = enabled;
+      self.starReductionIterations.enabled = enabled;
+   };
+   this.starReduction.onCheck = function() { self.refreshStarReductionControls(); };
+   this.refreshStarReductionControls();
    this.branchesBox.sizer.add(starlessStretchControl.sizer);
    this.branchesBox.sizer.add(starsStretchControl.sizer);
    this.branchesBox.sizer.add(this.recombine);
+   this.branchesBox.sizer.add(this.starReduction);
+   this.branchesBox.sizer.add(starReductionMethodControl.sizer);
+   this.branchesBox.sizer.add(this.starReductionIterationsSizer);
 
    this.statusBox = new GroupBox(this);
    this.statusBox.title = "Status";
@@ -1244,7 +1336,6 @@ constructor()
    this.sizer.add(this.statusBox);
    this.sizer.add(this.buttonSizer);
 
-   var self = this;
    if (restoreWorkflowState(this))
       this.statusText.text = "Restored last-used workflow settings. Confirm the linear input, then Validate.";
    this.rememberSettings.onCheck = function(checked)
@@ -1360,9 +1451,28 @@ constructor()
             }
             if (self.recombine.checked)
             {
-               checkAbortRequested();
-               recombineScreen(branches.starlessView, branches.starsView, nonlinear);
-               checkAbortRequested();
+               var starlessReferenceWindow = null;
+               try
+               {
+                  checkAbortRequested();
+                  if (self.starReduction.checked)
+                     starlessReferenceWindow = cloneViewForStarReduction(branches.starlessView);
+                  recombineScreen(branches.starlessView, branches.starsView, nonlinear);
+                  checkAbortRequested();
+                  if (self.starReduction.checked)
+                  {
+                     applyBlanshanStarReduction(branches.starlessView,
+                        starlessReferenceWindow.mainView,
+                        self.starReductionIterations.value,
+                        self.starReductionMethod.currentItem + 1);
+                     checkAbortRequested();
+                  }
+               }
+               finally
+               {
+                  if (starlessReferenceWindow !== null && !starlessReferenceWindow.isNull)
+                     starlessReferenceWindow.forceClose();
+               }
             }
          }
 

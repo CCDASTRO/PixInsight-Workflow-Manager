@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.10"
+#define VERSION "0.5.11"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -621,6 +621,26 @@ function chooseStarsWindow(windows)
    return windows.length === 1 ? windows[0] : null;
 }
 
+function uniqueMainViewId(baseId)
+{
+   var candidate = baseId;
+   var suffix = 2;
+   for (;;)
+   {
+      var available = true;
+      var windows = ImageWindow.windows;
+      for (var i = 0; i < windows.length; ++i)
+         if (windows[i].mainView.id === candidate)
+         {
+            available = false;
+            break;
+         }
+      if (available)
+         return candidate;
+      candidate = baseId + "_" + suffix++;
+   }
+}
+
 function executeStarSeparation(adapter, targetView)
 {
    var targetWindow = targetView.window;
@@ -632,6 +652,7 @@ function executeStarSeparation(adapter, targetView)
    if (starsWindow === null)
       throw new Error(adapter.label + " did not create an identifiable stars-only view. " +
          "For SyQon Starless, configure the process icon to generate stars by Subtraction.");
+   starsWindow.mainView.id = uniqueMainViewId(targetView.id + "_stars");
    logLine("Starless branch: " + targetWindow.mainView.fullId);
    logLine("Stars branch: " + starsWindow.mainView.fullId);
    return { starlessView: targetWindow.mainView, starsView: starsWindow.mainView };

@@ -17,7 +17,7 @@ directory to force registration of newly installed script folders.
 The package and `updates.xri` are generated from the repository root with:
 
 ```powershell
-.\packaging\build-pixinsight-package.ps1 -Version 0.5.5
+.\packaging\build-pixinsight-package.ps1 -Version 0.5.6
 ```
 
 The builder validates the source version, ZIP layout, SHA-1, XML, release date,

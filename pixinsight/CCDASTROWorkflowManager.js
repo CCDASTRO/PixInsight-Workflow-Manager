@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.5"
+#define VERSION "0.5.6"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -92,6 +92,23 @@ function errorMessage(error)
    }
 }
 
+function checkAbortRequested()
+{
+   processEvents();
+   if (Console.abortRequested)
+      throw new Error("Workflow aborted by user.");
+}
+
+function clearDisplaySTF(view)
+{
+   view.stf = [
+      [0.5, 0.0, 1.0, 0.0, 1.0],
+      [0.5, 0.0, 1.0, 0.0, 1.0],
+      [0.5, 0.0, 1.0, 0.0, 1.0],
+      [0.5, 0.0, 1.0, 0.0, 1.0]
+   ];
+}
+
 function parseOptionalNumber(text)
 {
    var value = parseFloat(text.trim());
@@ -114,7 +131,7 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       resumeAfterCrop: resumeAfterCrop === true,
       steps: {},
       noisePlacement: dialog.noisePlacement.currentItem,
@@ -168,7 +185,7 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || state.schemaVersion !== 1 || !state.steps)
+      if (!state || state.schemaVersion !== 2 || !state.steps)
          return false;
       for (var i = 0; i < dialog.rows.length; ++i)
       {
@@ -244,7 +261,7 @@ function resetWorkflowControls(dialog)
    }
    dialog.noisePlacement.currentItem = 1;
    dialog.starlessStretch.currentItem = 1;
-   dialog.starsStretch.currentItem = 1;
+   dialog.starsStretch.currentItem = 0;
    dialog.recombine.checked = true;
 }
 
@@ -838,6 +855,9 @@ PreflightValidator.prototype.validate = function()
         this.dialog.starsStretch.currentItem > 0 ||
         this.dialog.recombine.checked) && !separationEnabled)
       result.errors.push("Branch stretching and recombination require star separation.");
+   if (this.dialog.starsStretch.currentItem > 0)
+      result.warnings.push("Automatic stretching of a stars-only branch can amplify subtraction residuals. " +
+         "Keep the stars linear unless a separate stars stretch is clearly needed.");
    if (!this.dialog.rowsById.deconvolution.enabled.checked &&
        this.dialog.rowsById.noiseReduction.enabled.checked &&
        this.dialog.noisePlacement.currentItem === 0)
@@ -1168,7 +1188,7 @@ constructor()
       "Keep the starless image linear, preserve color balance with a linked stretch, or neutralize channel backgrounds with an unlinked stretch.");
    this.starlessStretch = starlessStretchControl.combo;
    var starsStretchControl = labeledCombo(this, "Stars stretch:",
-      ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 1,
+      ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 0,
       "Keep the stars linear, preserve color balance with a linked stretch, or neutralize channel backgrounds with a gentler unlinked stretch.");
    this.starsStretch = starsStretchControl.combo;
    this.recombine = new CheckBox(this);
@@ -1275,46 +1295,75 @@ constructor()
       saveWorkflowState(self, false);
 
       Console.show();
+      Console.abortEnabled = true;
       self.enabled = false;
       try
       {
          var view = ImageWindow.activeWindow.currentView;
+         clearDisplaySTF(view);
+         checkAbortRequested();
          var linearOrder = ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
          for (var i = 0; i < linearOrder.length; ++i)
          {
             var linearRow = self.rowsById[linearOrder[i]];
             if (linearRow.enabled.checked)
+            {
+               checkAbortRequested();
                adapters[linearRow.adapterId()].execute(view);
+               checkAbortRequested();
+            }
          }
 
          var noiseRow = self.rowsById.noiseReduction;
          var separationRow = self.rowsById.starSeparation;
          if (noiseRow.enabled.checked && self.noisePlacement.currentItem === 0)
+         {
+            checkAbortRequested();
             adapters[noiseRow.adapterId()].execute(view);
+            checkAbortRequested();
+         }
 
          var branches = null;
          if (separationRow.enabled.checked)
+         {
+            checkAbortRequested();
             branches = executeStarSeparation(adapters[separationRow.adapterId()], view);
+            checkAbortRequested();
+         }
 
          if (branches !== null)
          {
             if (noiseRow.enabled.checked && self.noisePlacement.currentItem === 1)
+            {
+               checkAbortRequested();
                adapters[noiseRow.adapterId()].execute(branches.starlessView);
+               checkAbortRequested();
+            }
             var nonlinear = false;
             if (self.starlessStretch.currentItem > 0)
             {
+               checkAbortRequested();
+               clearDisplaySTF(branches.starlessView);
                applySelectedAutoHistogram(branches.starlessView,
                   self.starlessStretch.currentItem, 0.25);
+               checkAbortRequested();
                nonlinear = true;
             }
             if (self.starsStretch.currentItem > 0)
             {
+               checkAbortRequested();
+               clearDisplaySTF(branches.starsView);
                applySelectedAutoHistogram(branches.starsView,
-                  self.starsStretch.currentItem, 0.35);
+                  self.starsStretch.currentItem, 0.08);
+               checkAbortRequested();
                nonlinear = true;
             }
             if (self.recombine.checked)
+            {
+               checkAbortRequested();
                recombineScreen(branches.starlessView, branches.starsView, nonlinear);
+               checkAbortRequested();
+            }
          }
 
          self.statusText.text = "Workflow completed successfully.";
@@ -1329,7 +1378,11 @@ constructor()
          Console.criticalln("<end><cbr><b>[CCDASTRO] " + message + "</b>");
          (new MessageBox(message, TITLE, StdIcon.Error, StdButton.Ok)).execute();
       }
-      finally { self.enabled = true; }
+      finally
+      {
+         Console.abortEnabled = false;
+         self.enabled = true;
+      }
    };
 
    this.closeButton.onClick = function()

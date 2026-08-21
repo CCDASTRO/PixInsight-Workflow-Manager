@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.5.10'
+    [string] $Version = '0.5.11'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +102,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.5.11 renames the retained stars-only branch to &lt;target&gt;_stars</li>
           <li>v0.5.10 declares Star Method PixelMath variables with the PixInsight-compatible syntax</li>
           <li>v0.5.9 embeds Star Method parameters directly for PixInsight 1.9.4 PixelMath compatibility</li>
           <li>v0.5.8 fixes temporary starless-reference creation on the PixInsight 1.9.4 V8 API</li>

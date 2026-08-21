@@ -1,9 +1,9 @@
-# CCDASTRO PixInsight Workflow Manager v0.5.10
+# CCDASTRO PixInsight Workflow Manager v0.5.11
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v0.5.10 capabilities
+## v0.5.11 capabilities
 
 - Interactive DynamicCrop handoff and preflight detection of likely
   integration borders.
@@ -17,6 +17,7 @@ manager for an integrated linear color master.
 - BlurXTerminator or SyQon Parallax.
 - NoiseXTerminator or SyQon Prism/DeepPrism.
 - StarXTerminator, StarNet2, or SyQon Starless.
+- Automatic `<target>_stars` naming for the retained stars-only branch.
 - Main denoise placement before star separation or on the starless branch.
 - Independent linked or unlinked automatic histogram stretches for starless
   and stars-only views.

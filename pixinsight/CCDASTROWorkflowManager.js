@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.7"
+#define VERSION "0.5.8"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -794,7 +794,7 @@ function cloneViewForStarReduction(view)
 {
    var image = view.image;
    var window = new ImageWindow(image.width, image.height, image.numberOfChannels,
-      image.bitsPerSample, image.sampleType === SampleType_Real, image.isColor,
+      image.bitsPerSample, image.isReal, image.isColor,
       "CCDASTRO_StarlessReference");
    window.mainView.beginProcess(UndoFlag.NoSwapFile);
    try { window.mainView.image.assign(image); }

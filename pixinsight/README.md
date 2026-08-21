@@ -1,9 +1,9 @@
-# CCDASTRO PixInsight Workflow Manager v0.5.7
+# CCDASTRO PixInsight Workflow Manager v0.5.8
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v0.5.7 capabilities
+## v0.5.8 capabilities
 
 - Interactive DynamicCrop handoff and preflight detection of likely
   integration borders.

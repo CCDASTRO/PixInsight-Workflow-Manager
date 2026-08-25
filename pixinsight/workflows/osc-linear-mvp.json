@@ -1,8 +1,8 @@
 {
   "$schema": "./osc-linear-mvp.schema.json",
   "schemaVersion": 2,
-  "id": "osc-linear-v0.5.14",
-  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.14",
+  "id": "osc-linear-v0.5.15",
+  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.15",
   "description": "Post-integration workflow with metadata-assisted plate solving, selectable tools, and starless/stars branches.",
   "input": {
     "stage": "linear-integrated",
@@ -126,8 +126,8 @@
     {
       "id": "starlessStretch",
       "order": 70,
-      "enabled": true,
-      "stage": "nonlinear",
+      "enabled": false,
+      "stage": "branch",
       "lane": "starless",
       "selectedAdapter": "linkedAutoHistogram",
       "adapters": [
@@ -136,13 +136,13 @@
       ],
       "requires": ["starlessView"],
       "mustFollow": ["starSeparation", "noiseReduction"],
-      "parameters": { "targetBackground": 0.25 }
+      "parameters": { "targetBackground": 0.18 }
     },
     {
       "id": "starsStretch",
       "order": 80,
-      "enabled": true,
-      "stage": "nonlinear",
+      "enabled": false,
+      "stage": "branch",
       "lane": "stars",
       "selectedAdapter": "linkedAutoHistogram",
       "adapters": [
@@ -157,15 +157,30 @@
       "id": "recombine",
       "order": 90,
       "enabled": true,
-      "stage": "nonlinear",
+      "stage": "linear",
       "lane": "main",
-      "selectedAdapter": "pixelMathScreen",
+      "selectedAdapter": "pixelMathAdd",
       "adapters": [
-        { "id": "pixelMathScreen", "kind": "internal" }
+        { "id": "pixelMathAdd", "kind": "internal" }
       ],
       "requires": ["starlessView", "starsView"],
       "mustFollow": ["starlessStretch", "starsStretch"],
-      "parameters": { "mode": "screen" }
+      "parameters": { "mode": "add" }
+    },
+    {
+      "id": "finalStretch",
+      "order": 92,
+      "enabled": true,
+      "stage": "nonlinear",
+      "lane": "main",
+      "selectedAdapter": "linkedAutoHistogram",
+      "adapters": [
+        { "id": "linkedAutoHistogram", "kind": "internal" },
+        { "id": "unlinkedAutoHistogram", "kind": "internal" }
+      ],
+      "requires": ["recombinedView"],
+      "mustFollow": ["recombine"],
+      "parameters": { "targetBackground": 0.15 }
     },
     {
       "id": "starReduction",
@@ -178,7 +193,7 @@
         { "id": "blanshanStarMethodV2", "kind": "internal" }
       ],
       "requires": ["starlessView", "recombinedView"],
-      "mustFollow": ["recombine"],
+      "mustFollow": ["finalStretch"],
       "parameters": { "method": "moderate", "iterations": 1 }
     }
   ]

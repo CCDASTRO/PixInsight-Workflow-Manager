@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v0.5.14
+# CCDASTRO PixInsight Workflow Manager v0.5.15
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -11,7 +11,7 @@ the required order.
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager-0.4.8.png)
 
-## v0.5.14 capabilities
+## v0.5.15 capabilities
 
 - Interactive DynamicCrop handoff and preflight detection of likely
   integration borders.
@@ -27,10 +27,10 @@ the required order.
 - StarXTerminator, StarNet2, or SyQon Starless.
 - Automatic `<target>_stars` naming for the retained stars-only branch.
 - Main denoise placement before star separation or on the starless branch.
-- Independent linked or unlinked automatic histogram stretches for starless
-  and stars-only views.
-- Stars use a conservative linked automatic stretch by default to restore
-  them without amplifying subtraction residuals.
+- Recommended linear starless and stars branches, followed by linear-add
+  recombination and one conservative linked automatic histogram stretch.
+- Independent branch stretches remain available as advanced alternatives,
+  but cannot be combined with the final recombined stretch.
 - Optional Bill Blanshan Star Method V2 PixelMath reduction after branch
   recombination, with Strong, Moderate, or Soft modes and 1–3 iterations.
 - Linear-add or nonlinear screen-blend PixelMath recombination.
@@ -49,8 +49,8 @@ The default order is:
 5. BlurXTerminator or SyQon Parallax
 6. StarXTerminator, StarNet2, or SyQon Starless
 7. NoiseXTerminator or SyQon Prism on the starless branch
-8. Independent starless and stars stretches
-9. PixelMath screen recombination
+8. Linear-add PixelMath recombination
+9. One linked automatic histogram stretch on the recombined image
 
 ## Configure optional cropping
 
@@ -183,10 +183,8 @@ view was created before continuing.
    metadata-derived values.
 5. Select the desired tool in each remaining enabled stage.
 6. Choose whether denoise runs before separation or on the starless branch.
-7. Choose the starless and stars stretch options. Linked preserves the relative
-   channel balance; unlinked calculates each RGB channel independently to
-   neutralize unequal channel backgrounds.
-8. Enable automatic recombination if desired.
+7. Keep the starless and stars branches linear for the recommended workflow.
+8. Enable automatic recombination and choose the final linked stretch.
 9. Confirm that the input is an unstretched integrated linear color master.
 10. Click Validate: Check the workflow settings, file paths, and required inputs. Resolve every reported error before running the workflow. Warnings should also be reviewed, although they may not prevent processing.
 11. Protect your original image: Save a copy of the current image before continuing, or confirm that PixInsight’s swap-file–based undo system is enabled and has sufficient disk space. This gives you a way to reverse changes if the result is not satisfactory.
@@ -202,9 +200,11 @@ separation is enabled, the original target becomes the starless branch and the
 generated stars-only view becomes the stars branch.
 
 If starless denoise is selected, only the starless view receives the main
-denoise pass. The two views can then be stretched independently. Recombination
-uses linear addition when both views remain linear, or PixelMath screen blending
-when either automatic stretch is applied.
+denoise pass. By default, the two linear views are added with PixelMath and the
+completed image receives one conservative linked stretch. This avoids stretching
+the extracted star layer separately, which can amplify subtraction residuals and
+create washed-out halos. Independent branch stretches remain advanced options;
+they use screen blending and disable the final recombined stretch.
 
 ## Safety and current limitations
 

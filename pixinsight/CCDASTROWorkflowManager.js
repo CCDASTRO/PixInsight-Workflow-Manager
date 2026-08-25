@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.14"
+#define VERSION "0.5.15"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -131,12 +131,13 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 3,
+      schemaVersion: 4,
       resumeAfterCrop: resumeAfterCrop === true,
       steps: {},
       noisePlacement: dialog.noisePlacement.currentItem,
       starlessStretch: dialog.starlessStretch.currentItem,
       starsStretch: dialog.starsStretch.currentItem,
+      finalStretch: dialog.finalStretch.currentItem,
       recombine: dialog.recombine.checked,
       starReduction: dialog.starReduction.checked,
       starReductionMethod: dialog.starReductionMethod.currentItem,
@@ -188,7 +189,7 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || state.schemaVersion !== 3 || !state.steps)
+      if (!state || state.schemaVersion !== 4 || !state.steps)
          return false;
       for (var i = 0; i < dialog.rows.length; ++i)
       {
@@ -215,6 +216,8 @@ function restoreWorkflowState(dialog)
          dialog.starlessStretch.currentItem = state.starlessStretch;
       if (state.starsStretch >= 0 && state.starsStretch < dialog.starsStretch.numberOfItems)
          dialog.starsStretch.currentItem = state.starsStretch;
+      if (state.finalStretch >= 0 && state.finalStretch < dialog.finalStretch.numberOfItems)
+         dialog.finalStretch.currentItem = state.finalStretch;
       dialog.recombine.checked = state.recombine === true;
       dialog.starReduction.checked = state.starReduction === true;
       if (state.starReductionMethod >= 0 &&
@@ -270,8 +273,9 @@ function resetWorkflowControls(dialog)
       row.refreshStatus();
    }
    dialog.noisePlacement.currentItem = 1;
-   dialog.starlessStretch.currentItem = 1;
-   dialog.starsStretch.currentItem = 1;
+   dialog.starlessStretch.currentItem = 0;
+   dialog.starsStretch.currentItem = 0;
+   dialog.finalStretch.currentItem = 1;
    dialog.recombine.checked = true;
    dialog.starReduction.checked = false;
    dialog.starReductionMethod.currentItem = 1;
@@ -549,7 +553,7 @@ var adapters = {
       "starXTerminator", "StarXTerminator", ["StarXTerminator"], function(p)
       {
          setFirstProperty(p, ["stars"], true);
-         setFirstProperty(p, ["unscreen"], true);
+         setFirstProperty(p, ["unscreen"], false);
       }),
 
    starNet2: new ProcessAdapter(
@@ -939,8 +943,14 @@ PreflightValidator.prototype.validate = function()
       result.errors.push("Starless-branch denoise requires star separation.");
    if ((this.dialog.starlessStretch.currentItem > 0 ||
         this.dialog.starsStretch.currentItem > 0 ||
+        this.dialog.finalStretch.currentItem > 0 ||
         this.dialog.recombine.checked) && !separationEnabled)
       result.errors.push("Branch stretching and recombination require star separation.");
+   if (this.dialog.finalStretch.currentItem > 0 && !this.dialog.recombine.checked)
+      result.errors.push("Final recombined stretch requires automatic branch recombination.");
+   if (this.dialog.finalStretch.currentItem > 0 &&
+       (this.dialog.starlessStretch.currentItem > 0 || this.dialog.starsStretch.currentItem > 0))
+      result.errors.push("Use either the final recombined stretch or the advanced branch stretches, not both.");
    if (this.dialog.starReduction.checked && !this.dialog.recombine.checked)
       result.errors.push("Bill Blanshan star reduction requires automatic branch recombination.");
    if (this.dialog.starsStretch.currentItem > 0)
@@ -1272,17 +1282,21 @@ constructor()
    this.branchesBox.sizer.margin = 8;
    this.branchesBox.sizer.spacing = 6;
    var starlessStretchControl = labeledCombo(this, "Starless stretch:",
-      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 1,
-      "Keep the starless image linear, preserve color balance with a linked stretch, or neutralize channel backgrounds with an unlinked stretch.");
+      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 0,
+      "Advanced option. Keep linear for the recommended single stretch after recombination.");
    this.starlessStretch = starlessStretchControl.combo;
    var starsStretchControl = labeledCombo(this, "Stars stretch:",
-      ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 1,
-      "Keep the stars linear, preserve color balance with a linked stretch, or neutralize channel backgrounds with a gentler unlinked stretch.");
+      ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 0,
+      "Advanced option. Keep linear to avoid amplifying subtraction residuals and halos.");
    this.starsStretch = starsStretchControl.combo;
    this.recombine = new CheckBox(this);
-   this.recombine.text = "Recombine branches automatically (screen blend after stretching)";
+   this.recombine.text = "Recombine branches automatically";
    this.recombine.checked = true;
    this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
+   var finalStretchControl = labeledCombo(this, "Final recombined stretch:",
+      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 1,
+      "Recommended: linearly add the branches first, then apply one linked stretch to the completed image.");
+   this.finalStretch = finalStretchControl.combo;
    this.starReduction = new CheckBox(this);
    this.starReduction.text = "Apply Bill Blanshan Star Method V2 after recombination";
    this.starReduction.checked = false;
@@ -1318,6 +1332,7 @@ constructor()
    this.branchesBox.sizer.add(starlessStretchControl.sizer);
    this.branchesBox.sizer.add(starsStretchControl.sizer);
    this.branchesBox.sizer.add(this.recombine);
+   this.branchesBox.sizer.add(finalStretchControl.sizer);
    this.branchesBox.sizer.add(this.starReduction);
    this.branchesBox.sizer.add(starReductionMethodControl.sizer);
    this.branchesBox.sizer.add(this.starReductionIterationsSizer);
@@ -1490,6 +1505,19 @@ constructor()
                      starlessReferenceWindow = cloneViewForStarReduction(branches.starlessView);
                   recombineScreen(branches.starlessView, branches.starsView, nonlinear);
                   checkAbortRequested();
+                  if (self.finalStretch.currentItem > 0)
+                  {
+                     clearDisplaySTF(branches.starlessView);
+                     applySelectedAutoHistogram(branches.starlessView,
+                        self.finalStretch.currentItem, 0.15);
+                     if (starlessReferenceWindow !== null)
+                     {
+                        clearDisplaySTF(starlessReferenceWindow.mainView);
+                        applySelectedAutoHistogram(starlessReferenceWindow.mainView,
+                           self.finalStretch.currentItem, 0.15);
+                     }
+                     checkAbortRequested();
+                  }
                   if (self.starReduction.checked)
                   {
                      applyBlanshanStarReduction(branches.starlessView,

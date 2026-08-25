@@ -361,6 +361,11 @@ PlateSolveAdapter.prototype.execute = function(view)
    solver.solverCfg.autoMagnitude = true;
    solver.solverCfg.generateErrorImg = false;
    solver.solverCfg.showStars = false;
+   if (!finitePositive(solver.metadata.observationTime))
+   {
+      solver.solverCfg.tryApparentCoordinates = false;
+      logLine("Image metadata has no valid observation time; apparent-coordinate retry disabled.");
+   }
    if (typeof CatalogMode !== "undefined")
       solver.solverCfg.catalogMode = CatalogMode.Automatic;
 

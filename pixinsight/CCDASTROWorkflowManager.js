@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.12"
+#define VERSION "0.5.13"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -94,7 +94,7 @@ function errorMessage(error)
 
 function checkAbortRequested()
 {
-   processEvents();
+   CoreApplication.processEvents();
    if (Console.abortRequested)
       throw new Error("Workflow aborted by user.");
 }
@@ -651,7 +651,7 @@ function executeStarSeparation(adapter, targetView)
    var targetWindow = targetView.window;
    var before = imageWindowsSnapshot();
    adapter.execute(targetView);
-   processEvents();
+   CoreApplication.processEvents();
    var created = newWindowsSince(before, targetWindow);
    var starsWindow = chooseStarsWindow(created);
    if (starsWindow === null)

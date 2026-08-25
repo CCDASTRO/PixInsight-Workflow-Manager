@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-0.5.11.zip" sha1="25046aee148f7a865d9b25c56868ea59e72d4d5a" type="script" releaseDate="20260821">
-         <title>CCDASTRO Workflow Manager 0.5.11</title>
+      <package fileName="CCDASTROWorkflowManager-0.5.12.zip" sha1="e307f90ac0c33f8e51e04e69a3a195b923920d36" type="script" releaseDate="20260825">
+         <title>CCDASTRO Workflow Manager 0.5.12</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v0.5.12 prevents ImageSolver&apos;s apparent-coordinate fallback from using a missing observation time</li>
                <li>v0.5.11 renames the retained stars-only branch to &lt;target&gt;_stars</li>
                <li>v0.5.10 declares Star Method PixelMath variables with the PixInsight-compatible syntax</li>
                <li>v0.5.9 embeds Star Method parameters directly for PixInsight 1.9.4 PixelMath compatibility</li>
@@ -42,4 +43,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-08-21T02:59:53.156Z" encoding="Base64">dt26wzYxW1GKfx02USxLAU/O4AyhW0thvAA39bqcnndwPzfDegErSi34bKCp4VIoF4inawS8LzNpvntGi0isBQ==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-08-25T12:18:22.305Z" encoding="Base64">KmEC/Qkf47BlGf9mUfwkDbeyJKIgHWUEoAhxQzcYkgQ/nzxTVogd8jM0V3bGnc/9D9JO8crfhVCdBOipobDqCg==</Signature>

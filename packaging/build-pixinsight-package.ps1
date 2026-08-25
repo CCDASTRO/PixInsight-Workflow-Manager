@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.5.13'
+    [string] $Version = '0.5.14'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +102,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.5.14 uses unscreened StarXTerminator stars for screen recombination and a darker starless stretch</li>
           <li>v0.5.13 replaces deprecated event processing calls with the PixInsight 1.9.4 CoreApplication API</li>
           <li>v0.5.12 prevents ImageSolver's apparent-coordinate fallback from using a missing observation time</li>
           <li>v0.5.11 renames the retained stars-only branch to &lt;target&gt;_stars</li>

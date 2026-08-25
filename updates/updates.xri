@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-0.5.13.zip" sha1="9b7a24f57b4877f3882976e1b29c97b59d266b44" type="script" releaseDate="20260825">
-         <title>CCDASTRO Workflow Manager 0.5.13</title>
+      <package fileName="CCDASTROWorkflowManager-0.5.14.zip" sha1="adf10425e2099dac9750e8b6a6f251d441ffbe48" type="script" releaseDate="20260825">
+         <title>CCDASTRO Workflow Manager 0.5.14</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v0.5.14 uses unscreened StarXTerminator stars for screen recombination and a darker starless stretch</li>
                <li>v0.5.13 replaces deprecated event processing calls with the PixInsight 1.9.4 CoreApplication API</li>
                <li>v0.5.12 prevents ImageSolver&apos;s apparent-coordinate fallback from using a missing observation time</li>
                <li>v0.5.11 renames the retained stars-only branch to &lt;target&gt;_stars</li>
@@ -44,4 +45,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-08-25T13:04:02.272Z" encoding="Base64">SP/W3DN8R020XVfHbajmqj+BwJSDj2nF0C7FZi/BCuW2UJaCea20LPQZNXiDtNqyrNLEO/t4UPfvM7ZIbRquCw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-08-25T13:31:31.897Z" encoding="Base64">QWc9T6gspDMi3/9nuCaYVT1PH3CSFusv8pO6+Ud9XGFXGBdL4RbyKANXJuTsfcw0uKIg2+qP+LNS/VP6wQInBw==</Signature>

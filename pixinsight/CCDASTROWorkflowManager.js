@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.13"
+#define VERSION "0.5.14"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -549,7 +549,7 @@ var adapters = {
       "starXTerminator", "StarXTerminator", ["StarXTerminator"], function(p)
       {
          setFirstProperty(p, ["stars"], true);
-         setFirstProperty(p, ["unscreen"], false);
+         setFirstProperty(p, ["unscreen"], true);
       }),
 
    starNet2: new ProcessAdapter(
@@ -1467,7 +1467,7 @@ constructor()
                checkAbortRequested();
                clearDisplaySTF(branches.starlessView);
                applySelectedAutoHistogram(branches.starlessView,
-                  self.starlessStretch.currentItem, 0.25);
+                  self.starlessStretch.currentItem, 0.18);
                checkAbortRequested();
                nonlinear = true;
             }

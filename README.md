@@ -10,7 +10,7 @@ each step, and click **Run Workflow**. The manager runs the selected steps in
 the required order.
 
 ![CCDASTRO Workflow Manager v0.5.15 interface in PixInsight](docs/images/workflow-manager.png)
-[shory video]"https://youtu.be/0G-PI8F51rE"
+[short video](https://youtu.be/0G-PI8F51rE)
 ## v0.5.15 capabilities
 
 - Interactive DynamicCrop handoff and preflight detection of likely

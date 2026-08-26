@@ -11,7 +11,7 @@ the required order.
 
 ![CCDASTRO Workflow Manager v0.5.15 interface in PixInsight](docs/images/workflow-manager.png)
 
-##[short video](https://youtu.be/0G-PI8F51rE)
+## [short video](https://youtu.be/0G-PI8F51rE)
 
 ## v0.5.15 capabilities
 

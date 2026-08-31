@@ -9,7 +9,7 @@ Select the processing steps with the checkboxes, choose the desired tool for
 each step, and click **Run Workflow**. The manager runs the selected steps in
 the required order.
 
-![CCDASTRO Workflow Manager v0.6.0 interface in PixInsight](docs/images/workflow-manager.png)
+![CCDASTRO Workflow Manager v0.6.0 interface in PixInsight](docs/images/workflow-manager-v0.6.0.png)
 
 ## [short video](https://youtu.be/0G-PI8F51rE)
 

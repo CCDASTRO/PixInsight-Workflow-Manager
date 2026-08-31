@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 const workflowPath = process.argv[2] ||
-  path.join(__dirname, "..", "workflows", "osc-linear-mvp.json");
+  path.join(__dirname, "..", "workflows", "color-master-v0.6.0.json");
 const workflow = JSON.parse(fs.readFileSync(workflowPath, "utf8"));
 const errors = [];
 
@@ -14,9 +14,13 @@ function requireValue(condition, message) {
   if (!condition) errors.push(message);
 }
 
-requireValue(workflow.schemaVersion === 2, "schemaVersion must be 2");
+requireValue(workflow.schemaVersion === 3, "schemaVersion must be 3");
 requireValue(workflow.input && workflow.input.stage === "linear-integrated",
   "input.stage must be linear-integrated");
+requireValue(workflow.input && workflow.input.colorModel === "integrated-color-master",
+  "input.colorModel must be integrated-color-master");
+requireValue(Array.isArray(workflow.profiles) && workflow.profiles.length > 0,
+  "profiles must be a non-empty array");
 requireValue(Array.isArray(workflow.steps) && workflow.steps.length > 0,
   "steps must be a non-empty array");
 
@@ -47,6 +51,19 @@ for (const step of workflow.steps || []) {
   byId.set(step.id, step);
   orders.add(step.order);
 }
+
+const profileIds = new Set();
+for (const profile of workflow.profiles || []) {
+  requireValue(typeof profile.id === "string" && profile.id.length > 0,
+    "every profile requires an id");
+  requireValue(!profileIds.has(profile.id), `duplicate profile id: ${profile.id}`);
+  requireValue(Array.isArray(profile.visibleSteps), `${profile.id}: visibleSteps must be an array`);
+  for (const stepId of profile.visibleSteps || [])
+    requireValue(byId.has(stepId), `${profile.id}: unknown visible step ${stepId}`);
+  profileIds.add(profile.id);
+}
+requireValue(profileIds.has(workflow.defaultProfile),
+  "defaultProfile must identify a declared profile");
 
 const requiredOrder = ["gradient", "plateSolve", "colorCalibration"];
 for (let i = 0; i < requiredOrder.length; ++i) {

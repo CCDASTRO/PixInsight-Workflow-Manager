@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.5.15'
+    [string] $Version = '0.6.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +102,8 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.6.0 adds object/image-type workflows for general color masters, broadband and mapped narrowband emission nebulae, galaxies, and star clusters</li>
+          <li>v0.6.0 shows only the stages appropriate to the selected image type and supports a direct full-image stretch when star separation is omitted</li>
           <li>v0.5.15 recombines linear branches before one conservative final stretch to prevent washed-out star halos</li>
           <li>v0.5.14 uses unscreened StarXTerminator stars for screen recombination and a darker starless stretch</li>
           <li>v0.5.13 replaces deprecated event processing calls with the PixInsight 1.9.4 CoreApplication API</li>

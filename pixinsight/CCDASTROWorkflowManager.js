@@ -8,7 +8,7 @@
 #engine v8
 
 #feature-id    CCDASTROWorkflowManager : CCDASTRO > Workflow Manager
-#feature-info  Configurable color-master post-processing workflow with metadata-assisted plate solving and starless branches.
+#feature-info  Profile-driven color-master post-processing workflow with metadata-assisted plate solving and starless branches.
 
 #define SETTINGS_MODULE "CCDASTROWorkflowManager"
 #define SOLVER_SETTINGS_MODULE "ImageSolver"
@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.5.15"
+#define VERSION "0.6.0"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -131,8 +131,9 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       resumeAfterCrop: resumeAfterCrop === true,
+      imageType: dialog.imageType.currentItem,
       steps: {},
       noisePlacement: dialog.noisePlacement.currentItem,
       starlessStretch: dialog.starlessStretch.currentItem,
@@ -189,8 +190,14 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || state.schemaVersion !== 4 || !state.steps)
+      if (!state || (state.schemaVersion !== 4 && state.schemaVersion !== 5) || !state.steps)
          return false;
+      if (state.schemaVersion === 5 && state.imageType >= 0 &&
+          state.imageType < WORKFLOW_PROFILES.length)
+         dialog.imageType.currentItem = state.imageType;
+      else
+         dialog.imageType.currentItem = 0;
+      dialog.applyImageType(false);
       for (var i = 0; i < dialog.rows.length; ++i)
       {
          var row = dialog.rows[i];
@@ -259,6 +266,8 @@ function resetWorkflowControls(dialog)
    Settings.remove(WORKFLOW_REMEMBER_KEY);
    dialog.rememberSettings.checked = true;
    dialog.linearConfirmation.checked = false;
+   dialog.imageType.currentItem = 0;
+   dialog.applyImageType(true);
    for (var i = 0; i < dialog.rows.length; ++i)
    {
       var row = dialog.rows[i];
@@ -603,6 +612,58 @@ function defaultWorkflow()
    ];
 }
 
+var WORKFLOW_PROFILES = [
+   {
+      id: "generalColor", label: "General color image",
+      description: "The complete configurable workflow with the established general-purpose defaults.",
+      visible: ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
+      enabled: { gradient: true, plateSolve: true, colorCalibration: true, deconvolution: true, noiseReduction: true, starSeparation: true },
+      noisePlacement: 1, showBranches: true, recombine: true, finalStretch: 1, starReduction: false
+   },
+   {
+      id: "emissionBroadband", label: "Broadband color emission nebula",
+      description: "SPCC-calibrated color workflow with starless-branch denoise and optional star reduction.",
+      visible: ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
+      enabled: { gradient: true, plateSolve: true, colorCalibration: true, deconvolution: true, noiseReduction: true, starSeparation: true },
+      noisePlacement: 1, showBranches: true, recombine: true, finalStretch: 1, starReduction: true
+   },
+   {
+      id: "emissionMapped", label: "Mapped narrowband color emission nebula",
+      description: "Processes an already combined mapped-color master; broadband SPCC and plate solving are omitted.",
+      visible: ["crop", "gradient", "deconvolution", "noiseReduction", "starSeparation"],
+      enabled: { gradient: true, plateSolve: false, colorCalibration: false, deconvolution: true, noiseReduction: true, starSeparation: true },
+      noisePlacement: 1, showBranches: true, recombine: true, finalStretch: 1, starReduction: true
+   },
+   {
+      id: "galaxy", label: "Galaxy",
+      description: "Color calibration and structure recovery with moderate starless-branch denoise and no default star reduction.",
+      visible: ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
+      enabled: { gradient: true, plateSolve: true, colorCalibration: true, deconvolution: true, noiseReduction: true, starSeparation: true },
+      noisePlacement: 1, showBranches: true, recombine: true, finalStretch: 1, starReduction: false
+   },
+   {
+      id: "starCluster", label: "Star cluster",
+      description: "Conservative full-image workflow without star separation or star reduction.",
+      visible: ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction"],
+      enabled: { gradient: true, plateSolve: true, colorCalibration: true, deconvolution: true, noiseReduction: true, starSeparation: false },
+      noisePlacement: 0, showBranches: false, recombine: false, finalStretch: 1, starReduction: false
+   },
+   {
+      id: "custom", label: "Custom workflow",
+      description: "Shows every available stage and retains your current selections.",
+      visible: ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
+      enabled: null, noisePlacement: 1, showBranches: true, recombine: true, finalStretch: 1, starReduction: false
+   }
+];
+
+function profileContainsStep(profile, stepId)
+{
+   for (var i = 0; i < profile.visible.length; ++i)
+      if (profile.visible[i] === stepId)
+         return true;
+   return false;
+}
+
 function imageWindowsSnapshot()
 {
    var snapshot = {};
@@ -943,10 +1004,9 @@ PreflightValidator.prototype.validate = function()
       result.errors.push("Starless-branch denoise requires star separation.");
    if ((this.dialog.starlessStretch.currentItem > 0 ||
         this.dialog.starsStretch.currentItem > 0 ||
-        this.dialog.finalStretch.currentItem > 0 ||
         this.dialog.recombine.checked) && !separationEnabled)
       result.errors.push("Branch stretching and recombination require star separation.");
-   if (this.dialog.finalStretch.currentItem > 0 && !this.dialog.recombine.checked)
+   if (separationEnabled && this.dialog.finalStretch.currentItem > 0 && !this.dialog.recombine.checked)
       result.errors.push("Final recombined stretch requires automatic branch recombination.");
    if (this.dialog.finalStretch.currentItem > 0 &&
        (this.dialog.starlessStretch.currentItem > 0 || this.dialog.starsStretch.currentItem > 0))
@@ -961,6 +1021,10 @@ PreflightValidator.prototype.validate = function()
        this.dialog.noisePlacement.currentItem === 0)
       result.warnings.push("Noise reduction is enabled before separation without a deblur step. " +
          "Use this only if deconvolution was already completed.");
+
+   var profile = WORKFLOW_PROFILES[this.dialog.imageType.currentItem];
+   if (profile.id === "emissionMapped")
+      result.warnings.push("Mapped narrowband assumes the active image is already combined into the intended color palette; broadband SPCC is intentionally skipped.");
 
    result.warnings.push("The workflow modifies the active view. Save a copy or enable swap-file undo.");
    return result;
@@ -1142,6 +1206,14 @@ function WorkflowRow(parent, step)
       this.setup.toolTip = "Review metadata-derived ImageSolver seed values.";
    }
    this.adapterId = function() { return this.step.adapterIds[this.choice.currentItem]; };
+   this.setVisible = function(visible)
+   {
+      this.enabled.visible = visible;
+      this.choice.visible = visible;
+      this.status.visible = visible;
+      if (this.setup !== null)
+         this.setup.visible = visible;
+   };
    this.refreshChoiceHelp = function()
    {
       this.choice.toolTip = adapterHelp[this.adapterId()] || this.step.note;
@@ -1250,6 +1322,24 @@ constructor()
       "The crop handoff and linear-image confirmation are never restored.";
    this.rememberSettings.checked = rememberWorkflowStateEnabled();
 
+   this.profileBox = new GroupBox(this);
+   this.profileBox.title = "Image workflow";
+   this.profileBox.sizer = new VerticalSizer;
+   this.profileBox.sizer.margin = 8;
+   this.profileBox.sizer.spacing = 6;
+   var imageTypeItems = [];
+   for (var p = 0; p < WORKFLOW_PROFILES.length; ++p)
+      imageTypeItems.push(WORKFLOW_PROFILES[p].label);
+   var imageTypeControl = labeledCombo(this, "Object / image type:", imageTypeItems, 0,
+      "Select the image type to show its appropriate recommended workflow. The input can be any integrated linear color master.");
+   this.imageType = imageTypeControl.combo;
+   this.profileDescription = new Label(this);
+   this.profileDescription.wordWrapping = true;
+   this.profileDescription.frameStyle = FrameStyle.Box;
+   this.profileDescription.margin = 6;
+   this.profileBox.sizer.add(imageTypeControl.sizer);
+   this.profileBox.sizer.add(this.profileDescription);
+
    this.stepsBox = new GroupBox(this);
    this.stepsBox.title = "Linear workflow";
    this.stepsBox.sizer = new VerticalSizer;
@@ -1277,7 +1367,7 @@ constructor()
    this.stepsBox.sizer.add(noisePlacementControl.sizer);
 
    this.branchesBox = new GroupBox(this);
-   this.branchesBox.title = "Starless / stars branches";
+   this.branchesBox.title = "Stretch and star branches";
    this.branchesBox.sizer = new VerticalSizer;
    this.branchesBox.sizer.margin = 8;
    this.branchesBox.sizer.spacing = 6;
@@ -1293,10 +1383,13 @@ constructor()
    this.recombine.text = "Recombine branches automatically";
    this.recombine.checked = true;
    this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
-   var finalStretchControl = labeledCombo(this, "Final recombined stretch:",
+   var finalStretchControl = labeledCombo(this, "Final image stretch:",
       ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 1,
-      "Recommended: linearly add the branches first, then apply one linked stretch to the completed image.");
+      "Applies to the recombined image when star separation is used, or directly to the active image otherwise.");
    this.finalStretch = finalStretchControl.combo;
+   this.starlessStretchControl = starlessStretchControl;
+   this.starsStretchControl = starsStretchControl;
+   this.finalStretchControl = finalStretchControl;
    this.starReduction = new CheckBox(this);
    this.starReduction.text = "Apply Bill Blanshan Star Method V2 after recombination";
    this.starReduction.checked = false;
@@ -1320,6 +1413,19 @@ constructor()
    this.starReductionIterationsSizer.add(this.starReductionIterations);
    this.starReductionIterationsSizer.addStretch();
    var self = this;
+   this.setBranchControlsVisible = function(visible)
+   {
+      self.starlessStretchControl.label.visible = visible;
+      self.starlessStretch.visible = visible;
+      self.starsStretchControl.label.visible = visible;
+      self.starsStretch.visible = visible;
+      self.recombine.visible = visible;
+      self.starReduction.visible = visible;
+      self.starReductionMethodControl.label.visible = visible;
+      self.starReductionMethod.visible = visible;
+      self.starReductionIterationsLabel.visible = visible;
+      self.starReductionIterations.visible = visible;
+   };
    this.refreshStarReductionControls = function()
    {
       var enabled = self.starReduction.checked;
@@ -1336,6 +1442,39 @@ constructor()
    this.branchesBox.sizer.add(this.starReduction);
    this.branchesBox.sizer.add(starReductionMethodControl.sizer);
    this.branchesBox.sizer.add(this.starReductionIterationsSizer);
+
+   this.starReductionMethodControl = starReductionMethodControl;
+   this.applyImageType = function(applyDefaults)
+   {
+      var profile = WORKFLOW_PROFILES[self.imageType.currentItem];
+      self.profileDescription.text = profile.description;
+      for (var i = 0; i < self.rows.length; ++i)
+      {
+         var row = self.rows[i];
+         var visible = profileContainsStep(profile, row.step.id);
+         row.setVisible(visible);
+         if (!visible)
+            row.enabled.checked = false;
+         else if (applyDefaults && profile.enabled !== null && row.step.id !== "crop")
+            row.enabled.checked = profile.enabled[row.step.id] === true;
+         row.refreshStatus();
+      }
+      if (applyDefaults && profile.enabled !== null)
+      {
+         self.noisePlacement.currentItem = profile.noisePlacement;
+         self.starlessStretch.currentItem = 0;
+         self.starsStretch.currentItem = 0;
+         self.finalStretch.currentItem = profile.finalStretch;
+         self.recombine.checked = profile.recombine;
+         self.starReduction.checked = profile.starReduction;
+      }
+      self.setBranchControlsVisible(profile.showBranches);
+      self.refreshStarReductionControls();
+      self.noisePlacementControl.label.visible = profileContainsStep(profile, "noiseReduction");
+      self.noisePlacement.visible = profileContainsStep(profile, "noiseReduction");
+      self.stepsBox.title = profile.label + " — linear workflow";
+      self.adjustToContents();
+   };
 
    this.statusBox = new GroupBox(this);
    this.statusBox.title = "Status";
@@ -1377,13 +1516,22 @@ constructor()
    this.sizer.add(this.inputLabel);
    this.sizer.add(this.linearConfirmation);
    this.sizer.add(this.rememberSettings);
+   this.sizer.add(this.profileBox);
    this.sizer.add(this.stepsBox);
    this.sizer.add(this.branchesBox);
    this.sizer.add(this.statusBox);
    this.sizer.add(this.buttonSizer);
 
+   this.noisePlacementControl = noisePlacementControl;
+   this.applyImageType(true);
    if (restoreWorkflowState(this))
       this.statusText.text = "Restored last-used workflow settings. Confirm the linear input, then Validate.";
+   this.imageType.onItemSelected = function()
+   {
+      self.applyImageType(true);
+      self.statusText.text = "Loaded recommended settings for " +
+         WORKFLOW_PROFILES[self.imageType.currentItem].label + ". Confirm the linear input, then Validate.";
+   };
    this.rememberSettings.onCheck = function(checked)
    {
       try { setRememberWorkflowState(checked); }
@@ -1533,6 +1681,13 @@ constructor()
                      starlessReferenceWindow.forceClose();
                }
             }
+         }
+         else if (self.finalStretch.currentItem > 0)
+         {
+            checkAbortRequested();
+            clearDisplaySTF(view);
+            applySelectedAutoHistogram(view, self.finalStretch.currentItem, 0.15);
+            checkAbortRequested();
          }
 
          self.statusText.text = "Workflow completed successfully.";

@@ -1,10 +1,17 @@
-# CCDASTRO PixInsight Workflow Manager v0.5.15
+# CCDASTRO PixInsight Workflow Manager v0.6.0
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v0.5.15 capabilities
+## v0.6.0 capabilities
 
+- An **Object / image type** dropdown that presents only the recommended stages
+  for General Color Image, Broadband Color Emission Nebula, Mapped Narrowband
+  Color Emission Nebula, Galaxy, Star Cluster, or Custom Workflow.
+- Profile-specific defaults while accepting any integrated linear color master,
+  regardless of whether it originated with a one-shot-color or mono camera.
+- Direct final-image stretching for profiles such as Star Cluster that do not
+  use star separation and recombination.
 - Interactive DynamicCrop handoff and preflight detection of likely
   integration borders.
 - Persistent last-used workflow selections with a Reset to Defaults control.
@@ -28,11 +35,30 @@ manager for an integrated linear color master.
 - Linear-add or nonlinear screen-blend PixelMath recombination.
 - Preflight validation for input state, astrometry, installed process classes,
   configured SyQon icons, and branch dependencies.
-- Version 2 workflow schema with `main`, `starless`, and `stars` lanes.
+- Version 3 profile-aware workflow schema with `main`, `starless`, and `stars` lanes.
 - Contextual mouse-over help for processing choices and branch controls.
 - Certified PixInsight code-signing support for trusted Update Manager packages.
 
-The default order is:
+## Select an object or image type
+
+Select the profile before choosing individual tools. Changing the profile loads
+its recommended settings and hides stages that do not apply. These are starting
+points: every displayed stage can still be enabled, disabled, or configured.
+
+| Profile | Presented workflow |
+| --- | --- |
+| General color image | Complete configurable workflow |
+| Broadband color emission nebula | SPCC, star separation, starless denoise, recombination, stretch, and optional star reduction |
+| Mapped narrowband color emission nebula | Gradient, deblur, star separation, starless denoise, recombination, and stretch; broadband SPCC is omitted |
+| Galaxy | SPCC, structure recovery, starless denoise, recombination, and a restrained stretch |
+| Star cluster | SPCC, conservative full-image deblur and denoise, and direct full-image stretch without star separation |
+| Custom workflow | All available stages using the current selections |
+
+The mapped narrowband profile expects an already combined mapped-color master.
+It does not perform HOO or other palette construction. Use the General or Custom
+profile when the image needs different color treatment.
+
+The default General Color Image order is:
 
 1. Optional interactive DynamicCrop handoff
 2. GradientCorrection or GraXpert
@@ -168,19 +194,22 @@ view was created before continuing.
 
 ## Run a workflow
 
-1. Open and select the integrated linear master main view.
+1. Open and select the integrated linear color-master main view.
 2. Launch **Script > CCDASTRO > Workflow Manager**.
-3. Leave **Plate Solve if needed** enabled when SPCC is selected.
-4. If its status says **Setup needed**, open **Setup...** and review the
+3. Select the appropriate **Object / image type**. Camera type does not determine
+   the selection.
+4. Leave **Plate Solve if needed** enabled when SPCC is selected.
+5. If its status says **Setup needed**, open **Setup...** and review the
    metadata-derived values.
-5. Select the desired tool in each remaining enabled stage.
-6. Choose whether denoise runs before separation or on the starless branch.
-7. Keep the starless and stars branches linear for the recommended workflow.
-8. Enable automatic recombination and choose the final linked stretch.
-9. Confirm that the input is an unstretched integrated linear color master.
-10. Click **Validate** and resolve every error.
-11. Save a copy or confirm that PixInsight swap-file undo is enabled.
-12. Click **Run Workflow**.
+6. Select the desired tool in each remaining enabled stage.
+7. Choose whether denoise runs before separation or on the starless branch when
+   that control is shown.
+8. Keep starless and stars branches linear when using a separating profile.
+9. Choose the final image stretch.
+10. Confirm that the input is an unstretched integrated linear color master.
+11. Click **Validate** and resolve every error.
+12. Save a copy or confirm that PixInsight swap-file undo is enabled.
+13. Click **Run Workflow**.
 
 Progress is written to the PixInsight Process Console. Execution stops at the
 first failed stage.
@@ -211,15 +240,15 @@ they use screen blending and disable the final recombined stretch.
 - SyQon choices require correctly named process icons and vendor-side setup.
 - If a third-party star-removal tool produces multiple auxiliary views with
   ambiguous names, the manager stops rather than guessing which is stars-only.
-- Persisted presets, GHS adapters, checkpoints, and target-specific JSON imports
+- Exportable user presets, GHS adapters, checkpoints, and target-specific JSON imports
   remain future work.
 
 ## Files
 
 - `CCDASTROWorkflowManager.js` - installable PJSR script.
 - `CCDASTROWorkflowManager.xsgn` - certified signature generated for the final release script.
-- `workflows/osc-linear-mvp.json` - version 2 workflow definition.
-- `workflows/osc-linear-mvp.schema.json` - JSON Schema.
+- `workflows/color-master-v0.6.0.json` - version 3 profile-aware workflow definition.
+- `workflows/color-master-v0.6.0.schema.json` - JSON Schema.
 - `tools/validate-workflow.js` - dependency-free structure/order validator.
 
 Developers with Node.js can validate the supplied workflow with:

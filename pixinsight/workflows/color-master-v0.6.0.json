@@ -1,12 +1,21 @@
 {
-  "$schema": "./osc-linear-mvp.schema.json",
-  "schemaVersion": 2,
-  "id": "osc-linear-v0.5.15",
-  "name": "OSC Linear, Plate-Solved, and Starless Workflow v0.5.15",
-  "description": "Post-integration workflow with metadata-assisted plate solving, selectable tools, and starless/stars branches.",
+  "$schema": "./color-master-v0.6.0.schema.json",
+  "schemaVersion": 3,
+  "id": "color-master-v0.6.0",
+  "name": "Integrated Color Master Workflow v0.6.0",
+  "description": "Profile-driven post-integration workflow for any integrated linear color master.",
+  "defaultProfile": "generalColor",
+  "profiles": [
+    { "id": "generalColor", "name": "General color image", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"] },
+    { "id": "emissionBroadband", "name": "Broadband color emission nebula", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"] },
+    { "id": "emissionMapped", "name": "Mapped narrowband color emission nebula", "visibleSteps": ["crop", "gradient", "deconvolution", "noiseReduction", "starSeparation"] },
+    { "id": "galaxy", "name": "Galaxy", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"] },
+    { "id": "starCluster", "name": "Star cluster", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction"] },
+    { "id": "custom", "name": "Custom workflow", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"] }
+  ],
   "input": {
     "stage": "linear-integrated",
-    "colorModel": "OSC-RGB",
+    "colorModel": "integrated-color-master",
     "sampleFormat": "any-float"
   },
   "lanes": ["main", "starless", "stars"],

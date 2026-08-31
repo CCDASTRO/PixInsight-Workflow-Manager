@@ -17,11 +17,15 @@ directory to force registration of newly installed script folders.
 The package and `updates.xri` are generated from the repository root with:
 
 ```powershell
-.\packaging\build-pixinsight-package.ps1 -Version 0.5.15
+.\packaging\build-pixinsight-package.ps1 -Version 0.6.0
 ```
 
 The builder validates the source version, ZIP layout, SHA-1, XML, release date,
 and UTF-8 encoding without a byte-order mark.
+
+After changing `CCDASTROWorkflowManager.js`, regenerate its `.xsgn` file with
+PixInsight CodeSign before building. A signature created for an earlier script
+version is not valid for the v0.6.0 source.
 
 After building a release, sign `updates/updates.xri` with PixInsight's CodeSign
 utility before committing or publishing it. CodeSign embeds the repository

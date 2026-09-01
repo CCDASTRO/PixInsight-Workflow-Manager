@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v0.6.0
+# CCDASTRO PixInsight Workflow Manager v0.6.1
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -12,6 +12,13 @@ the required order.
 ![CCDASTRO Workflow Manager v0.6.0 interface in PixInsight](docs/images/workflow-manager-v0.6.0.png)
 
 ## [short video](https://youtu.be/0G-PI8F51rE)
+
+## Revision history
+
+- **v0.6.1:** Adds prominent guidance about linear-master quality and documents
+  that users may choose their preferred calibration and integration method.
+- **v0.6.0:** Adds object/image-type profiles with tailored workflows for color
+  masters, emission nebulae, mapped narrowband images, galaxies, and star clusters.
 
 ## v0.6.0 capabilities
 
@@ -108,6 +115,20 @@ and SPCC requires a plate-solved image.
 - For SPCC, either an existing astrometric solution or approximate coordinates
   and image-scale metadata for the Plate Solve adapter.
 - The selected third-party processes, applications, models, and licenses.
+
+### Linear-master quality
+
+The workflow starts with the integrated linear color master you provide and is
+independent of the calibration and integration method used to create it. Use
+WBPP, another preprocessing script, process icons, or a manual process according
+to your needs.
+
+The quality of that master sets the limit for the workflow's results. Accurate
+calibration, registration, integration, pixel rejection, and color combination
+are essential. Inspect the master for gradients, clipping, registration errors,
+satellite trails, residual hot pixels, walking noise, and integration borders
+before continuing. Later processing can enhance good data, but it cannot recover
+detail or reliably remove defects lost or introduced during preprocessing.
 
 The preflight validator reports unavailable process classes and missing SyQon
 process icons before execution.

@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.6.0"
+#define VERSION "0.6.1"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1313,6 +1313,13 @@ constructor()
    this.inputLabel.text = "Active view: " +
       (ImageWindow.activeWindow.isNull ? "<none>" : ImageWindow.activeWindow.currentView.fullId);
    this.inputLabel.toolTip = "The workflow processes the active main image view in place.";
+   this.inputQualityNote = new Label(this);
+   this.inputQualityNote.wordWrapping = true;
+   this.inputQualityNote.useRichText = true;
+   this.inputQualityNote.text = "<b>Input quality matters:</b> The workflow builds on the linear master you provide. " +
+      "Accurate calibration, registration, integration, rejection, and color combination are essential; " +
+      "processing cannot recover detail or remove defects lost or introduced while creating the master.";
+   this.inputQualityNote.toolTip = "Create the best possible linear master with the preprocessing method of your choice before running this workflow.";
    this.linearConfirmation = new CheckBox(this);
    this.linearConfirmation.text = "I confirm this is an unstretched, integrated linear color master";
    this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";
@@ -1514,6 +1521,7 @@ constructor()
    this.sizer.add(this.title);
    this.sizer.add(this.help);
    this.sizer.add(this.inputLabel);
+   this.sizer.add(this.inputQualityNote);
    this.sizer.add(this.linearConfirmation);
    this.sizer.add(this.rememberSettings);
    this.sizer.add(this.profileBox);

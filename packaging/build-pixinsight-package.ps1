@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.6.0'
+    [string] $Version = '0.6.1'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +102,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.6.1 adds prominent linear-master quality guidance while leaving calibration and integration method choices to the user</li>
           <li>v0.6.0 adds object/image-type workflows for general color masters, broadband and mapped narrowband emission nebulae, galaxies, and star clusters</li>
           <li>v0.6.0 shows only the stages appropriate to the selected image type and supports a direct full-image stretch when star separation is omitted</li>
           <li>v0.5.15 recombines linear branches before one conservative final stretch to prevent washed-out star halos</li>

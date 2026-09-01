@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.6.1"
+#define VERSION "0.6.2"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1297,58 +1297,64 @@ constructor()
    super();
    this.launchCropRequested = false;
    this.windowTitle = TITLE + " " + VERSION;
-   this.minWidth = 760;
+   this.scrollBox = new ScrollBox(this);
+   this.scrollBox.autoScroll = true;
+   this.scrollBox.tracking = true;
+   this.scrollBox.horizontalScrollBarVisible = false;
+   this.content = new Control(this.scrollBox.viewport);
 
-   this.title = new Label(this);
+   this.title = new Label(this.content);
    this.title.useRichText = true;
    this.title.text = "<b>Color Post-Processing Workflow v" + VERSION + "</b>";
-   this.help = new Label(this);
+   this.help = new Label(this.content);
    this.help.wordWrapping = true;
    this.help.text = "Choose the desired tools. Plate Solve if needed uses metadata-derived " +
       "seed values and skips an image that already has an astrometric solution. " +
       "SyQon choices use configured process icons.";
-   this.inputLabel = new Label(this);
+   this.inputLabel = new Label(this.content);
    this.inputLabel.frameStyle = FrameStyle.Box;
    this.inputLabel.margin = 6;
    this.inputLabel.text = "Active view: " +
       (ImageWindow.activeWindow.isNull ? "<none>" : ImageWindow.activeWindow.currentView.fullId);
    this.inputLabel.toolTip = "The workflow processes the active main image view in place.";
-   this.inputQualityNote = new Label(this);
+   this.inputQualityNote = new Label(this.content);
    this.inputQualityNote.wordWrapping = true;
    this.inputQualityNote.useRichText = true;
    this.inputQualityNote.text = "<b>Input quality matters:</b> The workflow builds on the linear master you provide. " +
       "Accurate calibration, registration, integration, rejection, and color combination are essential; " +
       "processing cannot recover detail or remove defects lost or introduced while creating the master.";
    this.inputQualityNote.toolTip = "Create the best possible linear master with the preprocessing method of your choice before running this workflow.";
-   this.linearConfirmation = new CheckBox(this);
+   this.linearConfirmation = new CheckBox(this.content);
    this.linearConfirmation.text = "I confirm this is an unstretched, integrated linear color master";
    this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";
-   this.rememberSettings = new CheckBox(this);
+   this.rememberSettings = new CheckBox(this.content);
    this.rememberSettings.text = "Remember workflow settings";
    this.rememberSettings.toolTip = "Restore the last-used process selections and branch options. " +
       "The crop handoff and linear-image confirmation are never restored.";
    this.rememberSettings.checked = rememberWorkflowStateEnabled();
 
-   this.profileBox = new GroupBox(this);
-   this.profileBox.title = "Image workflow";
+   this.profileBox = new GroupBox(this.content);
+   this.profileSection = new SectionBar(this.content, "Image workflow");
+   this.profileSection.setSection(this.profileBox);
    this.profileBox.sizer = new VerticalSizer;
    this.profileBox.sizer.margin = 8;
    this.profileBox.sizer.spacing = 6;
    var imageTypeItems = [];
    for (var p = 0; p < WORKFLOW_PROFILES.length; ++p)
       imageTypeItems.push(WORKFLOW_PROFILES[p].label);
-   var imageTypeControl = labeledCombo(this, "Object / image type:", imageTypeItems, 0,
+   var imageTypeControl = labeledCombo(this.content, "Object / image type:", imageTypeItems, 0,
       "Select the image type to show its appropriate recommended workflow. The input can be any integrated linear color master.");
    this.imageType = imageTypeControl.combo;
-   this.profileDescription = new Label(this);
+   this.profileDescription = new Label(this.content);
    this.profileDescription.wordWrapping = true;
    this.profileDescription.frameStyle = FrameStyle.Box;
    this.profileDescription.margin = 6;
    this.profileBox.sizer.add(imageTypeControl.sizer);
    this.profileBox.sizer.add(this.profileDescription);
 
-   this.stepsBox = new GroupBox(this);
-   this.stepsBox.title = "Linear workflow";
+   this.stepsBox = new GroupBox(this.content);
+   this.stepsSection = new SectionBar(this.content, "Linear workflow");
+   this.stepsSection.setSection(this.stepsBox);
    this.stepsBox.sizer = new VerticalSizer;
    this.stepsBox.sizer.margin = 8;
    this.stepsBox.sizer.spacing = 6;
@@ -1361,55 +1367,56 @@ constructor()
    var workflow = defaultWorkflow();
    for (var i = 0; i < workflow.length; ++i)
    {
-      var row = new WorkflowRow(this, workflow[i]);
+      var row = new WorkflowRow(this.content, workflow[i]);
       this.rows.push(row);
       this.rowsById[workflow[i].id] = row;
       this.stepsBox.sizer.add(row.sizer);
    }
 
-   var noisePlacementControl = labeledCombo(this, "Noise placement:",
+   var noisePlacementControl = labeledCombo(this.content, "Noise placement:",
       ["Before star separation", "Starless branch"], 1,
       "Choose whether the main denoise pass affects the complete image or only the starless branch.");
    this.noisePlacement = noisePlacementControl.combo;
    this.stepsBox.sizer.add(noisePlacementControl.sizer);
 
-   this.branchesBox = new GroupBox(this);
-   this.branchesBox.title = "Stretch and star branches";
+   this.branchesBox = new GroupBox(this.content);
+   this.branchesSection = new SectionBar(this.content, "Stretch and star branches");
+   this.branchesSection.setSection(this.branchesBox);
    this.branchesBox.sizer = new VerticalSizer;
    this.branchesBox.sizer.margin = 8;
    this.branchesBox.sizer.spacing = 6;
-   var starlessStretchControl = labeledCombo(this, "Starless stretch:",
+   var starlessStretchControl = labeledCombo(this.content, "Starless stretch:",
       ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 0,
       "Advanced option. Keep linear for the recommended single stretch after recombination.");
    this.starlessStretch = starlessStretchControl.combo;
-   var starsStretchControl = labeledCombo(this, "Stars stretch:",
+   var starsStretchControl = labeledCombo(this.content, "Stars stretch:",
       ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 0,
       "Advanced option. Keep linear to avoid amplifying subtraction residuals and halos.");
    this.starsStretch = starsStretchControl.combo;
-   this.recombine = new CheckBox(this);
+   this.recombine = new CheckBox(this.content);
    this.recombine.text = "Recombine branches automatically";
    this.recombine.checked = true;
    this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
-   var finalStretchControl = labeledCombo(this, "Final image stretch:",
+   var finalStretchControl = labeledCombo(this.content, "Final image stretch:",
       ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 1,
       "Applies to the recombined image when star separation is used, or directly to the active image otherwise.");
    this.finalStretch = finalStretchControl.combo;
    this.starlessStretchControl = starlessStretchControl;
    this.starsStretchControl = starsStretchControl;
    this.finalStretchControl = finalStretchControl;
-   this.starReduction = new CheckBox(this);
+   this.starReduction = new CheckBox(this.content);
    this.starReduction.text = "Apply Bill Blanshan Star Method V2 after recombination";
    this.starReduction.checked = false;
    this.starReduction.toolTip = "Optionally reduce stars on the final recombined image while protecting the starless structures.";
-   var starReductionMethodControl = labeledCombo(this, "Star reduction method:",
+   var starReductionMethodControl = labeledCombo(this.content, "Star reduction method:",
       ["Strong", "Moderate", "Soft"], 1,
       "Strong removes more small stars; Moderate retains more stars; Soft makes the mildest reduction.");
    this.starReductionMethod = starReductionMethodControl.combo;
-   this.starReductionIterationsLabel = new Label(this);
+   this.starReductionIterationsLabel = new Label(this.content);
    this.starReductionIterationsLabel.text = "Iterations:";
    this.starReductionIterationsLabel.minWidth = 210;
    this.starReductionIterationsLabel.textAlignment = TextAlignment.Right | TextAlignment.VertCenter;
-   this.starReductionIterations = new SpinBox(this);
+   this.starReductionIterations = new SpinBox(this.content);
    this.starReductionIterations.minValue = 1;
    this.starReductionIterations.maxValue = 3;
    this.starReductionIterations.value = 1;
@@ -1479,13 +1486,15 @@ constructor()
       self.refreshStarReductionControls();
       self.noisePlacementControl.label.visible = profileContainsStep(profile, "noiseReduction");
       self.noisePlacement.visible = profileContainsStep(profile, "noiseReduction");
-      self.stepsBox.title = profile.label + " — linear workflow";
-      self.adjustToContents();
+      self.stepsSection.title = profile.label + " — linear workflow";
+      if (self.refreshScrollableLayout !== undefined)
+         self.refreshScrollableLayout();
    };
 
-   this.statusBox = new GroupBox(this);
-   this.statusBox.title = "Status";
-   this.statusText = new Label(this);
+   this.statusBox = new GroupBox(this.content);
+   this.statusSection = new SectionBar(this.content, "Status");
+   this.statusSection.setSection(this.statusBox);
+   this.statusText = new Label(this.content);
    this.statusText.wordWrapping = true;
    this.statusText.minHeight = 75;
    this.statusText.text = "Ready for preflight validation.";
@@ -1515,20 +1524,69 @@ constructor()
    this.buttonSizer.add(this.runButton);
    this.buttonSizer.add(this.closeButton);
 
+   this.content.sizer = new VerticalSizer;
+   this.content.sizer.margin = 10;
+   this.content.sizer.spacing = 8;
+   this.content.sizer.add(this.title);
+   this.content.sizer.add(this.help);
+   this.content.sizer.add(this.inputLabel);
+   this.content.sizer.add(this.inputQualityNote);
+   this.content.sizer.add(this.linearConfirmation);
+   this.content.sizer.add(this.rememberSettings);
+   this.content.sizer.add(this.profileSection);
+   this.content.sizer.add(this.profileBox);
+   this.content.sizer.add(this.stepsSection);
+   this.content.sizer.add(this.stepsBox);
+   this.content.sizer.add(this.branchesSection);
+   this.content.sizer.add(this.branchesBox);
+   this.content.sizer.add(this.statusSection);
+   this.content.sizer.add(this.statusBox);
+
    this.sizer = new VerticalSizer;
-   this.sizer.margin = 10;
-   this.sizer.spacing = 10;
-   this.sizer.add(this.title);
-   this.sizer.add(this.help);
-   this.sizer.add(this.inputLabel);
-   this.sizer.add(this.inputQualityNote);
-   this.sizer.add(this.linearConfirmation);
-   this.sizer.add(this.rememberSettings);
-   this.sizer.add(this.profileBox);
-   this.sizer.add(this.stepsBox);
-   this.sizer.add(this.branchesBox);
-   this.sizer.add(this.statusBox);
+   this.sizer.margin = 8;
+   this.sizer.spacing = 8;
+   this.sizer.add(this.scrollBox, 100);
    this.sizer.add(this.buttonSizer);
+
+   this.refreshScrollableLayout = function()
+   {
+      if (self.layoutRefreshActive)
+         return;
+      self.layoutRefreshActive = true;
+      try
+      {
+         self.content.adjustToContents();
+         var viewportWidth = self.scrollBox.viewport.width;
+         if (viewportWidth > 0)
+            self.content.resize(viewportWidth, self.content.height);
+         var maximum = Math.max(0, self.content.height - self.scrollBox.viewport.height);
+         self.scrollBox.setVerticalScrollRange(0, maximum);
+         var position = Math.min(self.scrollBox.scrollPosition.y, maximum);
+         self.scrollBox.scrollPosition = new Point(0, position);
+         self.content.move(0, -position);
+      }
+      finally
+      {
+         self.layoutRefreshActive = false;
+      }
+   };
+   this.scrollBox.onVerticalScrollPosUpdated = function(position)
+   {
+      self.content.move(0, -position);
+   };
+   this.scrollBox.viewport.onResize = function()
+   {
+      self.refreshScrollableLayout();
+   };
+   var toggleSection = function(section, beginToggle)
+   {
+      if (!beginToggle)
+         self.refreshScrollableLayout();
+   };
+   this.profileSection.onToggleSection = toggleSection;
+   this.stepsSection.onToggleSection = toggleSection;
+   this.branchesSection.onToggleSection = toggleSection;
+   this.statusSection.onToggleSection = toggleSection;
 
    this.noisePlacementControl = noisePlacementControl;
    this.applyImageType(true);
@@ -1722,8 +1780,10 @@ constructor()
       saveWorkflowState(self, false);
       self.cancel();
    };
-   this.adjustToContents();
-   this.setFixedWidth(this.width);
+   this.setMinSize(600, 420);
+   this.resize(Math.min(840, Math.round(this.availableScreenRect.width * 0.92)),
+      Math.min(900, Math.round(this.availableScreenRect.height * 0.90)));
+   this.refreshScrollableLayout();
 }
 }
 

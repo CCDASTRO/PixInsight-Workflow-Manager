@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v0.6.1
+# CCDASTRO PixInsight Workflow Manager v0.6.2
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -15,6 +15,8 @@ the required order.
 
 ## Revision history
 
+- **v0.6.2:** Makes the dialog resizable and adds collapsible, vertically
+  scrollable workflow sections for smaller displays and high display scaling.
 - **v0.6.1:** Adds prominent guidance about linear-master quality and documents
   that users may choose their preferred calibration and integration method.
 - **v0.6.0:** Adds object/image-type profiles with tailored workflows for color

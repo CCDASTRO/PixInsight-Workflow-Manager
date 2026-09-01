@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.6.2'
+    [string] $Version = '0.6.3'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +102,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v0.6.3 keeps the dialog size stable when sections are toggled and uses a larger adaptive minimum height</li>
           <li>v0.6.2 makes the workflow dialog resizable with collapsible sections and vertical scrolling for smaller displays</li>
           <li>v0.6.1 adds prominent linear-master quality guidance while leaving calibration and integration method choices to the user</li>
           <li>v0.6.0 adds object/image-type workflows for general color masters, broadband and mapped narrowband emission nebulae, galaxies, and star clusters</li>

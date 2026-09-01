@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "0.6.2"
+#define VERSION "0.6.3"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1580,8 +1580,16 @@ constructor()
    };
    var toggleSection = function(section, beginToggle)
    {
-      if (!beginToggle)
+      if (beginToggle)
+      {
+         self.sectionToggleWidth = self.width;
+         self.sectionToggleHeight = self.height;
+      }
+      else
+      {
+         self.resize(self.sectionToggleWidth, self.sectionToggleHeight);
          self.refreshScrollableLayout();
+      }
    };
    this.profileSection.onToggleSection = toggleSection;
    this.stepsSection.onToggleSection = toggleSection;
@@ -1780,7 +1788,8 @@ constructor()
       saveWorkflowState(self, false);
       self.cancel();
    };
-   this.setMinSize(600, 420);
+   var minimumHeight = Math.min(620, Math.round(this.availableScreenRect.height * 0.75));
+   this.setMinSize(600, minimumHeight);
    this.resize(Math.min(840, Math.round(this.availableScreenRect.width * 0.92)),
       Math.min(900, Math.round(this.availableScreenRect.height * 0.90)));
    this.refreshScrollableLayout();

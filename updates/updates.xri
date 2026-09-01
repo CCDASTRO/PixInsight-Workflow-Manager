@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-0.6.2.zip" sha1="6b113ad1a90e5aacd7bdf461eed6b989d77ad9bc" type="script" releaseDate="20260901">
-         <title>CCDASTRO Workflow Manager 0.6.2</title>
+      <package fileName="CCDASTROWorkflowManager-0.6.3.zip" sha1="d56e83b28fce1e9b45a0d7fa57547f3733455667" type="script" releaseDate="20260901">
+         <title>CCDASTRO Workflow Manager 0.6.3</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v0.6.3 keeps the dialog size stable when sections are toggled and uses a larger adaptive minimum height</li>
                <li>v0.6.2 makes the workflow dialog resizable with collapsible sections and vertical scrolling for smaller displays</li>
                <li>v0.6.1 adds prominent linear-master quality guidance while leaving calibration and integration method choices to the user</li>
                <li>v0.6.0 adds object/image-type workflows for general color masters, broadband and mapped narrowband emission nebulae, galaxies, and star clusters</li>
@@ -50,4 +51,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-09-01T01:22:17.403Z" encoding="Base64">ypBQ/OXJgzbQCHV4mukUv/U1rmpXgGaev6eeZekPGxon9pC5QexLz2Br3NgOR1PnqqffgO+3w57tmew/aMPGDw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-09-01T01:37:33.946Z" encoding="Base64">60F18Peblk7MdYophG/luZEaV4TXbnK0gyOFLViInNrBB5Z2wVGl1PTlOUfLNbQj32WE61kuvVpVcX9YrsuwAQ==</Signature>

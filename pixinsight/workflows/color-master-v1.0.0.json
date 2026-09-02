@@ -1,8 +1,8 @@
 {
-  "$schema": "./color-master-v0.6.0.schema.json",
+  "$schema": "./color-master-v1.0.0.schema.json",
   "schemaVersion": 3,
-  "id": "color-master-v0.6.0",
-  "name": "Integrated Color Master Workflow v0.6.0",
+  "id": "color-master-v1.0.0",
+  "name": "Integrated Color Master Workflow v1.0.0",
   "description": "Profile-driven post-integration workflow for any integrated linear color master.",
   "defaultProfile": "generalColor",
   "profiles": [

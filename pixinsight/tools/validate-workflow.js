@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 const workflowPath = process.argv[2] ||
-  path.join(__dirname, "..", "workflows", "color-master-v0.6.0.json");
+  path.join(__dirname, "..", "workflows", "color-master-v1.0.0.json");
 const workflow = JSON.parse(fs.readFileSync(workflowPath, "utf8"));
 const errors = [];
 

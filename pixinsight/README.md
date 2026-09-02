@@ -1,10 +1,13 @@
-# CCDASTRO PixInsight Workflow Manager v0.6.3
+# CCDASTRO PixInsight Workflow Manager v1.0.0
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 ## Revision history
 
+- **v1.0.0:** First stable public release. Promotes the fully tested,
+  profile-driven color-master workflow, executable adapters, preflight checks,
+  branch processing, recombination, and Update Manager distribution.
 - **v0.6.3:** Prevents section toggles from shrinking the dialog and raises the
   adaptive minimum height while retaining scrolling on smaller displays.
 - **v0.6.2:** Makes the dialog resizable and adds collapsible, vertically
@@ -14,7 +17,7 @@ manager for an integrated linear color master.
 - **v0.6.0:** Adds object/image-type profiles with tailored workflows for color
   masters, emission nebulae, mapped narrowband images, galaxies, and star clusters.
 
-## v0.6.0 capabilities
+## Capabilities
 
 - An **Object / image type** dropdown that presents only the recommended stages
   for General Color Image, Broadband Color Emission Nebula, Mapped Narrowband
@@ -300,8 +303,8 @@ stars-only diagnostic view.
 
 - `CCDASTROWorkflowManager.js` - installable PJSR script.
 - `CCDASTROWorkflowManager.xsgn` - certified signature generated for the final release script.
-- `workflows/color-master-v0.6.0.json` - version 3 profile-aware workflow definition.
-- `workflows/color-master-v0.6.0.schema.json` - JSON Schema.
+- `workflows/color-master-v1.0.0.json` - version 3 profile-aware workflow definition.
+- `workflows/color-master-v1.0.0.schema.json` - JSON Schema.
 - `tools/validate-workflow.js` - dependency-free structure/order validator.
 
 Developers with Node.js can validate the supplied workflow with:

@@ -252,6 +252,34 @@ the extracted star layer separately, which can amplify subtraction residuals and
 create washed-out halos. Independent branch stretches remain advanced options;
 they use screen blending and disable the final recombined stretch.
 
+### What an `<image>_stars` window is showing
+
+An `<image>_stars` window is the **stars-only branch** created by the selected
+star-separation process. It is not intended to look like a finished astronomical
+image. Its purpose is to retain the stellar signal removed from the source image
+so the workflow can process the starless image independently and then add the
+stars back at the recombination stage. If the preferred name already exists,
+PixInsight assigns the next available numbered name automatically. For example,
+`Image01_stars_2` means that `Image01_stars` was already in use; additional name
+conflicts can produce `Image01_stars_3`, `Image01_stars_4`, and so on.
+
+The stars can appear greatly enlarged, white, or “blown out,” and the background
+can look extremely noisy when this sparse, mostly black image is displayed with
+an aggressive automatic ScreenTransferFunction (STF). PixInsight calculates a
+display stretch from the small amount of signal in the stars-only layer, which
+strongly magnifies star cores, subtraction remnants, color speckles, and
+background noise. An STF changes only the screen display; it does not clip or
+permanently stretch the underlying linear pixels. Use **STF Reset** or disable
+the STF to inspect the actual linear branch.
+
+If **Stars stretch** was selected in the workflow, however, a real histogram
+stretch has been applied. Independent branch stretching is an advanced option
+and can genuinely overexpand or clip stars when pushed too far. For the safest
+default, leave both branches linear, allow the workflow to add them together,
+and apply the final stretch to the recombined image. Judge the result in that
+recombined image—not by the intentionally harsh appearance of the isolated
+stars-only diagnostic view.
+
 ## Safety and current limitations
 
 - Processing modifies the active view and does not automatically save or clone

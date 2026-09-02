@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ccastro.com/schemas/pixinsight-workflow-v3.schema.json",
+  "$id": "https://ccdastro.com/schemas/pixinsight-workflow-v3.schema.json",
   "title": "CCDASTRO PixInsight Workflow v3",
   "type": "object",
   "required": ["schemaVersion", "id", "name", "defaultProfile", "profiles", "input", "lanes", "steps"],

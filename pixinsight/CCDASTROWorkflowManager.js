@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.0.0"
+#define VERSION "1.1.0"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -32,6 +32,7 @@ var adapterHelp = {
    interactiveCrop: "Close the workflow and open DynamicCrop for the active image.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
+   mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Requires CCDASTRO_SPFC and CCDASTRO_MGC process icons and suitable MARS data. SPCC remains separate.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
    spcc: "Use SpectrophotometricColorCalibration. The image must have an astrometric solution.",
    blurXTerminator: "Use BlurXTerminator for deconvolution and structure recovery while the image is linear.",
@@ -492,6 +493,81 @@ ProcessIconAdapter.prototype.execute = function(view)
       throw new Error(this.label + " did not complete successfully.");
 };
 
+// A composite gradient adapter: never apply MGC without fresh flux calibration.
+function MGCAdapter()
+{
+   this.id = "mgc";
+   this.label = "MultiscaleGradientCorrection (SPFC + MGC)";
+}
+
+MGCAdapter.prototype.loadIcons = function()
+{
+   var result = {};
+   var names = ["CCDASTRO_SPFC", "CCDASTRO_MGC"];
+   var classes = ["SpectrophotometricFluxCalibration", "MultiscaleGradientCorrection"];
+   for (var i = 0; i < names.length; ++i)
+   {
+      if (resolveProcessClass([classes[i]]) === null)
+         throw new Error("Install the " + classes[i] + " process.");
+      if (ProcessInstance.icons().indexOf(names[i]) < 0)
+         throw new Error("Create the configured process icon '" + names[i] + "'. Use gradient Setup... for instructions.");
+      var process = ProcessInstance.fromIcon(names[i]);
+      if (process === null || process.processId() !== classes[i])
+         throw new Error("Icon '" + names[i] + "' must contain " + classes[i] + ", not a script or another process.");
+      result[i === 0 ? "spfc" : "mgc"] = process;
+   }
+   if (propertyExists(result.mgc, "command") && result.mgc.command !== "")
+      throw new Error("CCDASTRO_MGC must be a gradient-correction instance, not a database-management command.");
+   if (propertyExists(result.mgc, "useMARSDatabase") && !result.mgc.useMARSDatabase)
+      throw new Error("Enable the MARS database in CCDASTRO_MGC. Reference-image mode is not supported by this adapter.");
+   return result;
+};
+
+MGCAdapter.prototype.available = function()
+{
+   try { this.loadIcons(); return true; }
+   catch (e) { return false; }
+};
+
+MGCAdapter.prototype.requirement = function()
+{
+   try { this.loadIcons(); return "SPFC and MGC icons are configured. Confirm catalog paths, filter curves, preprocessing metadata, and MARS coverage for this image."; }
+   catch (e) { return errorMessage(e); }
+};
+
+MGCAdapter.prototype.execute = function(view)
+{
+   var processes = this.loadIcons();
+   if (!imageHasAstrometricSolution(view.window))
+   {
+      checkAbortRequested();
+      adapters.plateSolve.execute(view);
+   }
+   if (!imageHasAstrometricSolution(view.window))
+      throw new Error("MGC requires a valid astrometric solution before SPFC.");
+   checkAbortRequested();
+   logLine("Running SpectrophotometricFluxCalibration on " + view.fullId);
+   if (!processes.spfc.executeOn(view))
+      throw new Error("SPFC failed. Check catalog, filter/QE settings, and preprocessing metadata. MGC was not run.");
+   checkAbortRequested();
+   logLine("Running MultiscaleGradientCorrection on " + view.fullId);
+   if (!processes.mgc.executeOn(view))
+      throw new Error("MGC failed. Check MARS data, coverage, and filter selection. The workflow has stopped; no fallback was applied.");
+   checkAbortRequested();
+};
+
+function usesMGC(rows)
+{
+   return rows.gradient.enabled.checked && rows.gradient.adapterId() === "mgc";
+}
+
+function linearStageOrder(rows)
+{
+   // MGC performs its own prerequisite solve before SPFC; do not solve twice.
+   return usesMGC(rows) ? ["gradient", "colorCalibration", "deconvolution"]
+      : ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
+}
+
 function InteractiveCropAdapter()
 {
    this.id = "interactiveCrop";
@@ -512,6 +588,7 @@ InteractiveCropAdapter.prototype.requirement = function()
 var plateSolveSettings = new PlateSolveSettings;
 
 var adapters = {
+   mgc: new MGCAdapter,
    interactiveCrop: new InteractiveCropAdapter,
 
    gradientCorrection: new ProcessAdapter(
@@ -593,8 +670,8 @@ function defaultWorkflow()
          ["interactiveCrop"], "interactiveCrop",
          "Optional: closes this workflow and opens DynamicCrop for the active image.", false),
       new WorkflowStep("gradient", "1. Gradient correction",
-         ["gradientCorrection", "graxpert"], "gradientCorrection",
-         "Runs before color calibration."),
+         ["gradientCorrection", "graxpert", "mgc"], "gradientCorrection",
+         "Runs before color calibration. MGC includes an earlier plate solve and SPFC prerequisite."),
       new WorkflowStep("plateSolve", "2. Plate solve if needed",
          ["plateSolve"], "plateSolve",
          "Uses metadata-derived seed values and skips images that are already solved."),
@@ -993,10 +1070,21 @@ PreflightValidator.prototype.validate = function()
    var plateSolveRow = this.dialog.rowsById.plateSolve;
    var spccRow = this.dialog.rowsById.colorCalibration;
    var alreadySolved = imageHasAstrometricSolution(window);
-   if (plateSolveRow.enabled.checked && !alreadySolved && !plateSolveSettings.complete())
+   var mgcSelected = usesMGC(this.dialog.rowsById);
+   if (mgcSelected && !alreadySolved && !adapters.plateSolve.available())
+      result.errors.push("MGC: " + adapters.plateSolve.requirement());
+   if ((plateSolveRow.enabled.checked || mgcSelected) && !alreadySolved && !plateSolveSettings.complete())
       result.errors.push("Plate Solve if needed: " + adapters.plateSolve.requirement());
-   if (spccRow.enabled.checked && !alreadySolved && !plateSolveRow.enabled.checked)
+   if (spccRow.enabled.checked && !alreadySolved && !plateSolveRow.enabled.checked && !mgcSelected)
       result.errors.push("SPCC requires an astrometric solution. Enable Plate Solve if needed or solve the image first.");
+   if (mgcSelected)
+   {
+      if (WORKFLOW_PROFILES[this.dialog.imageType.currentItem].id === "emissionMapped")
+         result.errors.push("MGC is not supported on arbitrary mapped narrowband color palettes. Select GradientCorrection or GraXpert for this profile.");
+      result.warnings.push("MGC runs Plate Solve if needed before SPFC and gradient correction, even if the separate plate-solve checkbox is off. " +
+         "Confirm matching SPFC filter/QE curves and MARS filters, installed Gaia/MARS data, and suitable sky coverage. " +
+         "Catalog coverage and preprocessing provenance are checked by the native processes during execution, not certified by this preflight.");
+   }
 
    var separationEnabled = this.dialog.rowsById.starSeparation.enabled.checked;
    if (this.dialog.noisePlacement.currentItem === 1 &&
@@ -1199,11 +1287,11 @@ function WorkflowRow(parent, step)
    this.status.minWidth = 110;
    this.status.textAlignment = TextAlignment.Right | TextAlignment.VertCenter;
    this.setup = null;
-   if (step.id === "plateSolve")
+   if (step.id === "plateSolve" || step.id === "gradient")
    {
       this.setup = new PushButton(parent);
       this.setup.text = "Setup...";
-      this.setup.toolTip = "Review metadata-derived ImageSolver seed values.";
+      this.setup.toolTip = step.id === "gradient" ? "MGC setup instructions and plate-solving seed values." : "Review metadata-derived ImageSolver seed values.";
    }
    this.adapterId = function() { return this.step.adapterIds[this.choice.currentItem]; };
    this.setVisible = function(visible)
@@ -1220,6 +1308,8 @@ function WorkflowRow(parent, step)
    };
    this.refreshStatus = function()
    {
+      if (this.step.id === "gradient")
+         this.setup.enabled = this.enabled.checked && this.adapterId() === "mgc";
       if (!this.enabled.checked)
       {
          this.status.text = this.step.id === "crop" ? "Optional" : "Skipped";
@@ -1231,11 +1321,17 @@ function WorkflowRow(parent, step)
       else if (this.step.id === "plateSolve")
          this.status.text = adapters.plateSolve.available() && plateSolveSettings.complete()
             ? "Ready" : "Setup needed";
+      else if (this.adapterId() === "mgc" && !imageHasAstrometricSolution(ImageWindow.activeWindow) &&
+               (!adapters.plateSolve.available() || !plateSolveSettings.complete()))
+         this.status.text = "Setup needed";
       else
          this.status.text = adapters[this.adapterId()].available() ? "Available" : "Setup needed";
       this.status.toolTip = this.status.text === "Setup needed"
          ? adapters[this.adapterId()].requirement()
          : "The selected process is ready for preflight validation.";
+      if (this.adapterId() === "mgc" && this.status.text === "Setup needed" &&
+          adapters.mgc.available())
+         this.status.toolTip = "MGC needs an astrometric solution. Click gradient Setup... to provide plate-solving coordinates and image scale.";
    };
    this.sizer = new HorizontalSizer;
    this.sizer.spacing = 8;
@@ -1258,6 +1354,12 @@ function WorkflowRow(parent, step)
       {
          try
          {
+            if (self.step.id === "gradient")
+               (new MessageBox("MGC setup:\n\n1. Configure SpectrophotometricFluxCalibration for your camera/QE, filters, and Gaia catalog; save its process icon as CCDASTRO_SPFC.\n\n" +
+                  "2. Configure MultiscaleGradientCorrection with installed MARS data and matching filters; save its process icon as CCDASTRO_MGC.\n\n" +
+                  "3. Confirm suitable MARS coverage and test both processes on a copy of the linear master. Mapped narrowband palettes are not supported.\n\n" +
+                  "The workflow runs Plate Solve if needed > SPFC > MGC. SPCC remains separate. The next dialog configures plate solving.",
+                  "MGC Setup", StdIcon.Information, StdButton.Ok)).execute();
             (new PlateSolveSetupDialog(plateSolveSettings)).execute();
             self.refreshStatus();
          }
@@ -1661,7 +1763,7 @@ constructor()
          var view = ImageWindow.activeWindow.currentView;
          clearDisplaySTF(view);
          checkAbortRequested();
-         var linearOrder = ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
+         var linearOrder = linearStageOrder(self.rowsById);
          for (var i = 0; i < linearOrder.length; ++i)
          {
             var linearRow = self.rowsById[linearOrder[i]];

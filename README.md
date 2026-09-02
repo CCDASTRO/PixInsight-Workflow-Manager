@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.0.0
+# CCDASTRO PixInsight Workflow Manager v1.1.0
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -15,6 +15,8 @@ the required order.
 
 ## Revision history
 
+- **v1.1.0:** Adds MGC as an optional gradient method, with automatic prerequisite
+  plate solving and configured SPFC/MGC process icons, setup guidance, and preflight checks.
 - **v1.0.0:** First stable public release. Promotes the fully tested,
   profile-driven color-master workflow, executable adapters, preflight checks,
   branch processing, recombination, and Update Manager distribution.
@@ -44,7 +46,7 @@ the required order.
   separation.
 - Optional **Plate Solve if needed** step before SPCC, with a dedicated setup
   dialog and automatic seed-value extraction from FITS/XISF metadata (approximate information ImageSolver needs to begin matching the image against a star catalog).
-- GradientCorrection or GraXpert.
+- GradientCorrection, GraXpert, or MultiscaleGradientCorrection with SPFC.
 - BlurXTerminator or SyQon Parallax.
 - NoiseXTerminator or SyQon Prism/DeepPrism.
 - StarXTerminator, StarNet2, or SyQon Starless.
@@ -93,6 +95,54 @@ The default General Color Image order is:
 7. NoiseXTerminator or SyQon Prism on the starless branch
 8. Linear-add PixelMath recombination
 9. One linked automatic histogram stretch on the recombined image
+
+## MultiscaleGradientCorrection (MGC)
+
+Version 1.1.0 adds **MultiscaleGradientCorrection (SPFC + MGC)** to the
+Gradient correction dropdown. GradientCorrection remains the default; GraXpert
+is still available. MGC is an alternative, not a guaranteed improvement on every
+image, and does not replace SPCC color calibration.
+
+When MGC is enabled, the order is **Plate Solve if needed → SPFC → MGC → SPCC**
+(if SPCC is enabled), followed by the selected deblur and branch-processing
+stages. The prerequisite solve runs even when the separate plate-solve checkbox
+is off, and is skipped if valid astrometry already exists. SPFC runs afresh on
+the current linear master; there is no automatic fallback to another gradient tool.
+
+### MGC setup
+
+1. Open **SpectrophotometricFluxCalibration**. Select the appropriate camera/QE
+   and filter transmission settings and configure its Gaia spectrophotometric
+   catalog. Drag a configured process instance to the workspace and rename it
+   exactly `CCDASTRO_SPFC`.
+2. Open **MultiscaleGradientCorrection**. Configure the installed MARS database,
+   suitable reference filters, and gradient settings. Use MARS database mode,
+   not a reference-image or database-management command. Save its process icon
+   as `CCDASTRO_MGC`.
+3. Test both native processes on a copy of the solved, linear master. Confirm
+   the target lies within usable MARS coverage and that its preprocessing
+   metadata and filter information meet SPFC requirements.
+4. Select MGC in the manager. Click the gradient row's **Setup...** button for
+   guidance and plate-solving seed values, then run **Validate**.
+5. Keep both icons loaded in the workspace. Save them as a process-icon file
+   for reuse; the manager remembers the choice, not the icons themselves.
+
+Preflight checks the installed processes, exact icon names/types, MARS mode,
+and astrometry or solver setup. It cannot certify catalog contents, sky coverage,
+filter suitability, or preprocessing provenance: the native processes perform
+those checks at execution. Errors stop the workflow; they do not trigger a
+second correction on a partially processed image. Inspect the Process Console
+and restart from an appropriate saved master when retrying.
+
+The mapped narrowband color profile blocks MGC because arbitrary palette
+combinations do not necessarily correspond to physical MARS passbands. Use
+GradientCorrection or GraXpert there. Selecting Custom does not make a mapped
+image physically suitable for MGC.
+
+**MGC says Setup needed:** confirm both icons above are loaded and contain the
+correct native processes. If the image is unsolved, review the gradient
+**Setup...** dialog for coordinates and image scale.
+
 
 ## Configure optional cropping
 
@@ -313,8 +363,8 @@ stars-only diagnostic view.
 
 - `CCDASTROWorkflowManager.js` - installable PJSR script.
 - `CCDASTROWorkflowManager.xsgn` - certified signature generated for the final release script.
-- `workflows/color-master-v1.0.0.json` - version 3 profile-aware workflow definition.
-- `workflows/color-master-v1.0.0.schema.json` - JSON Schema.
+- `workflows/color-master-v1.1.0.json` - version 3 profile-aware workflow definition.
+- `workflows/color-master-v1.1.0.schema.json` - JSON Schema.
 - `tools/validate-workflow.js` - dependency-free structure/order validator.
 
 Developers with Node.js can validate the supplied workflow with:

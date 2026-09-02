@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-1.0.0.zip" sha1="39eb3915da3c42a7d673990e8265e06848ef41b1" type="script" releaseDate="20260902">
-         <title>CCDASTRO Workflow Manager 1.0.0</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.0.zip" sha1="10b990ffff644e49bc64a781506dd486d1734838" type="script" releaseDate="20260902">
+         <title>CCDASTRO Workflow Manager 1.1.0</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v1.1.0 adds optional MGC with prerequisite plate solving, SPFC, configured process icons, and preflight checks</li>
                <li>v1.0.0 is the first stable public release after successful end-to-end workflow and Update Manager testing</li>
                <li>v0.6.3 keeps the dialog size stable when sections are toggled and uses a larger adaptive minimum height</li>
                <li>v0.6.2 makes the workflow dialog resizable with collapsible sections and vertical scrolling for smaller displays</li>
@@ -52,4 +53,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-09-02T11:47:39.138Z" encoding="Base64">p6lek6NHdeoGC+4+kVHJM0fzZpCXE9vEMqm8YrvUJQy5r19t28Ic9mIDnMbrckHU+iFYhfn9cHp0+thMSPJ6CA==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-09-02T16:34:27.188Z" encoding="Base64">ykUV/xuPyLm3nF2MrFVmPbdlPPayn4dwB4lGhS0CpE3/dirrGQeaRYvLkQtqvG1KNCogISCAWpqBSu3sjdklDw==</Signature>

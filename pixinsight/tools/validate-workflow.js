@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 const workflowPath = process.argv[2] ||
-  path.join(__dirname, "..", "workflows", "color-master-v1.0.0.json");
+  path.join(__dirname, "..", "workflows", "color-master-v1.1.0.json");
 const workflow = JSON.parse(fs.readFileSync(workflowPath, "utf8"));
 const errors = [];
 
@@ -66,6 +66,19 @@ requireValue(profileIds.has(workflow.defaultProfile),
   "defaultProfile must identify a declared profile");
 
 const requiredOrder = ["gradient", "plateSolve", "colorCalibration"];
+const gradient = byId.get("gradient");
+if (gradient && gradient.adapters.some(adapter => adapter.id === "mgc")) {
+  const config = gradient.parameters && gradient.parameters.mgc;
+  requireValue(!!config, "MGC requires its composite configuration");
+  if (config) {
+    requireValue(JSON.stringify(config.sequence) === JSON.stringify(["plateSolveIfNeeded", "spfc", "mgc"]),
+      "MGC must run plate solving before SPFC before MGC");
+    requireValue(config.spfcIconId === "CCDASTRO_SPFC" && config.mgcIconId === "CCDASTRO_MGC",
+      "MGC icon names must match the executable adapter");
+    requireValue(config.skipSeparatePlateSolveStep === true && config.onFailure === "stop",
+      "MGC must skip the redundant solve and stop on failure");
+  }
+}
 for (let i = 0; i < requiredOrder.length; ++i) {
   requireValue(byId.has(requiredOrder[i]), `missing required workflow step: ${requiredOrder[i]}`);
   if (i > 0 && byId.has(requiredOrder[i - 1]) && byId.has(requiredOrder[i]))

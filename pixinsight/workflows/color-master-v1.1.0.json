@@ -1,8 +1,8 @@
 {
-  "$schema": "./color-master-v1.0.0.schema.json",
+  "$schema": "./color-master-v1.1.0.schema.json",
   "schemaVersion": 3,
-  "id": "color-master-v1.0.0",
-  "name": "Integrated Color Master Workflow v1.0.0",
+  "id": "color-master-v1.1.0",
+  "name": "Integrated Color Master Workflow v1.1.0",
   "description": "Profile-driven post-integration workflow for any integrated linear color master.",
   "defaultProfile": "generalColor",
   "profiles": [
@@ -43,12 +43,23 @@
       "selectedAdapter": "gradientCorrection",
       "adapters": [
         { "id": "gradientCorrection", "kind": "process", "processClass": "GradientCorrection" },
-        { "id": "graxpert", "kind": "process", "processClass": "GraXpert" }
+        { "id": "graxpert", "kind": "process", "processClass": "GraXpert" },
+        { "id": "mgc", "kind": "internal" }
       ],
       "requires": ["linear", "rgb"],
       "mustFollow": ["crop"],
       "mustPrecede": ["plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
-      "parameters": {}
+      "parameters": {
+        "mgc": {
+          "sequence": ["plateSolveIfNeeded", "spfc", "mgc"],
+          "spfcIconId": "CCDASTRO_SPFC",
+          "mgcIconId": "CCDASTRO_MGC",
+          "skipSeparatePlateSolveStep": true,
+          "requires": ["astrometricSolution", "GaiaSpectrophotometricCatalog", "MARSDatabase", "matchingFilters"],
+          "unsupportedProfiles": ["emissionMapped"],
+          "onFailure": "stop"
+        }
+      }
     },
     {
       "id": "plateSolve",

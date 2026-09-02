@@ -24,7 +24,7 @@ the required order.
 - **v0.6.0:** Adds object/image-type profiles with tailored workflows for color
   masters, emission nebulae, mapped narrowband images, galaxies, and star clusters.
 
-## v0.6.0 capabilities
+## Capabilities
 
 - An **Object / image type** dropdown that presents only the recommended stages
   for General Color Image, Broadband Color Emission Nebula, Mapped Narrowband

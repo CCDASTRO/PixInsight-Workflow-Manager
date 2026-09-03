@@ -3,6 +3,42 @@
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
+## Install with PixInsight Update Manager
+
+**Start here — recommended installation. No ZIP download or manual file copying
+is needed.** Add the repository below inside PixInsight; its Update Manager
+downloads and installs the package for you.
+
+1. In **PixInsight**, choose **Resources > Updates > Manage Repositories**.
+2. Click **Add** and paste this entire repository URL, including the final slash:
+
+   ```text
+   https://raw.githubusercontent.com/CCDASTRO/PixInsight-Workflow-Manager/main/updates/
+   ```
+
+3. Confirm the entry and close Manage Repositories, then choose
+   **Resources > Updates > Check for Updates**.
+4. Select the CCDASTRO Workflow Manager package and download the update.
+5. Exit PixInsight so its updater can install the downloaded package, then restart.
+6. Open **Script > CCDASTRO > Workflow Manager**.
+
+**Where does this URL go?** Paste it into PixInsight's **Manage Repositories**,
+not your browser's address bar. It is an update repository address, not a
+download webpage. Do not substitute the GitHub project page, a Releases page,
+or a ZIP-file link.
+
+**Already downloaded a ZIP from GitHub Releases?** You do not need to extract
+or run it for the recommended installation. Follow the steps above instead.
+The release downloads are not the normal installation route for users.
+
+**Future updates:** keep this repository entry in PixInsight and use
+**Check for Updates**. You do not need to download a new ZIP for each release.
+
+If the `CCDASTRO` menu is missing after the first installation, open
+**Script > Feature Scripts**, click **Add**, and select PixInsight's installed
+`src/scripts` directory. This forces PixInsight to scan and register newly
+installed script folders. Restart PixInsight after the scan.
+
 ## Workflow Manager interface
 
 Select the processing steps with the checkboxes, choose the desired tool for
@@ -115,10 +151,14 @@ the current linear master; there is no automatic fallback to another gradient to
    and filter transmission settings and configure its Gaia spectrophotometric
    catalog. Drag a configured process instance to the workspace and rename it
    exactly `CCDASTRO_SPFC`.
-2. Open **MultiscaleGradientCorrection**. Configure the installed MARS database,
-   suitable reference filters, and gradient settings. Use MARS database mode,
-   not a reference-image or database-management command. Save its process icon
-   as `CCDASTRO_MGC`.
+2. Open **MultiscaleGradientCorrection**. **Set up the MARS database file
+   locations before creating or saving the process icon.** Add your installed
+   MARS database files, choose suitable reference filters, and configure the
+   gradient settings. Use MARS database mode, not a reference-image or
+   database-management command. Only then drag the configured process's
+   **New Instance** triangle onto the workspace and rename the icon exactly
+   `CCDASTRO_MGC`. This captures the MARS locations and other process settings
+   for the workflow to reuse.
 3. Test both native processes on a copy of the solved, linear master. Confirm
    the target lies within usable MARS coverage and that its preprocessing
    metadata and filter information meet SPFC requirements.
@@ -126,6 +166,12 @@ the current linear master; there is no automatic fallback to another gradient to
    guidance and plate-solving seed values, then run **Validate**.
 5. Keep both icons loaded in the workspace. Save them as a process-icon file
    for reuse; the manager remembers the choice, not the icons themselves.
+
+**Already created the MGC icon, or moved the MARS files?** Open the saved
+`CCDASTRO_MGC` instance, correct its database locations, then update or replace
+that workspace icon and save your process-icon file again. Changing settings
+in a separate MGC instance does not update the existing saved icon. Reload the
+saved icon and confirm its MARS locations before running the workflow.
 
 Preflight checks the installed processes, exact icon names/types, MARS mode,
 and astrometry or solver setup. It cannot certify catalog contents, sky coverage,
@@ -216,26 +262,10 @@ must create a valid astrometric solution before SPCC can run. Approximate
 coordinates must be reasonably close to the image center; the setup dialog is
 not a blind-solve service.
 
-## Install with PixInsight Update Manager
+## Install manually as a Feature Script (advanced alternative)
 
-1. Choose **Resources > Updates > Manage Repositories**.
-2. Click **Add** and enter:
-
-   ```text
-   https://raw.githubusercontent.com/CCDASTRO/PixInsight-Workflow-Manager/main/updates/
-   ```
-
-3. Choose **Resources > Updates > Check for Updates**.
-4. Install the CCDASTRO package.
-5. Exit PixInsight so its updater can apply the package, then restart.
-6. Open **Script > CCDASTRO > Workflow Manager**.
-
-If the `CCDASTRO` menu is missing after the first installation, open
-**Script > Feature Scripts**, click **Add**, and select PixInsight's installed
-`src/scripts` directory. This forces PixInsight to scan and register newly
-installed script folders. Restart PixInsight after the scan.
-
-## Install manually as a Feature Script
+Most users should use **Install with PixInsight Update Manager** at the top of
+this page. Manual installation is an alternative, not an additional required step.
 
 1. Download or clone this repository.
 2. Locate PixInsight's installed `src/scripts` directory.

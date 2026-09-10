@@ -369,13 +369,55 @@ first failed stage.
 
 ## Final stretch and color balance
 
+### Which should I choose?
+
+**For a natural-looking SPCC-calibrated broadband image, start with Linked Auto
+Histogram.** It applies the same curve to red, green, and blue rather than
+independently rebalancing channels after color calibration. This is a useful
+default, not a guarantee of exact color preservation: a common nonlinear curve
+can still change channel ratios and saturation.
+
+| Situation | Useful choice | Reason |
+| --- | --- | --- |
+| SPCC-calibrated broadband color image | Linked Auto Histogram | Avoids separate automatic adjustments to the calibrated RGB channels. |
+| Inspecting an uncalibrated image with a strong camera or filter cast | Unlinked **display STF** | Helps reveal faint detail without permanently changing the pixels. |
+| Mapped narrowband image | Unlinked stretch, when needed | Allows deliberate balancing of emission structures assigned to different color channels; the mapping is not a natural broadband color representation. |
+| Deliberately changing the color balance for an artistic result | Unlinked stretch | Provides independent channel adjustment; judge the resulting colors intentionally. |
+
+**Display STF and the workflow's final histogram stretch are different.** An
+unlinked ScreenTransferFunction (STF) changes only the screen preview. The
+workflow's **Unlinked Auto Histogram** changes the image pixels and is saved
+with the processed image. An attractive unlinked preview does not establish that
+its color balance is physically accurate. Unlinked stretching is not a substitute
+for background correction or color calibration.
+
+### Why can unlinked look greener?
+
 **Unlinked Auto Histogram can change the color balance established by SPCC.**
 It calculates a separate stretch for each RGB channel. Identical color-calibration
 settings therefore do not guarantee matching final colors: different processing
 tools can change the image statistics used to calculate those stretches.
 
 Linked Auto Histogram applies a common stretch to the RGB channels and avoids
-this independent channel adjustment. For a fair RC-Astro versus SyQon comparison,
+this independent channel adjustment. A stronger green appearance after an
+unlinked stretch can reflect that adjustment rather than an overall green excess
+in the calibrated image. Green-channel signal contributes real information to
+the image; a visible green cast is not, by itself, evidence of the object's true
+color. Similar channel medians alone also cannot certify accurate colors or rule
+out genuine green/cyan features in particular regions.
+
+### Does linked remove or clip green?
+
+**Linked stretching does not selectively remove green.** Less visible green does
+not, by itself, mean green data was lost. However, both automatic histogram
+options calculate a black point: values below that threshold can be clipped to
+black. Linked uses a common threshold; unlinked calculates one for each channel.
+Neither choice guarantees zero clipping. Inspect channel histograms and compare
+with the linear image when evaluating possible signal loss.
+
+### Comparing different processing tools
+
+For a fair RC-Astro versus SyQon comparison,
 compare results before the final stretch, reset the display STF, and apply the
 **same linked stretch parameters** to both images. Calculating an automatic
 stretch separately for each image can still produce different parameters.

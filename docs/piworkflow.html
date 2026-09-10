@@ -527,12 +527,70 @@ that control is shown.</li>
 <p>Progress is written to the PixInsight Process Console. Execution stops at the
 first failed stage.</p>
 <h2 id="final-stretch-and-color-balance">Final stretch and color balance</h2>
+<h3 id="which-should-i-choose">Which should I choose?</h3>
+<p><strong>For a natural-looking SPCC-calibrated broadband image, start with Linked Auto
+Histogram.</strong> It applies the same curve to red, green, and blue rather than
+independently rebalancing channels after color calibration. This is a useful
+default, not a guarantee of exact color preservation: a common nonlinear curve
+can still change channel ratios and saturation.</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Useful choice</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SPCC-calibrated broadband color image</td>
+<td>Linked Auto Histogram</td>
+<td>Avoids separate automatic adjustments to the calibrated RGB channels.</td>
+</tr>
+<tr>
+<td>Inspecting an uncalibrated image with a strong camera or filter cast</td>
+<td>Unlinked <strong>display STF</strong></td>
+<td>Helps reveal faint detail without permanently changing the pixels.</td>
+</tr>
+<tr>
+<td>Mapped narrowband image</td>
+<td>Unlinked stretch, when needed</td>
+<td>Allows deliberate balancing of emission structures assigned to different color channels; the mapping is not a natural broadband color representation.</td>
+</tr>
+<tr>
+<td>Deliberately changing the color balance for an artistic result</td>
+<td>Unlinked stretch</td>
+<td>Provides independent channel adjustment; judge the resulting colors intentionally.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Display STF and the workflow's final histogram stretch are different.</strong> An
+unlinked ScreenTransferFunction (STF) changes only the screen preview. The
+workflow's <strong>Unlinked Auto Histogram</strong> changes the image pixels and is saved
+with the processed image. An attractive unlinked preview does not establish that
+its color balance is physically accurate. Unlinked stretching is not a substitute
+for background correction or color calibration.</p>
+<h3 id="why-can-unlinked-look-greener">Why can unlinked look greener?</h3>
 <p><strong>Unlinked Auto Histogram can change the color balance established by SPCC.</strong>
 It calculates a separate stretch for each RGB channel. Identical color-calibration
 settings therefore do not guarantee matching final colors: different processing
 tools can change the image statistics used to calculate those stretches.</p>
 <p>Linked Auto Histogram applies a common stretch to the RGB channels and avoids
-this independent channel adjustment. For a fair RC-Astro versus SyQon comparison,
+this independent channel adjustment. A stronger green appearance after an
+unlinked stretch can reflect that adjustment rather than an overall green excess
+in the calibrated image. Green-channel signal contributes real information to
+the image; a visible green cast is not, by itself, evidence of the object's true
+color. Similar channel medians alone also cannot certify accurate colors or rule
+out genuine green/cyan features in particular regions.</p>
+<h3 id="does-linked-remove-or-clip-green">Does linked remove or clip green?</h3>
+<p><strong>Linked stretching does not selectively remove green.</strong> Less visible green does
+not, by itself, mean green data was lost. However, both automatic histogram
+options calculate a black point: values below that threshold can be clipped to
+black. Linked uses a common threshold; unlinked calculates one for each channel.
+Neither choice guarantees zero clipping. Inspect channel histograms and compare
+with the linear image when evaluating possible signal loss.</p>
+<h3 id="comparing-different-processing-tools">Comparing different processing tools</h3>
+<p>For a fair RC-Astro versus SyQon comparison,
 compare results before the final stretch, reset the display STF, and apply the
 <strong>same linked stretch parameters</strong> to both images. Calculating an automatic
 stretch separately for each image can still produce different parameters.</p>

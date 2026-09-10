@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.0
+# CCDASTRO PixInsight Workflow Manager v1.1.1
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -51,6 +51,11 @@ the required order.
 
 ## Revision history
 
+- **v1.1.1:** Fixes recursive SyQon script execution while preserving configured
+  process-icon settings. Runs processing outside the workflow setup dialog so
+  the Process Console remains accessible. Documents the manual Starless step:
+  click **Generate Starless**, monitor the **Process Console** for completion,
+  then close the Starless window so the workflow can import the result and continue.
 - **v1.1.0:** Adds MGC as an optional gradient method, with automatic prerequisite
   plate solving and configured SPFC/MGC process icons, setup guidance, and preflight checks.
 - **v1.0.0:** First stable public release. Promotes the fully tested,
@@ -285,8 +290,13 @@ for a manual Feature Scripts installation.
 
 SyQon's PixInsight integrations are instantiable scripts that manage external
 applications, model files, licenses, temporary files, and output import. The
-workflow manager executes configured process icons so those vendor settings are
-preserved.
+workflow manager reads the configured process icons and calls the locally
+installed SyQon processing functions in an isolated scope. This preserves vendor
+settings and progress dialogs without recursively executing a Script instance,
+which PixInsight does not support. The vendor files are not modified or bundled.
+
+Supported script versions are Parallax v1.5, Prism v1.5, and Starless v3.0.2.
+Validation rejects other versions or missing scripts before image processing.
 
 Create these exact process-icon names only for the SyQon tools you plan to use:
 
@@ -301,14 +311,25 @@ For each SyQon tool:
 1. Install and configure the SyQon application and its PixInsight integration.
 2. Open the SyQon script from **Script > SyQon**.
 3. Select the executable, model, and desired conservative settings.
-4. Disable the SyQon interactive dialog option when available so the icon can
-   run unattended.
+4. Disable the SyQon settings dialog option when available. This does not remove
+   the manual interaction required by the Starless application described below.
 5. Drag the script's New Instance triangle to the PixInsight workspace.
 6. Rename the icon to the exact name in the table above.
 
-For `CCDASTRO_Starless`, enable stars-only generation using **Subtraction**.
-Linear inputs should not use Unscreen. The manager verifies that a stars-only
-view was created before continuing.
+The workflow uses **Subtraction** for Starless stars-only generation on its
+linear input and verifies that a stars-only view was created before continuing.
+**SyQon Starless requires manual interaction; this stage cannot run unattended.**
+With the Starless v3.0.2 integration, the workflow waits while the Starless
+application window is open. Click **Generate Starless** and monitor PixInsight's
+**Process Console** for processing completion, rather than relying on the
+Starless window to announce it. Once processing has finished, close the Starless
+window. Only then can the workflow import the
+result and continue. Waiting at this step does not mean PixInsight is frozen.
+Cancellation, timeout, or an output import error stops the workflow.
+
+The workflow configuration dialog closes during processing so the Process
+Console and native progress windows remain accessible, including during GraXpert.
+The configuration dialog returns after completion or failure.
 
 ## Run a workflow
 
@@ -384,6 +405,8 @@ stars-only diagnostic view.
 - Native process adapters use conservative defaults. Unrecognized optional
   third-party parameters retain the installed process defaults.
 - SyQon choices require correctly named process icons and vendor-side setup.
+- SyQon Starless requires a manual **Generate Starless** click and closing its
+  window after processing; workflows using this stage are not fully unattended.
 - If a third-party star-removal tool produces multiple auxiliary views with
   ambiguous names, the manager stops rather than guessing which is stars-only.
 - Exportable user presets, GHS adapters, checkpoints, and target-specific JSON imports

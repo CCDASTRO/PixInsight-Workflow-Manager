@@ -5,11 +5,13 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-1.1.0.zip" sha1="10b990ffff644e49bc64a781506dd486d1734838" type="script" releaseDate="20260902">
-         <title>CCDASTRO Workflow Manager 1.1.0</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.1.zip" sha1="77c78a854e894f29ae30a772e5b385307dadf604" type="script" releaseDate="20260910">
+         <title>CCDASTRO Workflow Manager 1.1.1</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v1.1.1 fixes recursive SyQon execution and keeps the Process Console accessible during processing</li>
+               <li>SyQon Starless requires clicking Generate Starless, monitoring the Process Console for completion, and closing its window before the workflow continues</li>
                <li>v1.1.0 adds optional MGC with prerequisite plate solving, SPFC, configured process icons, and preflight checks</li>
                <li>v1.0.0 is the first stable public release after successful end-to-end workflow and Update Manager testing</li>
                <li>v0.6.3 keeps the dialog size stable when sections are toggled and uses a larger adaptive minimum height</li>
@@ -53,4 +55,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-09-02T16:34:27.188Z" encoding="Base64">ykUV/xuPyLm3nF2MrFVmPbdlPPayn4dwB4lGhS0CpE3/dirrGQeaRYvLkQtqvG1KNCogISCAWpqBSu3sjdklDw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-09-10T01:37:33.173Z" encoding="Base64">BBq34hAXj0Zqt8Jh0StE7srDK7MffiWRf0RRyDVoXnhOyft8rdNhP9ln6OwSbwqdU3nS9W0aN+L3/y1W9FCICQ==</Signature>

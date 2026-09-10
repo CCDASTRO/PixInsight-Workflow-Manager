@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.0"
+#define VERSION "1.1.1"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -392,7 +392,9 @@ PlateSolveAdapter.prototype.execute = function(view)
 
 function logLine(text)
 {
+   Console.show();
    Console.writeln("<end><cbr><b>[CCDASTRO]</b> " + text);
+   Console.flush();
 }
 
 function propertyExists(object, name)
@@ -488,10 +490,107 @@ ProcessIconAdapter.prototype.execute = function(view)
    var process = ProcessInstance.fromIcon(this.iconId);
    if (process === null)
       throw new Error("Could not load process icon " + this.iconId + ".");
-   logLine("Running " + this.label + " process icon on " + view.fullId);
-   if (!process.executeOn(view))
-      throw new Error(this.label + " did not complete successfully.");
+   executeSyQonEngine(this.id, process, view);
 };
+
+ProcessIconAdapter.prototype.validateSetup = function(view)
+{
+   prepareSyQonEngine(this.id, ProcessInstance.fromIcon(this.iconId), view);
+};
+
+// Script.executeOn() cannot be nested inside a running PixInsight script.
+// Load the locally installed vendor implementation in its own function scope,
+// without calling its main() or changing the workflow's global Parameters.
+// Do not redistribute or modify the installed SyQon source files.
+function syqonEngineDefinition(id)
+{
+   var definitions = {
+      syqonParallax: { name: "Parallax", version: "v1.5" },
+      syqonPrism: { name: "Prism", version: "v1.5" },
+      syqonStarless: { name: "Starless", version: "v3.0.2" }
+   };
+   if (!definitions[id])
+      throw new Error("Unsupported SyQon adapter: " + id);
+   return definitions[id];
+}
+
+function syqonParameterBridge(rows, view)
+{
+   if (!Array.isArray(rows))
+      throw new Error("The SyQon icon has no Script parameter table. Recreate the icon from SyQon.");
+   var values = Object.create(null);
+   for (var i = 0; i < rows.length; ++i)
+      values[rows[i][0]] = rows[i][1];
+   return {
+      isViewTarget: true, isGlobalTarget: false, targetView: view,
+      has: function(key) { return Object.prototype.hasOwnProperty.call(values, key); },
+      getString: function(key) { return String(values[key]); },
+      getBoolean: function(key) { return values[key] === true || values[key] === "true" || values[key] === "1"; },
+      getInteger: function(key) { return parseInt(values[key], 10); },
+      getReal: function(key) { return Number(values[key]); },
+      set: function(key, value) { values[key] = value; }
+   };
+}
+
+function compileSyQonEngine(source, definition)
+{
+   // Keep the macro name inside strings: PixInsight's preprocessor expands
+   // identifier tokens even inside JavaScript regular-expression literals.
+   var versionDirective = new RegExp('^#define\\s+' + 'VER' + 'SION' +
+      '\\s+"([^"\\r\\n]+)"[^\\r\\n]*', 'm');
+   var version = source.match(versionDirective);
+   if (!version || version[1] !== definition.version)
+      throw new Error("Unsupported SyQon " + definition.name + " script version. " +
+         "Found " + (version ? version[1] : "no version declaration") +
+         "; this integration supports " + definition.version + ".");
+   // Refuse unknown preprocessor constructs rather than silently miscompile them.
+   source = source.replace(/^#(?:engine|feature-id|feature-icon|feature-info)\b[^\r\n]*/gm, "")
+      .replace(versionDirective, "");
+   if (/^\s*#/m.test(source) || !/\bmain\(\);\s*$/.test(source))
+      throw new Error("Unsupported SyQon script layout: " + definition.name);
+   source = source.replace(/\bmain\(\);\s*$/, "");
+   var name = definition.name;
+   // Mark success only after output import (including inverse stretch) returns.
+   // Vendor controllers also set 'completed' on timeout, so it is not sufficient.
+   var bridge = "\nvar imported = false;\n" +
+      "var importOutput = process" + name + "Output;\n" +
+      "process" + name + "Output = function() { " +
+      "var result = importOutput.apply(this, arguments); imported = true; return result; };\n" +
+      "return function(view) {\n" +
+      "SyQon" + name + "Parameters.load();\n" +
+      "SyQon" + name + "Parameters.openDialogBox = false;\n" +
+      (name === "Starless" ? "SyQonStarlessParameters.starsOnlyMode = 'Subtraction';\n" : "") +
+      "execute" + name + "OnWindow(view.window);\n" +
+      "if (!imported) throw new Error('SyQon " + name +
+      " did not import a result (failed, cancelled, or timed out). See the Process Console.');\n" +
+      "};\n";
+   return new Function("Parameters", "VERSION", source + bridge);
+}
+
+function prepareSyQonEngine(id, process, view)
+{
+   if (!process || process.processId() !== "Script")
+      throw new Error("The SyQon icon must be a configured Script instance.");
+   if (!view.isMainView)
+      throw new Error("SyQon workflow stages require a main image view, not a preview.");
+   var definition = syqonEngineDefinition(id);
+   var scriptPath = CoreApplication.srcDirPath + "/scripts/SyQon_" + definition.name + ".js";
+   if (!File.exists(scriptPath))
+      throw new Error("Install the SyQon " + definition.name + " PixInsight script: " + scriptPath);
+   var factory = compileSyQonEngine(File.readTextFile(scriptPath), definition);
+   var parameters = syqonParameterBridge(process.parameters, view);
+   return function() { factory(parameters, definition.version)(view); };
+}
+
+function executeSyQonEngine(id, process, view)
+{
+   var run = prepareSyQonEngine(id, process, view);
+   var definition = syqonEngineDefinition(id);
+   logLine("Running SyQon " + definition.name + " on " + view.fullId +
+      ". Its progress window will remain open while processing.");
+   run();
+   logLine("SyQon " + definition.name + " completed on " + view.fullId);
+}
 
 // A composite gradient adapter: never apply MGC without fresh flux calibration.
 function MGCAdapter()
@@ -1063,6 +1162,9 @@ PreflightValidator.prototype.validate = function()
       if (!adapter || !adapter.available())
          result.errors.push(row.step.label + ": " +
             (adapter ? adapter.requirement() : "Unknown adapter."));
+      else if (typeof adapter.validateSetup === "function")
+         try { adapter.validateSetup(window.currentView); }
+         catch (e) { result.errors.push(row.step.label + ": " + errorMessage(e)); }
    }
    if (!anyEnabled)
       result.errors.push("Select at least one processing step.");
@@ -1755,134 +1857,8 @@ constructor()
 
       saveWorkflowState(self, false);
 
-      Console.show();
-      Console.abortEnabled = true;
-      self.enabled = false;
-      try
-      {
-         var view = ImageWindow.activeWindow.currentView;
-         clearDisplaySTF(view);
-         checkAbortRequested();
-         var linearOrder = linearStageOrder(self.rowsById);
-         for (var i = 0; i < linearOrder.length; ++i)
-         {
-            var linearRow = self.rowsById[linearOrder[i]];
-            if (linearRow.enabled.checked)
-            {
-               checkAbortRequested();
-               adapters[linearRow.adapterId()].execute(view);
-               checkAbortRequested();
-            }
-         }
-
-         var noiseRow = self.rowsById.noiseReduction;
-         var separationRow = self.rowsById.starSeparation;
-         if (noiseRow.enabled.checked && self.noisePlacement.currentItem === 0)
-         {
-            checkAbortRequested();
-            adapters[noiseRow.adapterId()].execute(view);
-            checkAbortRequested();
-         }
-
-         var branches = null;
-         if (separationRow.enabled.checked)
-         {
-            checkAbortRequested();
-            branches = executeStarSeparation(adapters[separationRow.adapterId()], view);
-            checkAbortRequested();
-         }
-
-         if (branches !== null)
-         {
-            if (noiseRow.enabled.checked && self.noisePlacement.currentItem === 1)
-            {
-               checkAbortRequested();
-               adapters[noiseRow.adapterId()].execute(branches.starlessView);
-               checkAbortRequested();
-            }
-            var nonlinear = false;
-            if (self.starlessStretch.currentItem > 0)
-            {
-               checkAbortRequested();
-               clearDisplaySTF(branches.starlessView);
-               applySelectedAutoHistogram(branches.starlessView,
-                  self.starlessStretch.currentItem, 0.18);
-               checkAbortRequested();
-               nonlinear = true;
-            }
-            if (self.starsStretch.currentItem > 0)
-            {
-               checkAbortRequested();
-               clearDisplaySTF(branches.starsView);
-               applySelectedAutoHistogram(branches.starsView,
-                  self.starsStretch.currentItem, 0.08);
-               checkAbortRequested();
-               nonlinear = true;
-            }
-            if (self.recombine.checked)
-            {
-               var starlessReferenceWindow = null;
-               try
-               {
-                  checkAbortRequested();
-                  if (self.starReduction.checked)
-                     starlessReferenceWindow = cloneViewForStarReduction(branches.starlessView);
-                  recombineScreen(branches.starlessView, branches.starsView, nonlinear);
-                  checkAbortRequested();
-                  if (self.finalStretch.currentItem > 0)
-                  {
-                     clearDisplaySTF(branches.starlessView);
-                     applySelectedAutoHistogram(branches.starlessView,
-                        self.finalStretch.currentItem, 0.15);
-                     if (starlessReferenceWindow !== null)
-                     {
-                        clearDisplaySTF(starlessReferenceWindow.mainView);
-                        applySelectedAutoHistogram(starlessReferenceWindow.mainView,
-                           self.finalStretch.currentItem, 0.15);
-                     }
-                     checkAbortRequested();
-                  }
-                  if (self.starReduction.checked)
-                  {
-                     applyBlanshanStarReduction(branches.starlessView,
-                        starlessReferenceWindow.mainView,
-                        self.starReductionIterations.value,
-                        self.starReductionMethod.currentItem + 1);
-                     checkAbortRequested();
-                  }
-               }
-               finally
-               {
-                  if (starlessReferenceWindow !== null && !starlessReferenceWindow.isNull)
-                     starlessReferenceWindow.forceClose();
-               }
-            }
-         }
-         else if (self.finalStretch.currentItem > 0)
-         {
-            checkAbortRequested();
-            clearDisplaySTF(view);
-            applySelectedAutoHistogram(view, self.finalStretch.currentItem, 0.15);
-            checkAbortRequested();
-         }
-
-         self.statusText.text = "Workflow completed successfully.";
-         logLine("Workflow completed successfully.");
-         (new MessageBox("Workflow completed successfully.", TITLE,
-            StdIcon.Information, StdButton.Ok)).execute();
-      }
-      catch (e)
-      {
-         var message = "Workflow stopped: " + errorMessage(e);
-         self.statusText.text = message;
-         Console.criticalln("<end><cbr><b>[CCDASTRO] " + message + "</b>");
-         (new MessageBox(message, TITLE, StdIcon.Error, StdButton.Ok)).execute();
-      }
-      finally
-      {
-         Console.abortEnabled = false;
-         self.enabled = true;
-      }
+      self.runRequested = true;
+      self.ok();
    };
 
    this.closeButton.onClick = function()
@@ -1898,11 +1874,152 @@ constructor()
 }
 }
 
+// Run after the modal configuration dialog has closed so native process
+// progress and the Process Console remain accessible.
+function executeWorkflow(self)
+{
+   Console.show();
+   Console.abortEnabled = true;
+   self.enabled = false;
+   try
+   {
+      var view = ImageWindow.activeWindow.currentView;
+      clearDisplaySTF(view);
+      checkAbortRequested();
+      var linearOrder = linearStageOrder(self.rowsById);
+      for (var i = 0; i < linearOrder.length; ++i)
+      {
+         var linearRow = self.rowsById[linearOrder[i]];
+         if (linearRow.enabled.checked)
+         {
+            checkAbortRequested();
+            adapters[linearRow.adapterId()].execute(view);
+            checkAbortRequested();
+         }
+      }
+
+      var noiseRow = self.rowsById.noiseReduction;
+      var separationRow = self.rowsById.starSeparation;
+      if (noiseRow.enabled.checked && self.noisePlacement.currentItem === 0)
+      {
+         checkAbortRequested();
+         adapters[noiseRow.adapterId()].execute(view);
+         checkAbortRequested();
+      }
+
+      var branches = null;
+      if (separationRow.enabled.checked)
+      {
+         checkAbortRequested();
+         branches = executeStarSeparation(adapters[separationRow.adapterId()], view);
+         checkAbortRequested();
+      }
+
+      if (branches !== null)
+      {
+         if (noiseRow.enabled.checked && self.noisePlacement.currentItem === 1)
+         {
+            checkAbortRequested();
+            adapters[noiseRow.adapterId()].execute(branches.starlessView);
+            checkAbortRequested();
+         }
+         var nonlinear = false;
+         if (self.starlessStretch.currentItem > 0)
+         {
+            checkAbortRequested();
+            clearDisplaySTF(branches.starlessView);
+            applySelectedAutoHistogram(branches.starlessView,
+               self.starlessStretch.currentItem, 0.18);
+            checkAbortRequested();
+            nonlinear = true;
+         }
+         if (self.starsStretch.currentItem > 0)
+         {
+            checkAbortRequested();
+            clearDisplaySTF(branches.starsView);
+            applySelectedAutoHistogram(branches.starsView,
+               self.starsStretch.currentItem, 0.08);
+            checkAbortRequested();
+            nonlinear = true;
+         }
+         if (self.recombine.checked)
+         {
+            var starlessReferenceWindow = null;
+            try
+            {
+               checkAbortRequested();
+               if (self.starReduction.checked)
+                  starlessReferenceWindow = cloneViewForStarReduction(branches.starlessView);
+               recombineScreen(branches.starlessView, branches.starsView, nonlinear);
+               checkAbortRequested();
+               if (self.finalStretch.currentItem > 0)
+               {
+                  clearDisplaySTF(branches.starlessView);
+                  applySelectedAutoHistogram(branches.starlessView,
+                     self.finalStretch.currentItem, 0.15);
+                  if (starlessReferenceWindow !== null)
+                  {
+                     clearDisplaySTF(starlessReferenceWindow.mainView);
+                     applySelectedAutoHistogram(starlessReferenceWindow.mainView,
+                        self.finalStretch.currentItem, 0.15);
+                  }
+                  checkAbortRequested();
+               }
+               if (self.starReduction.checked)
+               {
+                  applyBlanshanStarReduction(branches.starlessView,
+                     starlessReferenceWindow.mainView,
+                     self.starReductionIterations.value,
+                     self.starReductionMethod.currentItem + 1);
+                  checkAbortRequested();
+               }
+            }
+            finally
+            {
+               if (starlessReferenceWindow !== null && !starlessReferenceWindow.isNull)
+                  starlessReferenceWindow.forceClose();
+            }
+         }
+      }
+      else if (self.finalStretch.currentItem > 0)
+      {
+         checkAbortRequested();
+         clearDisplaySTF(view);
+         applySelectedAutoHistogram(view, self.finalStretch.currentItem, 0.15);
+         checkAbortRequested();
+      }
+
+      self.statusText.text = "Workflow completed successfully.";
+      logLine("Workflow completed successfully.");
+      (new MessageBox("Workflow completed successfully.", TITLE,
+         StdIcon.Information, StdButton.Ok)).execute();
+   }
+   catch (e)
+   {
+      var message = "Workflow stopped: " + errorMessage(e);
+      self.statusText.text = message;
+      Console.criticalln("<end><cbr><b>[CCDASTRO] " + message + "</b>");
+      (new MessageBox(message, TITLE, StdIcon.Error, StdButton.Ok)).execute();
+   }
+   finally
+   {
+      Console.abortEnabled = false;
+      self.enabled = true;
+   }
+}
+
 function main()
 {
    Console.hide();
    var dialog = new WorkflowDialog;
-   dialog.execute();
+   for (;;)
+   {
+      dialog.runRequested = false;
+      dialog.execute();
+      if (!dialog.runRequested)
+         break;
+      executeWorkflow(dialog);
+   }
    if (dialog.launchCropRequested)
    {
       try

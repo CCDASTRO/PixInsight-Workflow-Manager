@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $readmePath = Join-Path $repositoryRoot 'README.md'
-$imagePath = Join-Path $repositoryRoot 'docs\images\workflow-manager-v0.6.3.png'
+$imagePath = Join-Path $repositoryRoot 'docs\images\workflow-manager.png'
 $resolvedOutput = Join-Path $repositoryRoot $OutputPath
 
 if (-not (Test-Path -LiteralPath $readmePath -PathType Leaf)) {
@@ -21,7 +21,7 @@ if (-not (Test-Path -LiteralPath $imagePath -PathType Leaf)) {
 $markdown = [System.IO.File]::ReadAllText($readmePath)
 $body = (ConvertFrom-Markdown -InputObject $markdown).Html
 $imageBase64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($imagePath))
-$body = $body.Replace('src="docs/images/workflow-manager-v0.6.3.png"', "src=`"data:image/png;base64,$imageBase64`"")
+$body = $body.Replace('src="docs/images/workflow-manager.png"', "src=`"data:image/png;base64,$imageBase64`"")
 
 $template = @'
 <!doctype html>
@@ -46,7 +46,7 @@ $template = @'
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.0",
+    "softwareVersion": "1.1.1",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -122,6 +122,9 @@ $template = @'
       text-decoration: none; cursor: pointer;
     }
     button:hover, .button:hover { border-color: var(--accent); color: var(--accent); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .copy-controls { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
+    .copy-status { color: var(--muted); font-size: .9rem; }
     .layout {
       width: min(1260px, calc(100% - 2rem)); margin: 2rem auto 4rem;
       display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 2rem; align-items: start;
@@ -163,7 +166,7 @@ $template = @'
       .brand span:last-child { display: none; }
     }
     @media print {
-      .topbar, .toc { display: none; }
+      .topbar, .toc, .copy-controls { display: none; }
       body { background: white; color: black; }
       .layout { display: block; width: 100%; margin: 0; }
       main { border: 0; box-shadow: none; padding: 0; }
@@ -184,23 +187,57 @@ $template = @'
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
 {{BODY}}
-      <footer class="footer">CCDASTRO PixInsight Workflow Manager v1.1.0 · Chuck Faranda / CCDASTRO, Inc.</footer>
+      <footer class="footer">CCDASTRO PixInsight Workflow Manager v1.1.1 · Chuck Faranda / CCDASTRO, Inc.</footer>
     </main>
   </div>
   <script>
     (() => {
       const root = document.documentElement;
       const theme = document.getElementById('theme');
-      const saved = localStorage.getItem('ccdastro-theme');
+      let saved;
+      try { saved = localStorage.getItem('ccdastro-theme'); } catch (_) { /* Storage may be blocked. */ }
       if (saved === 'light') root.dataset.theme = 'light';
       const syncThemeLabel = () => theme.textContent = root.dataset.theme === 'light' ? 'Dark' : 'Light';
       syncThemeLabel();
       theme.addEventListener('click', () => {
         root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
-        localStorage.setItem('ccdastro-theme', root.dataset.theme);
+        try { localStorage.setItem('ccdastro-theme', root.dataset.theme); } catch (_) { /* Keep the session theme. */ }
         syncThemeLabel();
       });
       document.getElementById('print').addEventListener('click', () => window.print());
+
+      const repositoryUrl = 'https://raw.githubusercontent.com/CCDASTRO/PixInsight-Workflow-Manager/main/updates/';
+      const repositoryCode = [...document.querySelectorAll('#content pre code')]
+        .find(code => code.textContent.trim() === repositoryUrl);
+      if (repositoryCode) {
+        const controls = document.createElement('div');
+        controls.className = 'copy-controls';
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.textContent = 'Copy repository URL';
+        const status = document.createElement('span');
+        status.className = 'copy-status';
+        status.setAttribute('role', 'status');
+        controls.append(copy, status);
+        repositoryCode.closest('pre').after(controls);
+        copy.addEventListener('click', async () => {
+          copy.disabled = true;
+          status.textContent = '';
+          try {
+            await navigator.clipboard.writeText(repositoryUrl);
+            status.textContent = 'Copied! Paste into PixInsight > Manage Repositories.';
+          } catch (_) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(repositoryCode);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            status.textContent = 'Automatic copy was blocked. Copy the selected URL with Ctrl+C (Mac: Command+C), or touch and hold it and choose Copy.';
+          } finally {
+            copy.disabled = false;
+          }
+        });
+      }
 
       const headings = [...document.querySelectorAll('#content h2, #content h3')];
       const used = new Set();

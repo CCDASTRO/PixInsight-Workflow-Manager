@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.1.0'
+    [string] $Version = '1.1.1'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +102,8 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v1.1.1 fixes recursive SyQon execution and keeps the Process Console accessible during processing</li>
+          <li>SyQon Starless requires clicking Generate Starless, monitoring the Process Console for completion, and closing its window before the workflow continues</li>
           <li>v1.1.0 adds optional MGC with prerequisite plate solving, SPFC, configured process icons, and preflight checks</li>
           <li>v1.0.0 is the first stable public release after successful end-to-end workflow and Update Manager testing</li>
           <li>v0.6.3 keeps the dialog size stable when sections are toggled and uses a larger adaptive minimum height</li>

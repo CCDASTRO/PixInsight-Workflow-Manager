@@ -3,6 +3,17 @@
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
+## Important: the workflow window hides while processing
+
+> **After you confirm Run Workflow, the Workflow Manager window disappears temporarily. This is normal.**
+>
+> The window is hidden so it does not cover PixInsight's **Process Console** or
+> the processing tools' progress windows. **Follow processing in the Process Console.**
+> The workflow is still running; you do not need to reopen or start it again.
+>
+> **The Workflow Manager window returns automatically after the run finishes or stops with an error.**
+> Dismiss any completion or error message to return to the workflow settings.
+
 ## Install with PixInsight Update Manager
 
 **Start here — recommended installation. No ZIP download or manual file copying
@@ -44,6 +55,9 @@ installed script folders. Restart PixInsight after the scan.
 Select the processing steps with the checkboxes, choose the desired tool for
 each step, and click **Run Workflow**. The manager runs the selected steps in
 the required order.
+
+**During the run, this settings window is hidden to keep the Process Console
+visible. It returns automatically when the run ends.**
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 

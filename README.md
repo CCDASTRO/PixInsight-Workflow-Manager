@@ -367,6 +367,24 @@ The configuration dialog returns after completion or failure.
 Progress is written to the PixInsight Process Console. Execution stops at the
 first failed stage.
 
+## Final stretch and color balance
+
+**Unlinked Auto Histogram can change the color balance established by SPCC.**
+It calculates a separate stretch for each RGB channel. Identical color-calibration
+settings therefore do not guarantee matching final colors: different processing
+tools can change the image statistics used to calculate those stretches.
+
+Linked Auto Histogram applies a common stretch to the RGB channels and avoids
+this independent channel adjustment. For a fair RC-Astro versus SyQon comparison,
+compare results before the final stretch, reset the display STF, and apply the
+**same linked stretch parameters** to both images. Calculating an automatic
+stretch separately for each image can still produce different parameters.
+
+A green or cyan cast in a finished comparison alone does not establish that
+BlurXTerminator caused it. If the difference remains with a matched stretch,
+compare the images immediately after SPCC and after each subsequent stage to
+identify where their color balance diverges.
+
 ## Starless processing behavior
 
 The deblur stage runs on the complete image while stars are present. When star

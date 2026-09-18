@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.0
+# CCDASTRO PixInsight Workflow Manager v1.1.2
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -40,6 +40,10 @@ If the `CCDASTRO` menu is missing after the first installation, open
 installed script folders. Restart PixInsight after the scan.
 
 ## Revision history
+
+- **v1.1.2:** Adds PixInsight 1.9.5 release compatibility, strict package-content checks,
+  and documented passing astrometry, SPFC/MGC, and SPCC runtime tests.
+  RC Astro integration testing remains pending; its modules were unavailable.
 
 - **v1.1.0:** Adds MGC as an optional gradient method, with automatic prerequisite
   plate solving and configured SPFC/MGC process icons, setup guidance, and preflight checks.
@@ -202,7 +206,10 @@ and SPCC requires a plate-solved image.
 
 ## Requirements
 
-- PixInsight 1.9.4 or newer, including the standard ImageSolver script.
+- PixInsight 1.9.4, including the standard ImageSolver script. PixInsight 1.9.5
+  release preparation is documented in [the compatibility checklist](../docs/PIXINSIGHT-1.9.5.md);
+  astrometry, SPFC/MGC, and SPCC passed tests on 1.9.5 build 1702;
+  full workflow and third-party module verification remain pending.
 - An integrated, unstretched color master, preferably 32-bit floating-point
   XISF.
 - For SPCC, either an existing astrometric solution or approximate coordinates

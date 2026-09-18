@@ -2,7 +2,12 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.1.1'
+    [string] $Version = '1.1.2',
+
+    # Explicit release ceiling: do not advertise compatibility with future releases.
+    [Parameter()]
+    [ValidateSet('1.9.4', '1.9.5')]
+    [string] $MaximumPixInsightVersion = '1.9.5'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -37,6 +42,10 @@ if ($workflowVersion -ne $Version) {
 }
 
 if (Test-Path -LiteralPath $stageRoot) {
+    if ([System.IO.Path]::GetFullPath($stageRoot) -ne
+        [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot 'packaging\.stage'))) {
+        throw 'Refusing to remove a staging directory outside packaging/.stage.'
+    }
     Remove-Item -LiteralPath $stageRoot -Recurse -Force
 }
 New-Item -ItemType Directory -Path $stageScriptDirectory -Force | Out-Null
@@ -75,6 +84,14 @@ try {
         'src/scripts/CCDASTRO/CCDASTROWorkflowManager.js',
         'src/scripts/CCDASTRO/CCDASTROWorkflowManager.xsgn'
     )
+    # PixInsight 1.9.5 protects distribution files. Ship only our script and
+    # signature; never bundle ImageSolver, etc, modules, or runtime libraries.
+    $allowedEntries = $requiredEntries + @('src/', 'src/scripts/', 'src/scripts/CCDASTRO/')
+    foreach ($entry in $entries) {
+        if ($allowedEntries -cnotcontains $entry) {
+            throw "Package contains an unexpected or potentially protected path: $entry"
+        }
+    }
     foreach ($requiredEntry in $requiredEntries) {
         if ($entries -notcontains $requiredEntry) {
             throw "Package is missing required entry: $requiredEntry. Found: $($entries -join ', ')"
@@ -96,12 +113,15 @@ $manifest = @"
     <p>CCDASTRO PixInsight Scripts</p>
     <p>Configurable post-processing workflows for integrated color master images.</p>
   </description>
-  <platform os="all" arch="noarch" version="1.9.4:2.0.0">
+  <platform os="all" arch="noarch" version="1.9.4:$MaximumPixInsightVersion">
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v1.1.2 targets PixInsight 1.9.4 through 1.9.5 and enforces a script-only package layout</li>
+          <li>1.9.5 build 1702: plate solving, new astrometric properties, XISF save/reopen, SPFC/MGC, and SPCC tested successfully</li>
+          <li>RC Astro integration testing remains pending; BlurXTerminator, NoiseXTerminator, and StarXTerminator were unavailable in the test installation</li>
           <li>v1.1.1 fixes recursive SyQon execution and keeps the Process Console accessible during processing</li>
           <li>SyQon Starless requires clicking Generate Starless, monitoring the Process Console for completion, and closing its window before the workflow continues</li>
           <li>v1.1.0 adds optional MGC with prerequisite plate solving, SPFC, configured process icons, and preflight checks</li>

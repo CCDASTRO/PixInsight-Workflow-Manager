@@ -4,12 +4,15 @@
       <p>CCDASTRO PixInsight Scripts</p>
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
-   <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-      <package fileName="CCDASTROWorkflowManager-1.1.1.zip" sha1="77c78a854e894f29ae30a772e5b385307dadf604" type="script" releaseDate="20260910">
-         <title>CCDASTRO Workflow Manager 1.1.1</title>
+   <platform os="all" arch="noarch" version="1.9.4:1.9.5">
+      <package fileName="CCDASTROWorkflowManager-1.1.2.zip" sha1="192b28d889693768ffaa9d4af5faff95620ce951" type="script" releaseDate="20260918">
+         <title>CCDASTRO Workflow Manager 1.1.2</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v1.1.2 targets PixInsight 1.9.4 through 1.9.5 and enforces a script-only package layout</li>
+               <li>1.9.5 build 1702: plate solving, new astrometric properties, XISF save/reopen, SPFC/MGC, and SPCC tested successfully</li>
+               <li>RC Astro integration testing remains pending; BlurXTerminator, NoiseXTerminator, and StarXTerminator were unavailable in the test installation</li>
                <li>v1.1.1 fixes recursive SyQon execution and keeps the Process Console accessible during processing</li>
                <li>SyQon Starless requires clicking Generate Starless, monitoring the Process Console for completion, and closing its window before the workflow continues</li>
                <li>v1.1.0 adds optional MGC with prerequisite plate solving, SPFC, configured process icons, and preflight checks</li>
@@ -55,4 +58,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-09-10T01:37:33.173Z" encoding="Base64">BBq34hAXj0Zqt8Jh0StE7srDK7MffiWRf0RRyDVoXnhOyft8rdNhP9ln6OwSbwqdU3nS9W0aN+L3/y1W9FCICQ==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-09-18T12:47:37.415Z" encoding="Base64">I8CWeBS1kVl8+KgDkw25ocO0n6Ot5omq7N9x3TgTEcs1zh/nQzLfx4w9LUHjIE0aGYYZTb39VPsdMzF840eMCg==</Signature>

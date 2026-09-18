@@ -17,13 +17,16 @@ directory to force registration of newly installed script folders.
 The package and `updates.xri` are generated from the repository root with:
 
 ```powershell
-.\packaging\build-pixinsight-package.ps1 -Version 1.1.0
+.\packaging\build-pixinsight-package.ps1 -Version 1.1.2 -MaximumPixInsightVersion 1.9.5
 ```
 
 The builder validates the source version, ZIP layout, SHA-1, XML, release date,
-and UTF-8 encoding without a byte-order mark.
+and UTF-8 encoding without a byte-order mark. It allows only the CCDASTRO
+script, its signature, and their parent directories in the ZIP. The default
+compatibility range ends at 1.9.5, rather than advertising future releases.
+See [the 1.9.5 release checks](../docs/PIXINSIGHT-1.9.5.md) before publishing.
 
-For the v1.1.0 release, use this order:
+For a release with script changes, use this order:
 
 1. Run `./packaging/prepare-codesign.ps1`. This copies PixInsight's installed
    `ImageSolver` dependency into the temporary relative location required by
@@ -32,13 +35,13 @@ For the v1.1.0 release, use this order:
    save the generated signature as
    `pixinsight/CCDASTROWorkflowManager.xsgn`.
 3. Run the package builder shown above. It creates
-   `updates/CCDASTROWorkflowManager-1.1.0.zip`, calculates its SHA-1, and
+   `updates/CCDASTROWorkflowManager-1.1.2.zip`, calculates its SHA-1, and
    regenerates `updates/updates.xri`.
 4. Sign the newly generated `updates/updates.xri` with PixInsight CodeSign.
 5. Commit and publish the script, `.xsgn`, ZIP, and signed manifest together.
 
-A signature created for an earlier script version is not valid for the v1.1.0
-source. The stale v1.0.0 script signature is intentionally removed during
-release preparation.
+A signature created for different script contents is not valid for the current
+source. When only packaging changes, reuse the unchanged script and its valid
+signature, starting at step 3. Re-sign the regenerated manifest in all cases.
 
 CodeSign embeds the repository signature directly in the `.xri` file.

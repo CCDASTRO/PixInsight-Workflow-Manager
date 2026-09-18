@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.1">CCDASTRO PixInsight Workflow Manager v1.1.1</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.2">CCDASTRO PixInsight Workflow Manager v1.1.2</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <h2 id="important-the-workflow-window-hides-while-processing">Important: the workflow window hides while processing</h2>
@@ -216,24 +216,35 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
-<li><strong>v1.1.1:</strong> Fixes recursive SyQon script execution while preserving configured
+<li><p><strong>v1.1.2:</strong> Adds PixInsight 1.9.5 release compatibility, strict package-content checks,
+and documented passing astrometry, SPFC/MGC, and SPCC runtime tests.
+RC Astro integration testing remains pending; its modules were unavailable.</p>
+</li>
+<li><p><strong>v1.1.1:</strong> Fixes recursive SyQon script execution while preserving configured
 process-icon settings. Runs processing outside the workflow setup dialog so
 the Process Console remains accessible. Documents the manual Starless step:
 click <strong>Generate Starless</strong>, monitor the <strong>Process Console</strong> for completion,
-then close the Starless window so the workflow can import the result and continue.</li>
-<li><strong>v1.1.0:</strong> Adds MGC as an optional gradient method, with automatic prerequisite
-plate solving and configured SPFC/MGC process icons, setup guidance, and preflight checks.</li>
-<li><strong>v1.0.0:</strong> First stable public release. Promotes the fully tested,
+then close the Starless window so the workflow can import the result and continue.</p>
+</li>
+<li><p><strong>v1.1.0:</strong> Adds MGC as an optional gradient method, with automatic prerequisite
+plate solving and configured SPFC/MGC process icons, setup guidance, and preflight checks.</p>
+</li>
+<li><p><strong>v1.0.0:</strong> First stable public release. Promotes the fully tested,
 profile-driven color-master workflow, executable adapters, preflight checks,
-branch processing, recombination, and Update Manager distribution.</li>
-<li><strong>v0.6.3:</strong> Prevents section toggles from shrinking the dialog and raises the
-adaptive minimum height while retaining scrolling on smaller displays.</li>
-<li><strong>v0.6.2:</strong> Makes the dialog resizable and adds collapsible, vertically
-scrollable workflow sections for smaller displays and high display scaling.</li>
-<li><strong>v0.6.1:</strong> Adds prominent guidance about linear-master quality and documents
-that users may choose their preferred calibration and integration method.</li>
-<li><strong>v0.6.0:</strong> Adds object/image-type profiles with tailored workflows for color
-masters, emission nebulae, mapped narrowband images, galaxies, and star clusters.</li>
+branch processing, recombination, and Update Manager distribution.</p>
+</li>
+<li><p><strong>v0.6.3:</strong> Prevents section toggles from shrinking the dialog and raises the
+adaptive minimum height while retaining scrolling on smaller displays.</p>
+</li>
+<li><p><strong>v0.6.2:</strong> Makes the dialog resizable and adds collapsible, vertically
+scrollable workflow sections for smaller displays and high display scaling.</p>
+</li>
+<li><p><strong>v0.6.1:</strong> Adds prominent guidance about linear-master quality and documents
+that users may choose their preferred calibration and integration method.</p>
+</li>
+<li><p><strong>v0.6.0:</strong> Adds object/image-type profiles with tailored workflows for color
+masters, emission nebulae, mapped narrowband images, galaxies, and star clusters.</p>
+</li>
 </ul>
 <h2 id="capabilities">Capabilities</h2>
 <ul>
@@ -391,7 +402,10 @@ the linear-image safety confirmation must always be selected again. Click
 and SPCC requires a plate-solved image.</p>
 <h2 id="requirements">Requirements</h2>
 <ul>
-<li>PixInsight 1.9.4 or newer, including the standard ImageSolver script.</li>
+<li>PixInsight 1.9.4, including the standard ImageSolver script. PixInsight 1.9.5
+release preparation is documented in <a href="PIXINSIGHT-1.9.5.md">the compatibility checklist</a>;
+astrometry, SPFC/MGC, and SPCC passed tests on 1.9.5 build 1702;
+full workflow and third-party module verification remain pending.</li>
 <li>An integrated, unstretched color master, preferably 32-bit floating-point
 XISF.</li>
 <li>For SPCC, either an existing astrometric solution or approximate coordinates

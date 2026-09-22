@@ -78,7 +78,10 @@ installed script folders. Restart PixInsight after the scan.
   dialog and automatic seed-value extraction from FITS/XISF metadata.
 - GradientCorrection, GraXpert, or MultiscaleGradientCorrection with SPFC.
 - BlurXTerminator or SyQon Parallax.
-- NoiseXTerminator or SyQon Prism/DeepPrism.
+- NoiseXTerminator, MLDenoise (installed process defaults), or SyQon Prism/DeepPrism.
+  MLDenoise requires the process to be installed and available to scripts. It uses
+  the same full-image or starless-branch placement as the other noise tools.
+  The workflow reports it as unavailable if the process is missing.
 - StarXTerminator, StarNet2, or SyQon Starless.
 - Automatic `<target>_stars` naming for the retained stars-only branch.
 - Main denoise placement before star separation or on the starless branch.
@@ -122,7 +125,7 @@ The default General Color Image order is:
 4. SpectrophotometricColorCalibration (SPCC)
 5. BlurXTerminator or SyQon Parallax
 6. StarXTerminator, StarNet2, or SyQon Starless
-7. NoiseXTerminator or SyQon Prism on the starless branch
+7. NoiseXTerminator, MLDenoise, or SyQon Prism on the starless branch
 8. Linear-add PixelMath recombination
 9. One linked automatic histogram stretch on the recombined image
 

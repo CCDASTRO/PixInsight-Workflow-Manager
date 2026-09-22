@@ -265,7 +265,10 @@ separation.</li>
 dialog and automatic seed-value extraction from FITS/XISF metadata (approximate information ImageSolver needs to begin matching the image against a star catalog).</li>
 <li>GradientCorrection, GraXpert, or MultiscaleGradientCorrection with SPFC.</li>
 <li>BlurXTerminator or SyQon Parallax.</li>
-<li>NoiseXTerminator or SyQon Prism/DeepPrism.</li>
+<li>NoiseXTerminator, MLDenoise (installed process defaults), or SyQon Prism/DeepPrism.
+MLDenoise requires the process to be installed and available to scripts. It uses
+the same full-image or starless-branch placement as the other noise tools.
+The workflow reports it as unavailable if the process is missing.</li>
 <li>StarXTerminator, StarNet2, or SyQon Starless.</li>
 <li>Automatic <code>&lt;target&gt;_stars</code> naming for the retained stars-only branch.</li>
 <li>Main denoise placement before star separation or on the starless branch.</li>
@@ -331,7 +334,7 @@ profile when the image needs different color treatment.</p>
 <li>SpectrophotometricColorCalibration (SPCC)</li>
 <li>BlurXTerminator or SyQon Parallax</li>
 <li>StarXTerminator, StarNet2, or SyQon Starless</li>
-<li>NoiseXTerminator or SyQon Prism on the starless branch</li>
+<li>NoiseXTerminator, MLDenoise, or SyQon Prism on the starless branch</li>
 <li>Linear-add PixelMath recombination</li>
 <li>One linked automatic histogram stretch on the recombined image</li>
 </ol>

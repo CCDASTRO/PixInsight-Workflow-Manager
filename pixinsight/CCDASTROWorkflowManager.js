@@ -38,6 +38,7 @@ var adapterHelp = {
    blurXTerminator: "Use BlurXTerminator for deconvolution and structure recovery while the image is linear.",
    syqonParallax: "Run the configured CCDASTRO_Parallax process icon for structure recovery.",
    noiseXTerminator: "Use NoiseXTerminator for the main noise-reduction pass.",
+   mlDenoise: "Use PixInsight MLDenoise with its default settings for the main noise-reduction pass.",
    syqonPrism: "Run the configured CCDASTRO_Prism process icon for the main noise-reduction pass.",
    starXTerminator: "Use StarXTerminator and request a separate stars-only image.",
    starNet2: "Use StarNet2 in linear mode and request a separate stars-only image.",
@@ -731,6 +732,10 @@ var adapters = {
          setFirstProperty(p, ["iterations"], 2);
       }),
 
+   // Use the installed process defaults; do not assume version-specific parameters.
+   mlDenoise: new ProcessAdapter(
+      "mlDenoise", "MLDenoise", ["MLDenoise"]),
+
    syqonPrism: new ProcessIconAdapter(
       "syqonPrism", "SyQon Prism / DeepPrism", SYQON_PRISM_ICON),
 
@@ -780,7 +785,7 @@ function defaultWorkflow()
          ["blurXTerminator", "syqonParallax"], "blurXTerminator",
          "Runs on linear data before the main denoise pass."),
       new WorkflowStep("noiseReduction", "5. Noise reduction",
-         ["noiseXTerminator", "syqonPrism"], "noiseXTerminator",
+         ["noiseXTerminator", "mlDenoise", "syqonPrism"], "noiseXTerminator",
          "Can run before separation or on the starless branch."),
       new WorkflowStep("starSeparation", "6. Star separation",
          ["starXTerminator", "starNet2", "syqonStarless"], "starXTerminator",

@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.1",
+    "softwareVersion": "1.1.4",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.2">CCDASTRO PixInsight Workflow Manager v1.1.2</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.4">CCDASTRO PixInsight Workflow Manager v1.1.4</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <h2 id="important-the-workflow-window-hides-while-processing">Important: the workflow window hides while processing</h2>
@@ -216,6 +216,11 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.4:</strong> Refreshes signing dependencies for the ImageSolver engine shipped
+with PixInsight 1.9.5 build 1705. Script and update manifest signed with the CCDASTRO identity; runtime verification pending.</p>
+</li>
+<li><p><strong>v1.1.3:</strong> Adds MLDenoise to noise reduction with the selected denoise placement.</p>
+</li>
 <li><p><strong>v1.1.2:</strong> Adds PixInsight 1.9.5 release compatibility, strict package-content checks,
 and documented passing astrometry, SPFC/MGC, and SPCC runtime tests.
 RC Astro integration testing remains pending; its modules were unavailable.</p>

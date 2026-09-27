@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.2
+# CCDASTRO PixInsight Workflow Manager v1.1.4
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -40,6 +40,10 @@ If the `CCDASTRO` menu is missing after the first installation, open
 installed script folders. Restart PixInsight after the scan.
 
 ## Revision history
+
+- **v1.1.4:** Refreshes signing dependencies for the ImageSolver engine shipped
+  with PixInsight 1.9.5 build 1705. Script and update manifest signed with the CCDASTRO identity; runtime verification pending.
+- **v1.1.3:** Adds MLDenoise to noise reduction with the selected denoise placement.
 
 - **v1.1.2:** Adds PixInsight 1.9.5 release compatibility, strict package-content checks,
   and documented passing astrometry, SPFC/MGC, and SPCC runtime tests.

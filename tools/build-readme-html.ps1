@@ -19,6 +19,11 @@ if (-not (Test-Path -LiteralPath $imagePath -PathType Leaf)) {
 }
 
 $markdown = [System.IO.File]::ReadAllText($readmePath)
+$versionMatch = [regex]::Match($markdown, '(?m)^# CCDASTRO PixInsight Workflow Manager v(\d+\.\d+\.\d+)\s*$')
+if (-not $versionMatch.Success) {
+    throw 'Could not read the Workflow Manager version from the README heading.'
+}
+$workflowVersion = $versionMatch.Groups[1].Value
 $body = (ConvertFrom-Markdown -InputObject $markdown).Html
 $imageBase64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($imagePath))
 $body = $body.Replace('src="docs/images/workflow-manager.png"', "src=`"data:image/png;base64,$imageBase64`"")
@@ -50,7 +55,7 @@ $template = @'
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.1",
+    "softwareVersion": "{{VERSION}}",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -276,7 +281,7 @@ $template = @'
 </html>
 '@
 
-$html = $template.Replace('{{BODY}}', $body)
+$html = $template.Replace('{{BODY}}', $body).Replace('{{VERSION}}', $workflowVersion)
 $outputDirectory = Split-Path -Parent $resolvedOutput
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 [System.IO.File]::WriteAllText($resolvedOutput, $html, [System.Text.UTF8Encoding]::new($false))

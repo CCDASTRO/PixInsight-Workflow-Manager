@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.4
+# CCDASTRO PixInsight Workflow Manager v1.1.5
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -65,6 +65,11 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.5:** Offers Save As after a completed final image, using the original
+  input filename plus `_CCDASTROWorkflow_Final.xisf`. The name and folder remain
+  editable, existing outputs require overwrite confirmation, and the original
+  input file cannot be overwritten. Cancel leaves the processed image open.
+  Workflows without recombination leave their separate branches open.
 - **v1.1.4:** Refreshes signing dependencies for the ImageSolver engine shipped
   with PixInsight 1.9.5 build 1705. Script and update manifest signed with the CCDASTRO identity; runtime verification pending.
 - **v1.1.3:** Adds MLDenoise to noise reduction with the selected denoise placement.

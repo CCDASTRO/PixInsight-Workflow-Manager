@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.4.zip" sha1="25607b81c784ec083d94956869620b5ef797f349" type="script" releaseDate="20260927">
-         <title>CCDASTRO Workflow Manager 1.1.4</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.5.zip" sha1="846dff068385b4bd2b0296890aa60ac669063c62" type="script" releaseDate="20260930">
+         <title>CCDASTRO Workflow Manager 1.1.5</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v1.1.5 offers final-image Save As with the original filename plus _CCDASTROWorkflow_Final.xisf, original-file protection, and overwrite confirmation</li>
                <li>v1.1.4 refreshes signing dependencies for the ImageSolver engine shipped with PixInsight 1.9.5 build 1705</li>
                <li>v1.1.3 adds MLDenoise to noise reduction, using installed process defaults and the selected denoise placement</li>
                <li>v1.1.2 targets PixInsight 1.9.4 through 1.9.5 and enforces a script-only package layout</li>
@@ -60,4 +61,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-09-27T12:21:50.385Z" encoding="Base64">poG4AxoP0jF+/HMe10VqIJr2K84WaQU4ntcNh1+ncg0Q/sliCbe92MqrIJomWdNA7TfcCJaqx0ngLAhxxi3zAw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-09-30T15:17:31.916Z" encoding="Base64">n4JbKZK9Gxu/gTvSt+dlgPcdr+zRzlVuc2cLzaA32g2V2Q71hEi73GwWa+QKGyrHVQzb94CsdFDitS81lGmoDA==</Signature>

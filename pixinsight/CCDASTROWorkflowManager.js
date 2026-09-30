@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.4"
+#define VERSION "1.1.5"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1881,6 +1881,53 @@ constructor()
 
 // Run after the modal configuration dialog has closed so native process
 // progress and the Process Console remain accessible.
+function finalOutputPath(sourcePath, sourceId)
+{
+   var normalized = sourcePath.replace(/\\/g, "/");
+   var slash = normalized.lastIndexOf("/");
+   var directory = slash >= 0 ? normalized.substring(0, slash + 1) : "";
+   var name = normalized.substring(slash + 1);
+   if (name.length > 0)
+      name = name.replace(/\.[^.]+$/, "");
+   else
+      name = sourceId;
+   name = name.replace(/_CCDASTROWorkflow_Final(?:_v\d+)?$/, "");
+   return directory + name + "_CCDASTROWorkflow_Final.xisf";
+}
+
+function saveFinalImage(view, sourcePath, sourceId)
+{
+   var save = new SaveFileDialog;
+   save.caption = "Save workflow final image";
+   save.initialPath = finalOutputPath(sourcePath, sourceId);
+   save.filters = [["XISF images", "*.xisf"]];
+   save.overwritePrompt = true;
+   for (;;)
+   {
+      if (!save.execute())
+         return "Final image remains open and has not been saved.";
+      var path = save.filePath;
+      if (!/\.xisf$/i.test(path))
+         path += ".xisf";
+      if (sourcePath.length > 0 &&
+          path.replace(/\\/g, "/").toLowerCase() ===
+          sourcePath.replace(/\\/g, "/").toLowerCase())
+      {
+         (new MessageBox("Choose a different filename to preserve the original input file.",
+            TITLE, StdIcon.Warning, StdButton.Ok)).execute();
+         continue;
+      }
+      // Confirm overwrites here too, including when the extension was added.
+      if (File.exists(path) &&
+          (new MessageBox("Replace existing file?\n\n" + path, TITLE,
+             StdIcon.Warning, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
+         continue;
+      if (!view.window.saveAs(path, false, false, false, false))
+         throw new Error("Could not save final image: " + path);
+      return "Final image saved: " + path;
+   }
+}
+
 function executeWorkflow(self)
 {
    Console.show();
@@ -1889,6 +1936,8 @@ function executeWorkflow(self)
    try
    {
       var view = ImageWindow.activeWindow.currentView;
+      var sourcePath = view.window.filePath;
+      var sourceId = view.id;
       clearDisplaySTF(view);
       checkAbortRequested();
       var linearOrder = linearStageOrder(self.rowsById);
@@ -1994,9 +2043,15 @@ function executeWorkflow(self)
          checkAbortRequested();
       }
 
-      self.statusText.text = "Workflow completed successfully.";
-      logLine("Workflow completed successfully.");
-      (new MessageBox("Workflow completed successfully.", TITLE,
+      var completion = "Workflow completed successfully.";
+      if (branches === null || self.recombine.checked)
+         completion += "\n\n" + saveFinalImage(
+            branches === null ? view : branches.starlessView, sourcePath, sourceId);
+      else
+         completion += "\n\nSeparate branches remain open; no final image was saved.";
+      self.statusText.text = completion;
+      logLine(completion);
+      (new MessageBox(completion, TITLE,
          StdIcon.Information, StdButton.Ok)).execute();
    }
    catch (e)

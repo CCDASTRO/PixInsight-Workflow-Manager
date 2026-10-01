@@ -477,7 +477,13 @@ separation is enabled, automatic recombination is required. Preflight also
 requires a final or starless stretch in this workflow; HDR is not applied to a
 linear master.
 
-1. Click **Update Preview** to calculate the HDR result on a separate image.
+When the HDR review dialog first opens, only the **Before** image on the left
+is displayed. The right pane is blank/black and **Apply HDR** is disabled because
+the HDR preview has not been calculated yet. This is expected and does not mean
+the HDR result is black.
+
+1. Click **Update Preview** and wait for processing to finish. The calculated
+   HDR blend appears on the right and **Apply HDR** becomes available.
 2. Compare **Before** on the left with the **HDR blend** on the right. Both panes
    show the entire image at the same fit-to-window scale.
 3. Adjust **Layers** (3–10, initially 6) and **Blend (%)** (0–100, initially 30),

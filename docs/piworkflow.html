@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.6",
+    "softwareVersion": "1.1.7",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.6">CCDASTRO PixInsight Workflow Manager v1.1.6</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.7">CCDASTRO PixInsight Workflow Manager v1.1.7</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <h2 id="important-the-workflow-window-hides-while-processing">Important: the workflow window hides while processing</h2>
@@ -216,6 +216,8 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.7:</strong> Fixes the HDR preview background painting error by passing the required Brush object to Graphics.fillRect.</p>
+</li>
 <li><p><strong>v1.1.6:</strong> Adds optional native HDRMultiscaleTransform with a side-by-side
 preview, adjustable layers and blend strength, Apply/Skip controls, and a
 retained before-HDR comparison image. HDR runs after the stretch and star

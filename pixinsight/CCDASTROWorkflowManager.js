@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.6"
+#define VERSION "1.1.7"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1979,7 +1979,7 @@ constructor(view)
       var g = new Graphics(this);
       try
       {
-         g.fillRect(this.boundsRect, 0xff202020);
+         g.fillRect(this.boundsRect, new Brush(0xff202020));
          var half = Math.floor(this.width / 2);
          var scale = Math.min((half - 12) / self.beforeBitmap.width,
             (this.height - 12) / self.beforeBitmap.height);

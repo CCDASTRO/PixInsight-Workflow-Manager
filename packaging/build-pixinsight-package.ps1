@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.1.6',
+    [string] $Version = '1.1.7',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -119,6 +119,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v1.1.7 fixes the HDR preview Graphics.fillRect Brush argument error</li>
           <li>v1.1.6 adds optional native HDR with before/after preview, layers and blend controls, Apply/Skip, and retained comparison images</li>
           <li>v1.1.5 offers final-image Save As with the original filename plus _CCDASTROWorkflow_Final.xisf, original-file protection, and overwrite confirmation</li>
           <li>v1.1.4 refreshes signing dependencies for the ImageSolver engine shipped with PixInsight 1.9.5 build 1705</li>

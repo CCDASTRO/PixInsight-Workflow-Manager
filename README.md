@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.6
+# CCDASTRO PixInsight Workflow Manager v1.1.7
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -65,6 +65,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.7:** Fixes the HDR preview background painting error by passing the required Brush object to Graphics.fillRect.
 - **v1.1.6:** Adds optional native HDRMultiscaleTransform with a side-by-side
   preview, adjustable layers and blend strength, Apply/Skip controls, and a
   retained before-HDR comparison image. HDR runs after the stretch and star

@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.7.zip" sha1="6b2da01818954b51fdbca5759d449d0f4f471172" type="script" releaseDate="20261001">
-         <title>CCDASTRO Workflow Manager 1.1.7</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.8.zip" sha1="c1797f977860569419835361762d84aa97bbe380" type="script" releaseDate="20261001">
+         <title>CCDASTRO Workflow Manager 1.1.8</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v1.1.8 adds optional image-adaptive brightness and contrast with protected background/highlights, strength controls, preview and comparison</li>
                <li>v1.1.7 fixes the HDR preview Graphics.fillRect Brush argument error</li>
                <li>v1.1.6 adds optional native HDR with before/after preview, layers and blend controls, Apply/Skip, and retained comparison images</li>
                <li>v1.1.5 offers final-image Save As with the original filename plus _CCDASTROWorkflow_Final.xisf, original-file protection, and overwrite confirmation</li>
@@ -63,4 +64,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-01T00:29:52.393Z" encoding="Base64">75xGUeM02kehpk3HcH/p2+NzJmavIN2jiG8HstI97ckqI5J9PVBUX91uICSWjIlTWgJNzj8JqQzvFB/vjG1HCg==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-01T17:08:30.958Z" encoding="Base64">YCDCu9j1SKbTBW/L7nnntSlfkjxznp9mIhFwoFIV7VT4yFKjq8jip49fq+Q0W+F7aoQqXoBTZilvNz2i1sqTAw==</Signature>

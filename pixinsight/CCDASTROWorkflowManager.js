@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.7"
+#define VERSION "1.1.8"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -142,6 +142,7 @@ function captureWorkflowState(dialog, resumeAfterCrop)
       starsStretch: dialog.starsStretch.currentItem,
       finalStretch: dialog.finalStretch.currentItem,
       hdrEnabled: dialog.hdrEnabled.checked,
+      adaptiveEnabled: dialog.adaptiveEnabled.checked,
       recombine: dialog.recombine.checked,
       starReduction: dialog.starReduction.checked,
       starReductionMethod: dialog.starReductionMethod.currentItem,
@@ -230,6 +231,7 @@ function restoreWorkflowState(dialog)
          dialog.finalStretch.currentItem = state.finalStretch;
       dialog.recombine.checked = state.recombine === true;
       dialog.hdrEnabled.checked = state.hdrEnabled === true;
+      dialog.adaptiveEnabled.checked = state.adaptiveEnabled === true;
       dialog.starReduction.checked = state.starReduction === true;
       if (state.starReductionMethod >= 0 &&
           state.starReductionMethod < dialog.starReductionMethod.numberOfItems)
@@ -291,6 +293,7 @@ function resetWorkflowControls(dialog)
    dialog.finalStretch.currentItem = 1;
    dialog.recombine.checked = true;
    dialog.hdrEnabled.checked = false;
+   dialog.adaptiveEnabled.checked = false;
    dialog.starReduction.checked = false;
    dialog.starReductionMethod.currentItem = 1;
    dialog.starReductionIterations.value = 1;
@@ -1221,6 +1224,15 @@ PreflightValidator.prototype.validate = function()
           this.dialog.starlessStretch.currentItem === 0)
          result.errors.push("HDR review requires an image stretch in this workflow.");
    }
+   if (this.dialog.adaptiveEnabled && this.dialog.adaptiveEnabled.checked)
+   {
+      if (resolveProcessClass(["PixelMath"]) === null)
+         result.errors.push("Adaptive finishing requires PixelMath.");
+      if (separationEnabled && !this.dialog.recombine.checked)
+         result.errors.push("Adaptive finishing requires a recombined final image.");
+      if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
+         result.errors.push("Adaptive finishing requires an image stretch in this workflow.");
+   }
    if (this.dialog.starsStretch.currentItem > 0)
       result.warnings.push("Automatic stretching of a stars-only branch can amplify subtraction residuals. " +
          "Keep the stars linear unless a separate stars stretch is clearly needed.");
@@ -1684,6 +1696,11 @@ constructor()
    this.hdrEnabled.checked = false;
    this.hdrEnabled.toolTip = "After stretching and star reduction, review native HDRMultiscaleTransform on a copy. Adjust layers and blend strength, then Apply or Skip. Requires a nonlinear final image.";
    this.branchesBox.sizer.add(this.hdrEnabled);
+   this.adaptiveEnabled = new CheckBox(this.content);
+   this.adaptiveEnabled.text = "Optional adaptive brightness/contrast: preview before saving";
+   this.adaptiveEnabled.checked = false;
+   this.adaptiveEnabled.toolTip = "Measure image percentiles and review a gentle finishing curve after HDR. Protects dark background and bright highlights; does not adjust color balance or saturation. Apply or Skip.";
+   this.branchesBox.sizer.add(this.adaptiveEnabled);
    this.starReductionMethodControl = starReductionMethodControl;
    this.applyImageType = function(applyDefaults)
    {
@@ -2075,6 +2092,215 @@ function reviewHDR(view)
    }
 }
 
+function adaptiveCurveFromSamples(samples, strength)
+{
+   samples = samples.filter(function(x) { return finiteNumber(x) && x >= 0 && x <= 1; });
+   if (samples.length < 16)
+      throw new Error("Insufficient valid samples for adaptive finishing.");
+   samples.sort(function(a, b) { return a - b; });
+   function q(p) { return samples[Math.floor((samples.length - 1) * p)]; }
+   var low = q(0.20), lower = q(0.40), upper = q(0.75), high = q(0.99);
+   if (lower - low < 0.0001 || upper - lower < 0.0001 || high - upper < 0.0001)
+      throw new Error("Image has too little tonal variation for a safe adaptive curve. Skip this stage.");
+   var amount = Math.max(0, Math.min(50, strength)) / 100;
+   var delta = Math.min(lower - low, upper - lower, high - upper) * amount;
+   return [[0, 0], [low, low], [lower, lower - delta * 0.5],
+      [upper, upper + delta], [high, high], [1, 1]];
+}
+
+function sampleAdaptiveImage(image)
+{
+   var samples = [];
+   var stepX = Math.max(1, Math.ceil(image.width / 256));
+   var stepY = Math.max(1, Math.ceil(image.height / 256));
+   for (var y = 0; y < image.height; y += stepY)
+   {
+      checkAbortRequested();
+      for (var x = 0; x < image.width; x += stepX)
+      {
+         var value = image.sample(x, y, 0);
+         if (image.isColor)
+            value = (value + image.sample(x, y, 1) + image.sample(x, y, 2)) / 3;
+         samples.push(value);
+      }
+   }
+   return samples;
+}
+
+function adaptiveCurveExpression(points)
+{
+   // Piecewise linear RGB/K curve: monotonic, with identity outside the
+   // protected percentile interval. No interpolation overshoot or clipping.
+   var expression = "$T";
+   for (var i = points.length - 3; i >= 1; --i)
+   {
+      var a = points[i], b = points[i + 1];
+      var slope = (b[1] - a[1]) / (b[0] - a[0]);
+      var segment = "(" + a[1] + "+($T-" + a[0] + ")*" + slope + ")";
+      expression = "iif($T<" + b[0] + "," + segment + "," + expression + ")";
+   }
+   return "iif($T<=" + points[1][0] + ",$T," + expression + ")";
+}
+
+function buildAdaptiveCandidate(view, strength)
+{
+   var points = adaptiveCurveFromSamples(sampleAdaptiveImage(view.image), strength);
+   var window = cloneHDRView(view, "_Adaptive");
+   try
+   {
+      checkAbortRequested();
+      var process = new PixelMath;
+      process.useSingleExpression = true;
+      process.createNewImage = false;
+      process.rescale = false;
+      process.truncate = false;
+      process.symbols = "";
+      process.expression = adaptiveCurveExpression(points);
+      if (!process.executeOn(window.mainView))
+         throw new Error("Adaptive finishing failed.");
+      checkAbortRequested();
+      return window;
+   }
+   catch (e) { window.forceClose(); throw e; }
+}
+
+class AdaptiveReviewDialog extends Dialog
+{
+constructor(view)
+{
+   super();
+   var self = this;
+   this.windowTitle = "adaptive preview and comparison";
+   this.candidate = null;
+   this.instructions = new Label(this);
+   this.instructions.text = "Before (left) / adaptive blend (right). Update Preview after changing settings.\nApply keeps a separate adaptive result; Skip preserves the image before adaptive.";
+   this.layersLabel = new Label(this);
+   this.layersLabel.text = "Strength:";
+   this.layers = new ComboBox(this);
+   this.layers.addItem("Mild");
+   this.layers.addItem("Medium");
+   this.layers.addItem("Custom");
+   this.layers.currentItem = 0;
+   this.strengthLabel = new Label(this);
+   this.strengthLabel.text = "Amount (%):";
+   this.strength = new SpinBox(this);
+   this.strength.minValue = 0;
+   this.strength.maxValue = 50;
+   this.strength.value = 15;
+   this.strength.enabled = false;
+   this.keepComparison = new CheckBox(this);
+   this.keepComparison.text = "Keep a before-adaptive comparison image";
+   this.keepComparison.checked = true;
+   this.beforeBitmap = view.image.render();
+   this.afterBitmap = null;
+   this.preview = new Control(this);
+   this.preview.setMinSize(640, 320);
+   this.preview.onPaint = function()
+   {
+      var g = new Graphics(this);
+      try
+      {
+         g.fillRect(this.boundsRect, new Brush(0xff202020));
+         var half = Math.floor(this.width / 2);
+         var scale = Math.min((half - 12) / self.beforeBitmap.width,
+            (this.height - 12) / self.beforeBitmap.height);
+         var w = Math.round(self.beforeBitmap.width * scale);
+         var h = Math.round(self.beforeBitmap.height * scale);
+         var x = Math.round((half - w) / 2);
+         var y = Math.round((this.height - h) / 2);
+         g.drawScaledBitmap(new Rect(x, y, x + w, y + h), self.beforeBitmap);
+         if (self.afterBitmap !== null)
+            g.drawScaledBitmap(new Rect(half + x, y, half + x + w, y + h), self.afterBitmap);
+      }
+      finally { g.end(); }
+   };
+   this.updateButton = new PushButton(this);
+   this.updateButton.text = "Update Preview";
+   this.applyButton = new PushButton(this);
+   this.applyButton.text = "Apply adaptive";
+   this.applyButton.enabled = false;
+   this.skipButton = new PushButton(this);
+   this.skipButton.text = "Skip adaptive";
+   this.skipButton.onClick = function() { self.cancel(); };
+   this.applyButton.onClick = function() { self.ok(); };
+   var dirty = function() { self.applyButton.enabled = false; };
+   this.layers.onItemSelected = function(index)
+   {
+      self.strength.enabled = index === 2;
+      if (index < 2) self.strength.value = index === 0 ? 15 : 30;
+      dirty();
+   };
+   this.strength.onValueUpdated = dirty;
+   this.updateButton.onClick = function()
+   {
+      self.enabled = false;
+      self.applyButton.enabled = false;
+      try
+      {
+         if (self.candidate !== null) { self.candidate.forceClose(); self.candidate = null; }
+         self.afterBitmap = null;
+         self.candidate = buildAdaptiveCandidate(view, self.strength.value);
+         self.afterBitmap = self.candidate.mainView.image.render();
+         self.applyButton.enabled = true;
+      }
+      catch (e)
+      {
+         if (Console.abortRequested) { self.cancel(); return; }
+         (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
+      }
+      finally { self.enabled = true; self.preview.update(); }
+   };
+   this.options = new HorizontalSizer;
+   this.options.spacing = 8;
+   this.options.add(this.layersLabel);
+   this.options.add(this.layers);
+   this.options.add(this.strengthLabel);
+   this.options.add(this.strength);
+   this.options.add(this.updateButton);
+   this.options.addStretch();
+   this.buttons = new HorizontalSizer;
+   this.buttons.spacing = 8;
+   this.buttons.addStretch();
+   this.buttons.add(this.applyButton);
+   this.buttons.add(this.skipButton);
+   this.sizer = new VerticalSizer;
+   this.sizer.margin = 10;
+   this.sizer.spacing = 8;
+   this.sizer.add(this.instructions);
+   this.sizer.add(this.preview, 100);
+   this.sizer.add(this.options);
+   this.sizer.add(this.keepComparison);
+   this.sizer.add(this.buttons);
+   this.adjustToContents();
+}
+}
+
+function reviewAdaptive(view)
+{
+   var dialog = new AdaptiveReviewDialog(view);
+   var accepted = false;
+   try
+   {
+      if (!dialog.execute()) { checkAbortRequested(); return view; }
+      if (dialog.candidate === null || !dialog.applyButton.enabled)
+         throw new Error("Update the adaptive preview before applying.");
+      if (dialog.keepComparison.checked)
+      {
+         var before = cloneadaptiveView(view, "_BeforeAdaptive");
+         before.show();
+      }
+      dialog.candidate.show();
+      accepted = true;
+      logLine("adaptive applied: " + dialog.strength.value + "% strength. Original view retained.");
+      return dialog.candidate.mainView;
+   }
+   finally
+   {
+      if (!accepted && dialog.candidate !== null)
+         dialog.candidate.forceClose();
+   }
+}
+
 function finalOutputPath(sourcePath, sourceId)
 {
    var normalized = sourcePath.replace(/\\/g, "/");
@@ -2243,6 +2469,8 @@ function executeWorkflow(self)
          var finalView = branches === null ? view : branches.starlessView;
          if (self.hdrEnabled.checked)
             finalView = reviewHDR(finalView);
+         if (self.adaptiveEnabled.checked)
+            finalView = reviewAdaptive(finalView);
          checkAbortRequested();
          completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);
       }

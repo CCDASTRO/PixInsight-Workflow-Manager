@@ -121,4 +121,17 @@ test("HDR requires a stretch and recombined final image", () => {
   f.context.resolveProcessClass = () => null;
   assert.ok(f.validate().errors.some(x => x.includes("HDRMultiscaleTransform is unavailable")));
 });
+test("adaptive finishing preflight requires stretch, recombination and PixelMath", () => {
+  const f = fixture({ solved: true });
+  f.dialog.adaptiveEnabled = { checked: true };
+  assert.ok(f.validate().errors.some(x => x.includes("Adaptive finishing requires an image stretch")));
+  f.dialog.finalStretch.currentItem = 1;
+  assert.ok(!f.validate().errors.some(x => x.includes("Adaptive")));
+  f.dialog.rowsById.starSeparation.enabled.checked = true;
+  assert.ok(f.validate().errors.some(x => x.includes("Adaptive finishing requires a recombined")));
+  f.dialog.recombine.checked = true;
+  assert.ok(!f.validate().errors.some(x => x.includes("Adaptive")));
+  f.context.resolveProcessClass = () => null;
+  assert.ok(f.validate().errors.some(x => x.includes("Adaptive finishing requires PixelMath")));
+});
 console.log(`${count} tests passed. These use mocked PixInsight APIs, not real image processing.`);

@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.7
+# CCDASTRO PixInsight Workflow Manager v1.1.8
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -65,6 +65,9 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.8:** Adds optional image-adaptive brightness/contrast finishing after
+  HDR and before Save As, with Mild/Medium/Custom strength, protected background
+  and highlights, side-by-side preview, Apply/Skip, and comparison copies.
 - **v1.1.7:** Fixes the HDR preview background painting error by passing the required Brush object to Graphics.fillRect.
 - **v1.1.6:** Adds optional native HDRMultiscaleTransform with a side-by-side
   preview, adjustable layers and blend strength, Apply/Skip controls, and a
@@ -463,6 +466,47 @@ completed image receives one conservative linked stretch. This avoids stretching
 the extracted star layer separately, which can amplify subtraction residuals and
 create washed-out halos. Independent branch stretches remain advanced options;
 they use screen blending and disable the final recombined stretch.
+
+### Optional adaptive brightness and contrast
+
+Enable **Optional adaptive brightness/contrast: preview before saving** to
+review a gentle image-driven finishing curve after stretching, star reduction,
+and any HDR review, before the final Save As. This option is disabled by default
+and is remembered with your workflow settings. A workflow stretch is required;
+if stars are separated, automatic recombination is also required.
+
+The tool samples a grid of up to approximately 65,536 pixels, using mean RGB
+intensity for color images, and derives a monotonic piecewise-linear RGB/K curve
+from the 20th, 40th, 75th and 99th percentiles. Dark values at or below the 20th
+percentile and highlights at or above the 99th percentile remain unchanged.
+Lower midtones receive a small contrast adjustment while upper midtones receive
+a gentle brightness lift. Curve displacement is limited by the measured spacing
+between percentile anchors. PixelMath evaluates the curve without interpolation
+overshoot or rescaling. Images with too little tonal variation are rejected;
+use Skip rather than forcing a curve on them.
+
+1. Select **Mild** (15%) or **Medium** (30%), or **Custom** and an amount from
+   0–50%. The amount controls curve displacement, rather than a target brightness.
+2. Click **Update Preview**. The right pane is initially blank and Apply is
+   disabled until the calculation completes, just as in HDR review.
+3. Compare the before and after images at the same scale. After changing strength,
+   click **Update Preview** again before applying.
+4. **Apply adaptive** retains a separate `<image>_Adaptive` result for Save As.
+   **Skip adaptive**, or closing the dialog, continues with the pre-curve image.
+   The source image is not changed by calculating the preview.
+5. **Keep a before-adaptive comparison image** retains an additional
+   `<image>_BeforeAdaptive` copy for full-resolution inspection. Neither the
+   comparison copy nor the original processed view is automatically saved.
+
+This stage does not choose a color balance or apply a saturation curve. A common
+RGB/K brightness curve can still subtly change perceived color; inspect the
+comparison, particularly for mapped narrowband targets. Image statistics guide
+the curve, but do not determine an ideal aesthetic result. Start with Mild.
+PixInsight runtime verification is pending; automated checks cover curve bounds,
+monotonicity, protected tonal ranges, image sampling, and Apply/Skip behavior.
+
+The final filename remains `<original_name>_CCDASTROWorkflow_Final.xisf`.
+Enabling HDR and adaptive finishing adds two separate interactive reviews.
 
 ### Optional HDR preview and comparison
 

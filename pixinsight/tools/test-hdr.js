@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const source = fs.readFileSync(path.join(__dirname, "..", "CCDASTROWorkflowManager.js"), "utf8");
 new vm.Script(source.replace(/^#.*$/gm, ""));
 const builder = source.slice(source.indexOf("function cloneHDRView("), source.indexOf("class HDRReviewDialog"));
-const review = source.slice(source.indexOf("function reviewHDR("), source.indexOf("function finalOutputPath("));
+const review = source.slice(source.indexOf("function reviewHDR("), source.indexOf("function adaptiveCurveFromSamples("));
 function fixture(fail) {
   const windows = [], processes = [], calls = [];
   let aborts = 0;

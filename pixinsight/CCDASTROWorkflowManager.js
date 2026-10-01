@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.5"
+#define VERSION "1.1.6"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -141,6 +141,7 @@ function captureWorkflowState(dialog, resumeAfterCrop)
       starlessStretch: dialog.starlessStretch.currentItem,
       starsStretch: dialog.starsStretch.currentItem,
       finalStretch: dialog.finalStretch.currentItem,
+      hdrEnabled: dialog.hdrEnabled.checked,
       recombine: dialog.recombine.checked,
       starReduction: dialog.starReduction.checked,
       starReductionMethod: dialog.starReductionMethod.currentItem,
@@ -228,6 +229,7 @@ function restoreWorkflowState(dialog)
       if (state.finalStretch >= 0 && state.finalStretch < dialog.finalStretch.numberOfItems)
          dialog.finalStretch.currentItem = state.finalStretch;
       dialog.recombine.checked = state.recombine === true;
+      dialog.hdrEnabled.checked = state.hdrEnabled === true;
       dialog.starReduction.checked = state.starReduction === true;
       if (state.starReductionMethod >= 0 &&
           state.starReductionMethod < dialog.starReductionMethod.numberOfItems)
@@ -288,6 +290,7 @@ function resetWorkflowControls(dialog)
    dialog.starsStretch.currentItem = 0;
    dialog.finalStretch.currentItem = 1;
    dialog.recombine.checked = true;
+   dialog.hdrEnabled.checked = false;
    dialog.starReduction.checked = false;
    dialog.starReductionMethod.currentItem = 1;
    dialog.starReductionIterations.value = 1;
@@ -1208,6 +1211,16 @@ PreflightValidator.prototype.validate = function()
       result.errors.push("Use either the final recombined stretch or the advanced branch stretches, not both.");
    if (this.dialog.starReduction.checked && !this.dialog.recombine.checked)
       result.errors.push("Bill Blanshan star reduction requires automatic branch recombination.");
+   if (this.dialog.hdrEnabled && this.dialog.hdrEnabled.checked)
+   {
+      if (resolveProcessClass(["HDRMultiscaleTransform"]) === null)
+         result.errors.push("HDRMultiscaleTransform is unavailable.");
+      if (separationEnabled && !this.dialog.recombine.checked)
+         result.errors.push("HDR review requires a recombined final image.");
+      if (this.dialog.finalStretch.currentItem === 0 &&
+          this.dialog.starlessStretch.currentItem === 0)
+         result.errors.push("HDR review requires an image stretch in this workflow.");
+   }
    if (this.dialog.starsStretch.currentItem > 0)
       result.warnings.push("Automatic stretching of a stars-only branch can amplify subtraction residuals. " +
          "Keep the stars linear unless a separate stars stretch is clearly needed.");
@@ -1666,6 +1679,11 @@ constructor()
    this.branchesBox.sizer.add(starReductionMethodControl.sizer);
    this.branchesBox.sizer.add(this.starReductionIterationsSizer);
 
+   this.hdrEnabled = new CheckBox(this.content);
+   this.hdrEnabled.text = "Optional HDR: review preview and compare before saving";
+   this.hdrEnabled.checked = false;
+   this.hdrEnabled.toolTip = "After stretching and star reduction, review native HDRMultiscaleTransform on a copy. Adjust layers and blend strength, then Apply or Skip. Requires a nonlinear final image.";
+   this.branchesBox.sizer.add(this.hdrEnabled);
    this.starReductionMethodControl = starReductionMethodControl;
    this.applyImageType = function(applyDefaults)
    {
@@ -1881,6 +1899,182 @@ constructor()
 
 // Run after the modal configuration dialog has closed so native process
 // progress and the Process Console remain accessible.
+function cloneHDRView(view, suffix)
+{
+   var image = view.image;
+   var window = new ImageWindow(image.width, image.height, image.numberOfChannels,
+      image.bitsPerSample, image.isReal, image.isColor, uniqueMainViewId(view.id + suffix));
+   try
+   {
+      window.mainView.beginProcess(UndoFlag.NoSwapFile);
+      try { window.mainView.image.assign(image); }
+      finally { window.mainView.endProcess(); }
+      return window;
+   }
+   catch (e) { window.forceClose(); throw e; }
+}
+
+function buildHDRCandidate(view, layers, strength)
+{
+   var window = cloneHDRView(view, "_HDR");
+   try
+   {
+      checkAbortRequested();
+      var hdr = new HDRMultiscaleTransform;
+      hdr.numberOfLayers = layers;
+      hdr.numberOfIterations = 1;
+      hdr.toLightness = view.image.isColor;
+      hdr.preserveHue = view.image.isColor;
+      hdr.luminanceMask = true;
+      if (!hdr.executeOn(window.mainView))
+         throw new Error("HDRMultiscaleTransform failed.");
+      checkAbortRequested();
+      var blend = new PixelMath;
+      blend.useSingleExpression = true;
+      blend.createNewImage = false;
+      blend.rescale = false;
+      blend.truncate = true;
+      blend.symbols = "";
+      var amount = strength / 100;
+      blend.expression = "(" + (1 - amount) + ")*" + view.fullId + " + (" + amount + ")*$T";
+      if (!blend.executeOn(window.mainView))
+         throw new Error("HDR blend failed.");
+      checkAbortRequested();
+      return window;
+   }
+   catch (e) { window.forceClose(); throw e; }
+}
+
+class HDRReviewDialog extends Dialog
+{
+constructor(view)
+{
+   super();
+   var self = this;
+   this.windowTitle = "HDR preview and comparison";
+   this.candidate = null;
+   this.instructions = new Label(this);
+   this.instructions.text = "Before (left) / HDR blend (right). Update Preview after changing settings.\nApply keeps a separate HDR result; Skip preserves the image before HDR.";
+   this.layersLabel = new Label(this);
+   this.layersLabel.text = "Layers:";
+   this.layers = new SpinBox(this);
+   this.layers.minValue = 3;
+   this.layers.maxValue = 10;
+   this.layers.value = 6;
+   this.strengthLabel = new Label(this);
+   this.strengthLabel.text = "Blend (%):";
+   this.strength = new SpinBox(this);
+   this.strength.minValue = 0;
+   this.strength.maxValue = 100;
+   this.strength.value = 30;
+   this.keepComparison = new CheckBox(this);
+   this.keepComparison.text = "Keep a before-HDR comparison image";
+   this.keepComparison.checked = true;
+   this.beforeBitmap = view.image.render();
+   this.afterBitmap = null;
+   this.preview = new Control(this);
+   this.preview.setMinSize(640, 320);
+   this.preview.onPaint = function()
+   {
+      var g = new Graphics(this);
+      try
+      {
+         g.fillRect(this.boundsRect, 0xff202020);
+         var half = Math.floor(this.width / 2);
+         var scale = Math.min((half - 12) / self.beforeBitmap.width,
+            (this.height - 12) / self.beforeBitmap.height);
+         var w = Math.round(self.beforeBitmap.width * scale);
+         var h = Math.round(self.beforeBitmap.height * scale);
+         var x = Math.round((half - w) / 2);
+         var y = Math.round((this.height - h) / 2);
+         g.drawScaledBitmap(new Rect(x, y, x + w, y + h), self.beforeBitmap);
+         if (self.afterBitmap !== null)
+            g.drawScaledBitmap(new Rect(half + x, y, half + x + w, y + h), self.afterBitmap);
+      }
+      finally { g.end(); }
+   };
+   this.updateButton = new PushButton(this);
+   this.updateButton.text = "Update Preview";
+   this.applyButton = new PushButton(this);
+   this.applyButton.text = "Apply HDR";
+   this.applyButton.enabled = false;
+   this.skipButton = new PushButton(this);
+   this.skipButton.text = "Skip HDR";
+   this.skipButton.onClick = function() { self.cancel(); };
+   this.applyButton.onClick = function() { self.ok(); };
+   var dirty = function() { self.applyButton.enabled = false; };
+   this.layers.onValueUpdated = dirty;
+   this.strength.onValueUpdated = dirty;
+   this.updateButton.onClick = function()
+   {
+      self.enabled = false;
+      self.applyButton.enabled = false;
+      try
+      {
+         if (self.candidate !== null) { self.candidate.forceClose(); self.candidate = null; }
+         self.afterBitmap = null;
+         self.candidate = buildHDRCandidate(view, self.layers.value, self.strength.value);
+         self.afterBitmap = self.candidate.mainView.image.render();
+         self.applyButton.enabled = true;
+      }
+      catch (e)
+      {
+         if (Console.abortRequested) { self.cancel(); return; }
+         (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
+      }
+      finally { self.enabled = true; self.preview.update(); }
+   };
+   this.options = new HorizontalSizer;
+   this.options.spacing = 8;
+   this.options.add(this.layersLabel);
+   this.options.add(this.layers);
+   this.options.add(this.strengthLabel);
+   this.options.add(this.strength);
+   this.options.add(this.updateButton);
+   this.options.addStretch();
+   this.buttons = new HorizontalSizer;
+   this.buttons.spacing = 8;
+   this.buttons.addStretch();
+   this.buttons.add(this.applyButton);
+   this.buttons.add(this.skipButton);
+   this.sizer = new VerticalSizer;
+   this.sizer.margin = 10;
+   this.sizer.spacing = 8;
+   this.sizer.add(this.instructions);
+   this.sizer.add(this.preview, 100);
+   this.sizer.add(this.options);
+   this.sizer.add(this.keepComparison);
+   this.sizer.add(this.buttons);
+   this.adjustToContents();
+}
+}
+
+function reviewHDR(view)
+{
+   var dialog = new HDRReviewDialog(view);
+   var accepted = false;
+   try
+   {
+      if (!dialog.execute()) { checkAbortRequested(); return view; }
+      if (dialog.candidate === null || !dialog.applyButton.enabled)
+         throw new Error("Update the HDR preview before applying.");
+      if (dialog.keepComparison.checked)
+      {
+         var before = cloneHDRView(view, "_BeforeHDR");
+         before.show();
+      }
+      dialog.candidate.show();
+      accepted = true;
+      logLine("HDR applied: " + dialog.layers.value + " layers, " + dialog.strength.value + "% blend. Original view retained.");
+      return dialog.candidate.mainView;
+   }
+   finally
+   {
+      if (!accepted && dialog.candidate !== null)
+         dialog.candidate.forceClose();
+   }
+}
+
 function finalOutputPath(sourcePath, sourceId)
 {
    var normalized = sourcePath.replace(/\\/g, "/");
@@ -2045,8 +2239,13 @@ function executeWorkflow(self)
 
       var completion = "Workflow completed successfully.";
       if (branches === null || self.recombine.checked)
-         completion += "\n\n" + saveFinalImage(
-            branches === null ? view : branches.starlessView, sourcePath, sourceId);
+      {
+         var finalView = branches === null ? view : branches.starlessView;
+         if (self.hdrEnabled.checked)
+            finalView = reviewHDR(finalView);
+         checkAbortRequested();
+         completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);
+      }
       else
          completion += "\n\nSeparate branches remain open; no final image was saved.";
       self.statusText.text = completion;

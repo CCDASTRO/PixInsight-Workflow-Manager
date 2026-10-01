@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.5",
+    "softwareVersion": "1.1.6",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.5">CCDASTRO PixInsight Workflow Manager v1.1.5</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.6">CCDASTRO PixInsight Workflow Manager v1.1.6</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <h2 id="important-the-workflow-window-hides-while-processing">Important: the workflow window hides while processing</h2>
@@ -216,6 +216,11 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.6:</strong> Adds optional native HDRMultiscaleTransform with a side-by-side
+preview, adjustable layers and blend strength, Apply/Skip controls, and a
+retained before-HDR comparison image. HDR runs after the stretch and star
+reduction, before final Save As. Disabled by default.</p>
+</li>
 <li><p><strong>v1.1.5:</strong> Offers Save As after a completed final image, using the original
 input filename plus <code>_CCDASTROWorkflow_Final.xisf</code>. The name and folder remain
 editable, existing outputs require overwrite confirmation, and the original
@@ -636,6 +641,42 @@ completed image receives one conservative linked stretch. This avoids stretching
 the extracted star layer separately, which can amplify subtraction residuals and
 create washed-out halos. Independent branch stretches remain advanced options;
 they use screen blending and disable the final recombined stretch.</p>
+<h3 id="optional-hdr-preview-and-comparison">Optional HDR preview and comparison</h3>
+<p>Enable <strong>Optional HDR: review preview and compare before saving</strong> for targets
+with bright cores or structures whose detail benefits from dynamic-range
+compression. It uses PixInsight's native HDRMultiscaleTransform, so no additional
+script installation is required. HDR is disabled by default for every fresh
+workflow; remembered settings retain your selection.</p>
+<p>The stage runs on the final stretched image after any star reduction. When star
+separation is enabled, automatic recombination is required. Preflight also
+requires a final or starless stretch in this workflow; HDR is not applied to a
+linear master.</p>
+<ol>
+<li>Click <strong>Update Preview</strong> to calculate the HDR result on a separate image.</li>
+<li>Compare <strong>Before</strong> on the left with the <strong>HDR blend</strong> on the right. Both panes
+show the entire image at the same fit-to-window scale.</li>
+<li>Adjust <strong>Layers</strong> (3–10, initially 6) and <strong>Blend (%)</strong> (0–100, initially 30),
+then click <strong>Update Preview</strong> again. Apply stays disabled until the updated
+settings have been calculated. More layers target larger structures;
+blending controls the contribution of the HDR result.</li>
+<li>Click <strong>Apply HDR</strong> to retain the separate <code>&lt;image&gt;_HDR</code> result and continue
+to Save As, or <strong>Skip HDR</strong> to save the pre-HDR image instead. Closing the
+review dialog also skips HDR. Preview calculation does not modify the source.</li>
+<li>With <strong>Keep a before-HDR comparison image</strong> checked, an additional
+<code>&lt;image&gt;_BeforeHDR</code> image remains open after Apply for full-resolution
+inspection alongside the HDR result. The original processed view also stays
+open. Comparison images are not automatically saved.</li>
+</ol>
+<p>The final filename continues to use the original input name plus
+<code>_CCDASTROWorkflow_Final.xisf</code>, rather than a temporary HDR view name. Canceling
+Save As leaves the result open. Preview and comparison are interactive; enabling
+HDR adds a review step to the workflow.</p>
+<p>Start with a modest blend and inspect bright boundaries and stars at full
+resolution before accepting. HDR can change local contrast and brightness; it
+cannot reconstruct clipped core detail. Combining short and long exposures is
+a separate earlier operation. The comparison copies need additional memory for
+large images. PixInsight 1.9.5 runtime verification of this new stage is pending;
+automated tests use mocked PixInsight APIs.</p>
 <h3 id="what-an-image_stars-window-is-showing">What an <code>&lt;image&gt;_stars</code> window is showing</h3>
 <p>An <code>&lt;image&gt;_stars</code> window is the <strong>stars-only branch</strong> created by the selected
 star-separation process. It is not intended to look like a finished astronomical

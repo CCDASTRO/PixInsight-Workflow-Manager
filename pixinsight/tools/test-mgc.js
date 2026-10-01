@@ -108,4 +108,17 @@ test("other gradients and disabled MGC preserve old order", () => {
     assert.deepEqual(Array.from(f.context.linearStageOrder(f.dialog.rowsById)), expected);
   }
 });
+test("HDR requires a stretch and recombined final image", () => {
+  const f = fixture({ solved: true });
+  f.dialog.hdrEnabled = { checked: true };
+  assert.ok(f.validate().errors.some(x => x.includes("requires an image stretch")));
+  f.dialog.finalStretch.currentItem = 1;
+  assert.ok(!f.validate().errors.some(x => x.includes("HDR")));
+  f.dialog.rowsById.starSeparation.enabled.checked = true;
+  assert.ok(f.validate().errors.some(x => x.includes("recombined final")));
+  f.dialog.recombine.checked = true;
+  assert.ok(!f.validate().errors.some(x => x.includes("HDR")));
+  f.context.resolveProcessClass = () => null;
+  assert.ok(f.validate().errors.some(x => x.includes("HDRMultiscaleTransform is unavailable")));
+});
 console.log(`${count} tests passed. These use mocked PixInsight APIs, not real image processing.`);

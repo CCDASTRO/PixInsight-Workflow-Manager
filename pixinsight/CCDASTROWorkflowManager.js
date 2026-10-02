@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.12"
+#define VERSION "1.1.13"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2267,7 +2267,7 @@ function buildAdaptiveCandidate(view, strength, points, channel)
       for (var i = 0; i < channels.length; ++i)
       {
          process[channels[i]] = [[0, 0], [1, 1]];
-         process[channels[i] + "t"] = CurvesTransformation.prototype.AkimaSubsplines;
+         process[channels[i] + "t"] = CurvesTransformation.AkimaSubsplines;
       }
       process[channel] = curve;
       logLine("CurvesTransformation channel " + channel + ": " + JSON.stringify(curve));

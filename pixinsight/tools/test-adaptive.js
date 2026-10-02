@@ -2,8 +2,8 @@ const assert=require('node:assert/strict'),fs=require('fs'),path=require('path')
 const source=fs.readFileSync(process.argv[2] || path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
 new vm.Script(source.replace(/^#.*$/gm,''));
 let processes=[],windows=[],fail=false,abort=false;
-function CurvesTransformation(){processes.push(this);this.executeOn=()=>!fail;}
-CurvesTransformation.prototype.AkimaSubsplines=2;
+function CurvesTransformation(){processes.push(this);this.executeOn=()=>!fail; for(const channel of ['R','G','B','K','A','L','a','b','c','H','S']) { let value; Object.defineProperty(this,channel+'t',{get:()=>value,set:v=>{assert.ok(Number.isInteger(v),'Interpolation requires a signed integer');value=v;}}); }}
+CurvesTransformation.AkimaSubsplines=2;
 function Control(){this.enabled=true;this.repaint=()=>{};this.setMinSize=()=>{};this.addItem=()=>{};this.adjustToContents=()=>{};}
 function Sizer(){this.add=()=>{};this.addStretch=()=>{};}
 const ctx=vm.createContext({CurvesTransformation,finiteNumber:Number.isFinite,

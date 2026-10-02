@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.11
+# CCDASTRO PixInsight Workflow Manager v1.1.12
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -65,6 +65,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.12:** Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. PixInsight runtime verification is pending.
 - **v1.1.11:** HDR and adaptive previews use same-position Before/After switching, Fit/100%/200% centered zoom, and an inspection-only 10x absolute difference view. PixInsight runtime verification is pending.
 - **v1.1.10:** Forces immediate HDR/adaptive preview repaint, resets rendered image selections, and shows preview revision and sampled pixel-change statistics. Console logs record each preview settings selection.
 - **v1.1.9:** Uses a configured CCDASTRO_MLDenoise process icon so the neural network model path and denoise settings are retained. Preflight rejects missing models before processing.
@@ -495,46 +496,41 @@ comparison images at full resolution. Zero strength intentionally leaves pixels
 unchanged. The Process Console records settings and measured change for each
 recalculation. Runtime verification of the repaint changes is pending.
 
-### Optional adaptive brightness and contrast
+### Optional CurvesTransformation
 
-Enable **Optional adaptive brightness/contrast: preview before saving** to
-review a gentle image-driven finishing curve after stretching, star reduction,
-and any HDR review, before the final Save As. This option is disabled by default
-and is remembered with your workflow settings. A workflow stretch is required;
-if stars are separated, automatic recombination is also required.
+Enable **Optional CurvesTransformation: preview before saving** to review a
+native CurvesTransformation adjustment after stretching, star reduction, and
+any HDR review, before Save As. The option remains disabled by default and
+uses the existing remembered finishing-stage setting. A workflow stretch and,
+when stars are separated, automatic recombination are required.
 
-The tool samples a grid of up to approximately 65,536 pixels, using mean RGB
-intensity for color images, and derives a monotonic piecewise-linear RGB/K curve
-from the 20th, 40th, 75th and 99th percentiles. Dark values at or below the 20th
-percentile and highlights at or above the 99th percentile remain unchanged.
-Lower midtones receive a small contrast adjustment while upper midtones receive
-a gentle brightness lift. Curve displacement is limited by the measured spacing
-between percentile anchors. PixelMath evaluates the curve without interpolation
-overshoot or rescaling. Images with too little tonal variation are rejected;
-use Skip rather than forcing a curve on them.
+1. Choose **RGB/K**, **Lightness**, or **Saturation** (color images only).
+2. Choose **Brighten**, **Contrast**, or **Identity**, or edit the three
+   interior input/output points. Values use a 0–1000 scale, corresponding to
+   native normalized values 0–1. Inputs must increase from shadows to highlights.
+   Endpoints remain (0,0) and (1,1). Editing a point selects **Custom**.
+3. Set **Amount (%)** from 0 to 100. This moves each output point from the
+   identity diagonal toward the edited curve; 100 uses the complete curve and
+   0 leaves it at identity. Native Akima subspline interpolation is used.
+4. Click **Update Preview**, then switch **Before / After** at the same position.
+   Fit, centered 100%/200% zoom, and **Difference x10** remain available. The
+   difference display is for inspection only. Every preview is calculated from
+   the original stage image, so repeated updates do not accumulate changes.
+5. **Apply Curves** retains a separate &lt;image&gt;_Curves result for Save As.
+   **Skip Curves** or closing the dialog preserves the pre-curve image.
+   **Keep a before-Curves comparison image** retains an additional
+   &lt;image&gt;_BeforeCurves copy. Neither comparison nor original is saved automatically.
 
-1. Select **Mild** (15%) or **Medium** (30%), or **Custom** and an amount from
-   0–50%. The amount controls curve displacement, rather than a target brightness.
-2. Click **Update Preview**. The right pane is initially blank and Apply is
-   disabled until the calculation completes, just as in HDR review.
-3. Compare the before and after images at the same scale. After changing strength,
-   click **Update Preview** again before applying.
-4. **Apply adaptive** retains a separate `<image>_Adaptive` result for Save As.
-   **Skip adaptive**, or closing the dialog, continues with the pre-curve image.
-   The source image is not changed by calculating the preview.
-5. **Keep a before-adaptive comparison image** retains an additional
-   `<image>_BeforeAdaptive` copy for full-resolution inspection. Neither the
-   comparison copy nor the original processed view is automatically saved.
+The default Brighten preset raises shadow and midtone values. Native curves can
+produce substantial changes; inspect the preview and reduce Amount when needed.
+Other native curve channels remain at identity. This stage uses explicit editable
+points rather than the earlier percentile-derived protected curve.
+PixInsight runtime verification is pending. Automated checks cover selected
+channels, amount/identity behavior, input validation, editable controls, failure
+cleanup, comparison retention, and Apply/Skip.
 
-This stage does not choose a color balance or apply a saturation curve. A common
-RGB/K brightness curve can still subtly change perceived color; inspect the
-comparison, particularly for mapped narrowband targets. Image statistics guide
-the curve, but do not determine an ideal aesthetic result. Start with Mild.
-PixInsight runtime verification is pending; automated checks cover curve bounds,
-monotonicity, protected tonal ranges, image sampling, and Apply/Skip behavior.
-
-The final filename remains `<original_name>_CCDASTROWorkflow_Final.xisf`.
-Enabling HDR and adaptive finishing adds two separate interactive reviews.
+The final filename remains &lt;original_name&gt;_CCDASTROWorkflow_Final.xisf.
+Enabling HDR and CurvesTransformation adds two separate interactive reviews.
 
 ### Optional HDR preview and comparison
 

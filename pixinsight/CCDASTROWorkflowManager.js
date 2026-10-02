@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.11"
+#define VERSION "1.1.12"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1269,12 +1269,12 @@ PreflightValidator.prototype.validate = function()
    }
    if (this.dialog.adaptiveEnabled && this.dialog.adaptiveEnabled.checked)
    {
-      if (resolveProcessClass(["PixelMath"]) === null)
-         result.errors.push("Adaptive finishing requires PixelMath.");
+      if (resolveProcessClass(["CurvesTransformation"]) === null)
+         result.errors.push("Curves review requires CurvesTransformation.");
       if (separationEnabled && !this.dialog.recombine.checked)
-         result.errors.push("Adaptive finishing requires a recombined final image.");
+         result.errors.push("Curves review requires a recombined final image.");
       if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
-         result.errors.push("Adaptive finishing requires an image stretch in this workflow.");
+         result.errors.push("Curves review requires an image stretch in this workflow.");
    }
    if (this.dialog.starsStretch.currentItem > 0)
       result.warnings.push("Automatic stretching of a stars-only branch can amplify subtraction residuals. " +
@@ -1740,9 +1740,9 @@ constructor()
    this.hdrEnabled.toolTip = "After stretching and star reduction, review native HDRMultiscaleTransform on a copy. Adjust layers and blend strength, then Apply or Skip. Requires a nonlinear final image.";
    this.branchesBox.sizer.add(this.hdrEnabled);
    this.adaptiveEnabled = new CheckBox(this.content);
-   this.adaptiveEnabled.text = "Optional adaptive brightness/contrast: preview before saving";
+   this.adaptiveEnabled.text = "Optional CurvesTransformation: preview before saving";
    this.adaptiveEnabled.checked = false;
-   this.adaptiveEnabled.toolTip = "Measure image percentiles and review a gentle finishing curve after HDR. Protects dark background and bright highlights; does not adjust color balance or saturation. Apply or Skip.";
+   this.adaptiveEnabled.toolTip = "Apply native CurvesTransformation after HDR. Choose RGB/K, Lightness or Saturation, edit curve points and amount, and compare the preview before Apply or Skip.";
    this.branchesBox.sizer.add(this.adaptiveEnabled);
    this.starReductionMethodControl = starReductionMethodControl;
    this.applyImageType = function(applyDefaults)
@@ -2223,72 +2223,56 @@ function reviewHDR(view)
    }
 }
 
-function adaptiveCurveFromSamples(samples, strength)
+function curvesReviewPoints(dialog)
 {
-   samples = samples.filter(function(x) { return finiteNumber(x) && x >= 0 && x <= 1; });
-   if (samples.length < 16)
-      throw new Error("Insufficient valid samples for adaptive finishing.");
-   samples.sort(function(a, b) { return a - b; });
-   function q(p) { return samples[Math.floor((samples.length - 1) * p)]; }
-   var low = q(0.20), lower = q(0.40), upper = q(0.75), high = q(0.99);
-   if (lower - low < 0.0001 || upper - lower < 0.0001 || high - upper < 0.0001)
-      throw new Error("Image has too little tonal variation for a safe adaptive curve. Skip this stage.");
-   var amount = Math.max(0, Math.min(50, strength)) / 100;
-   var delta = Math.min(lower - low, upper - lower, high - upper) * amount;
-   return [[0, 0], [low, low], [lower, lower - delta * 0.5],
-      [upper, upper + delta], [high, high], [1, 1]];
+   var points = [[0, 0]];
+   for (var i = 0; i < dialog.curveInputs.length; ++i)
+      points.push([dialog.curveInputs[i].value / 1000, dialog.curveOutputs[i].value / 1000]);
+   points.push([1, 1]);
+   return points;
 }
 
-function sampleAdaptiveImage(image)
+function curvesWithAmount(points, amount)
 {
-   var samples = [];
-   var stepX = Math.max(1, Math.ceil(image.width / 256));
-   var stepY = Math.max(1, Math.ceil(image.height / 256));
-   for (var y = 0; y < image.height; y += stepY)
+   if (!finiteNumber(amount) || amount < 0 || amount > 100)
+      throw new Error("Curve amount must be between 0 and 100 percent.");
+   var result = [];
+   for (var i = 0; i < points.length; ++i)
    {
-      checkAbortRequested();
-      for (var x = 0; x < image.width; x += stepX)
-      {
-         var value = image.sample(x, y, 0);
-         if (image.isColor)
-            value = (value + image.sample(x, y, 1) + image.sample(x, y, 2)) / 3;
-         samples.push(value);
-      }
+      var x = points[i][0], y = points[i][1];
+      if (!finiteNumber(x) || !finiteNumber(y) || x < 0 || x > 1 || y < 0 || y > 1 ||
+          (i > 0 && x <= points[i - 1][0]))
+         throw new Error("Curve input points must increase from 0 to 1; outputs must be between 0 and 1.");
+      result.push([x, x + (y - x) * amount / 100]);
    }
-   return samples;
+   if (result.length < 2 || result[0][0] !== 0 || result[result.length - 1][0] !== 1)
+      throw new Error("Curve must include input endpoints 0 and 1.");
+   return result;
 }
 
-function adaptiveCurveExpression(points)
+function buildAdaptiveCandidate(view, strength, points, channel)
 {
-   // Piecewise linear RGB/K curve: monotonic, with identity outside the
-   // protected percentile interval. No interpolation overshoot or clipping.
-   var expression = "$T";
-   for (var i = points.length - 3; i >= 1; --i)
-   {
-      var a = points[i], b = points[i + 1];
-      var slope = (b[1] - a[1]) / (b[0] - a[0]);
-      var segment = "(" + a[1] + "+($T-" + a[0] + ")*" + slope + ")";
-      expression = "iif($T<" + b[0] + "," + segment + "," + expression + ")";
-   }
-   return "iif($T<=" + points[1][0] + ",$T," + expression + ")";
-}
-
-function buildAdaptiveCandidate(view, strength)
-{
-   var points = adaptiveCurveFromSamples(sampleAdaptiveImage(view.image), strength);
-   var window = cloneHDRView(view, "_Adaptive");
+   var curve = curvesWithAmount(points, strength);
+   if (["K", "L", "S"].indexOf(channel) < 0)
+      throw new Error("Unsupported CurvesTransformation channel.");
+   if (channel === "S" && !view.image.isColor)
+      throw new Error("Saturation requires a color image. Select RGB/K or Lightness.");
+   var window = cloneHDRView(view, "_Curves");
    try
    {
       checkAbortRequested();
-      var process = new PixelMath;
-      process.useSingleExpression = true;
-      process.createNewImage = false;
-      process.rescale = false;
-      process.truncate = false;
-      process.symbols = "";
-      process.expression = adaptiveCurveExpression(points);
+      var process = new CurvesTransformation;
+      // Explicit identity curves prevent unrelated channels from changing.
+      var channels = ["R", "G", "B", "K", "A", "L", "a", "b", "c", "H", "S"];
+      for (var i = 0; i < channels.length; ++i)
+      {
+         process[channels[i]] = [[0, 0], [1, 1]];
+         process[channels[i] + "t"] = CurvesTransformation.prototype.AkimaSubsplines;
+      }
+      process[channel] = curve;
+      logLine("CurvesTransformation channel " + channel + ": " + JSON.stringify(curve));
       if (!process.executeOn(window.mainView))
-         throw new Error("Adaptive finishing failed.");
+         throw new Error("CurvesTransformation failed.");
       checkAbortRequested();
       return window;
    }
@@ -2301,29 +2285,56 @@ constructor(view)
 {
    super();
    var self = this;
-   this.windowTitle = "adaptive preview and comparison";
+   this.windowTitle = "CurvesTransformation preview and comparison";
    this.candidate = null;
    this.previewRevision = 0;
    this.previewStatus = new Label(this);
    this.previewStatus.text = "Click Update Preview, then switch Before / After at the same position.";
    this.instructions = new Label(this);
-   this.instructions.text = "Switch Before / After to compare adaptive finishing. Difference x10 is for inspection only. Update Preview after changing settings.\nApply keeps a separate adaptive result; Skip preserves the image before adaptive.";
+   this.instructions.text = "Native CurvesTransformation. Edit input/output points (0–1000 = 0–1), then Update Preview.\nSwitch Before / After to compare. Apply keeps a separate result; Skip preserves the original.";
    this.layersLabel = new Label(this);
-   this.layersLabel.text = "Strength:";
+   this.layersLabel.text = "Preset:";
    this.layers = new ComboBox(this);
-   this.layers.addItem("Mild");
-   this.layers.addItem("Medium");
+   this.layers.addItem("Brighten");
+   this.layers.addItem("Contrast");
+   this.layers.addItem("Identity");
    this.layers.addItem("Custom");
    this.layers.currentItem = 0;
    this.strengthLabel = new Label(this);
    this.strengthLabel.text = "Amount (%):";
    this.strength = new SpinBox(this);
    this.strength.minValue = 0;
-   this.strength.maxValue = 50;
-   this.strength.value = 15;
-   this.strength.enabled = false;
+   this.strength.maxValue = 100;
+   this.strength.value = 100;
+   this.strength.enabled = true;
+   this.channel = new ComboBox(this);
+   this.channel.addItem("RGB/K");
+   this.channel.addItem("Lightness");
+   this.channel.addItem("Saturation (color images)");
+   this.channel.currentItem = 0;
+   this.curveInputs = [];
+   this.curveOutputs = [];
+   this.curveOptions = new VerticalSizer;
+   this.curveOptions.spacing = 4;
+   var defaults = [[100, 160], [350, 500], [700, 820]];
+   for (var i = 0; i < defaults.length; ++i)
+   {
+      var row = new HorizontalSizer;
+      row.spacing = 8;
+      var label = new Label(this);
+      label.text = ["Shadows: input / output", "Midtones: input / output", "Highlights: input / output"][i];
+      var input = new SpinBox(this);
+      input.minValue = 1; input.maxValue = 999; input.value = defaults[i][0];
+      var output = new SpinBox(this);
+      output.minValue = 0; output.maxValue = 1000; output.value = defaults[i][1];
+      input.toolTip = "Input brightness on a 0–1000 scale. Inputs must increase from shadows to highlights.";
+      output.toolTip = "Output value on a 0–1000 scale. Above input raises this part of the curve; below input lowers it.";
+      this.curveInputs.push(input); this.curveOutputs.push(output);
+      row.add(label); row.addStretch(); row.add(input); row.add(output);
+      this.curveOptions.add(row);
+   }
    this.keepComparison = new CheckBox(this);
-   this.keepComparison.text = "Keep a before-adaptive comparison image";
+   this.keepComparison.text = "Keep a before-Curves comparison image";
    this.keepComparison.checked = true;
    this.beforeBitmap = view.image.render(1, false);
    this.afterBitmap = null;
@@ -2355,19 +2366,31 @@ constructor(view)
    this.updateButton = new PushButton(this);
    this.updateButton.text = "Update Preview";
    this.applyButton = new PushButton(this);
-   this.applyButton.text = "Apply adaptive";
+   this.applyButton.text = "Apply Curves";
    this.applyButton.enabled = false;
    this.skipButton = new PushButton(this);
-   this.skipButton.text = "Skip adaptive";
+   this.skipButton.text = "Skip Curves";
    this.skipButton.onClick = function() { self.cancel(); };
    this.applyButton.onClick = function() { self.ok(); };
    var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.layers.onItemSelected = function(index)
    {
-      self.strength.enabled = index === 2;
-      if (index < 2) self.strength.value = index === 0 ? 15 : 30;
+      var presets = [ [[100,160],[350,500],[700,820]], [[100,70],[350,350],[700,800]], [[100,100],[350,350],[700,700]] ];
+      if (index < presets.length)
+         for (var i = 0; i < self.curveInputs.length; ++i)
+         {
+            self.curveInputs[i].value = presets[index][i][0];
+            self.curveOutputs[i].value = presets[index][i][1];
+         }
       dirty();
    };
+   var custom = function() { self.layers.currentItem = 3; dirty(); };
+   for (var i = 0; i < this.curveInputs.length; ++i)
+   {
+      this.curveInputs[i].onValueUpdated = custom;
+      this.curveOutputs[i].onValueUpdated = custom;
+   }
+   this.channel.onItemSelected = dirty;
    this.strength.onValueUpdated = dirty;
    this.updateButton.onClick = function()
    {
@@ -2381,8 +2404,8 @@ constructor(view)
          self.afterBitmap = null;
          self.differenceBitmap = null;
          self.displayMode.currentItem = 1;
-         logLine("Adaptive preview settings: " + self.strength.value + "% strength.");
-         self.candidate = buildAdaptiveCandidate(view, self.strength.value);
+         logLine("Curves preview settings: " + self.strength.value + "% curve amount.");
+         self.candidate = buildAdaptiveCandidate(view, self.strength.value, curvesReviewPoints(self), ["K", "L", "S"][self.channel.currentItem]);
          self.candidate.mainView.image.resetSelections();
          self.afterBitmap = self.candidate.mainView.image.render(1, false);
          ++self.previewRevision;
@@ -2400,6 +2423,7 @@ constructor(view)
    };
    this.options = new HorizontalSizer;
    this.options.spacing = 8;
+   this.options.add(this.channel);
    this.options.add(this.layersLabel);
    this.options.add(this.layers);
    this.options.add(this.strengthLabel);
@@ -2418,6 +2442,7 @@ constructor(view)
    this.sizer.add(this.preview, 100);
    this.sizer.add(this.comparisonOptions);
    this.sizer.add(this.options);
+   this.sizer.add(this.curveOptions);
    this.sizer.add(this.previewStatus);
    this.sizer.add(this.keepComparison);
    this.sizer.add(this.buttons);
@@ -2433,15 +2458,15 @@ function reviewAdaptive(view)
    {
       if (!dialog.execute()) { checkAbortRequested(); return view; }
       if (dialog.candidate === null || !dialog.applyButton.enabled)
-         throw new Error("Update the adaptive preview before applying.");
+         throw new Error("Update the Curves preview before applying.");
       if (dialog.keepComparison.checked)
       {
-         var before = cloneadaptiveView(view, "_BeforeAdaptive");
+         var before = cloneHDRView(view, "_BeforeCurves");
          before.show();
       }
       dialog.candidate.show();
       accepted = true;
-      logLine("adaptive applied: " + dialog.strength.value + "% strength. Original view retained.");
+      logLine("CurvesTransformation applied: " + dialog.strength.value + "% curve amount. Original view retained.");
       return dialog.candidate.mainView;
    }
    finally

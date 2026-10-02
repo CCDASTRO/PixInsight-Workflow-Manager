@@ -11,7 +11,7 @@ for (const name of ['HDRReviewDialog', 'AdaptiveReviewDialog']) {
   const calls = [], settings = [];
   const self = { enabled: true, applyButton: {}, previewRevision: 0, candidate: null, windowTitle: name,
     previewStatus: { repaint: () => calls.push('statusPaint') }, preview: { repaint: () => calls.push('paint') },
-    displayMode: { currentItem: 2 }, layers: { value: 6 }, strength: { value: 15 } };
+    channel: { currentItem: 0 }, displayMode: { currentItem: 2 }, layers: { value: 6 }, strength: { value: 15 } };
   let bitmapId = 0;
   function build(view, ...args) {
     settings.push(args);
@@ -19,7 +19,7 @@ for (const name of ['HDRReviewDialog', 'AdaptiveReviewDialog']) {
     return { mainView: { image: { resetSelections: () => calls.push('reset'), render: (...args) => { assert.deepEqual(args, [1, false]); return bitmap; } } }, forceClose: () => calls.push('close') };
   }
   const context = vm.createContext({ self, view: { image: {} }, logLine: () => {},
-    buildHDRCandidate: build, buildAdaptiveCandidate: build,
+    buildHDRCandidate: build, buildAdaptiveCandidate: build, curvesReviewPoints: () => [[0,0],[1,1]],
     previewChangeSummary: () => 'mean 0.1000%, max 1.0000%',
     CoreApplication: { processEvents: () => calls.push('events') } });
   vm.runInContext('(function(){ this.updateButton={}; ' + source.slice(handlerStart, handlerEnd) + ' }).call(self);', context);
@@ -32,7 +32,7 @@ for (const name of ['HDRReviewDialog', 'AdaptiveReviewDialog']) {
   assert.equal(self.applyButton.enabled, true);
   assert.equal(calls.filter(x => x === 'paint').length, 2);
   assert.equal(calls.filter(x => x === 'close').length, 1);
-  assert.deepEqual(settings, name === 'HDRReviewDialog' ? [[6, 15], [8, 30]] : [[15], [30]]);
+  assert.deepEqual(settings, name === 'HDRReviewDialog' ? [[6, 15], [8, 30]] : [[15, [[0,0],[1,1]], "K"], [30, [[0,0],[1,1]], "K"]]);
 }
 const helper = source.slice(source.indexOf('function previewChangeSummary('), source.indexOf('class HDRReviewDialog'));
 const context = vm.createContext({ Math }); vm.runInContext(helper, context);

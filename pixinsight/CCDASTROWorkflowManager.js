@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.10"
+#define VERSION "1.1.11"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2023,6 +2023,57 @@ function previewChangeSummary(before, after)
       "%, max " + (100 * maximum).toFixed(4) + "%";
 }
 
+function installComparisonControls(self, view)
+{
+   self.displayMode = new ComboBox(self);
+   self.displayMode.addItem("Before");
+   self.displayMode.addItem("After");
+   self.displayMode.addItem("Difference x10 (inspection only)");
+   self.displayMode.currentItem = 1;
+   self.zoomMode = new ComboBox(self);
+   self.zoomMode.addItem("Fit");
+   self.zoomMode.addItem("100% (center)");
+   self.zoomMode.addItem("200% (center)");
+   self.differenceBitmap = null;
+   self.displayMode.onItemSelected = function(index)
+   {
+      try
+      {
+         if (index === 2 && self.candidate !== null && self.differenceBitmap === null)
+         {
+            var difference = cloneHDRView(self.candidate.mainView, "_PreviewDifference");
+            try
+            {
+               var process = new PixelMath;
+               process.useSingleExpression = true;
+               process.createNewImage = false;
+               process.rescale = false;
+               process.truncate = true;
+               process.symbols = "";
+               process.expression = "min(1,10*abs(" + view.id + "-$T))";
+               if (!process.executeOn(difference.mainView))
+                  throw new Error("Difference preview failed.");
+               difference.mainView.image.resetSelections();
+               self.differenceBitmap = difference.mainView.image.render(1, false);
+            }
+            finally { difference.forceClose(); }
+         }
+      }
+      catch (e)
+      {
+         self.displayMode.currentItem = 1;
+         (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
+      }
+      self.preview.repaint();
+   };
+   self.zoomMode.onItemSelected = function() { self.preview.repaint(); };
+   self.comparisonOptions = new HorizontalSizer;
+   self.comparisonOptions.spacing = 8;
+   self.comparisonOptions.add(self.displayMode);
+   self.comparisonOptions.add(self.zoomMode);
+   self.comparisonOptions.addStretch();
+}
+
 class HDRReviewDialog extends Dialog
 {
 constructor(view)
@@ -2033,9 +2084,9 @@ constructor(view)
    this.candidate = null;
    this.previewRevision = 0;
    this.previewStatus = new Label(this);
-   this.previewStatus.text = "Click Update Preview to calculate the right-hand image.";
+   this.previewStatus.text = "Click Update Preview, then switch Before / After at the same position.";
    this.instructions = new Label(this);
-   this.instructions.text = "Before (left) / HDR blend (right). Update Preview after changing settings.\nApply keeps a separate HDR result; Skip preserves the image before HDR.";
+   this.instructions.text = "Switch Before / After to compare HDR. Difference x10 is for inspection only. Update Preview after changing settings.\nApply keeps a separate HDR result; Skip preserves the image before HDR.";
    this.layersLabel = new Label(this);
    this.layersLabel.text = "Layers:";
    this.layers = new SpinBox(this);
@@ -2055,22 +2106,26 @@ constructor(view)
    this.afterBitmap = null;
    this.preview = new Control(this);
    this.preview.setMinSize(640, 320);
+   installComparisonControls(this, view);
    this.preview.onPaint = function()
    {
       var g = new Graphics(this);
       try
       {
          g.fillRect(this.boundsRect, new Brush(0xff202020));
-         var half = Math.floor(this.width / 2);
-         var scale = Math.min((half - 12) / self.beforeBitmap.width,
-            (this.height - 12) / self.beforeBitmap.height);
-         var w = Math.round(self.beforeBitmap.width * scale);
-         var h = Math.round(self.beforeBitmap.height * scale);
-         var x = Math.round((half - w) / 2);
-         var y = Math.round((this.height - h) / 2);
-         g.drawScaledBitmap(new Rect(x, y, x + w, y + h), self.beforeBitmap);
-         if (self.afterBitmap !== null)
-            g.drawScaledBitmap(new Rect(half + x, y, half + x + w, y + h), self.afterBitmap);
+         var bitmap = self.displayMode.currentItem === 0 ? self.beforeBitmap :
+            self.displayMode.currentItem === 2 ? self.differenceBitmap : self.afterBitmap;
+         if (bitmap !== null)
+         {
+            var scale = self.zoomMode.currentItem === 0 ?
+               Math.min((this.width - 12) / bitmap.width, (this.height - 12) / bitmap.height) :
+               self.zoomMode.currentItem === 1 ? 1 : 2;
+            var w = Math.round(bitmap.width * scale);
+            var h = Math.round(bitmap.height * scale);
+            var x = Math.round((this.width - w) / 2);
+            var y = Math.round((this.height - h) / 2);
+            g.drawScaledBitmap(new Rect(x, y, x + w, y + h), bitmap);
+         }
       }
       finally { g.end(); }
    };
@@ -2096,6 +2151,8 @@ constructor(view)
       {
          if (self.candidate !== null) { self.candidate.forceClose(); self.candidate = null; }
          self.afterBitmap = null;
+         self.differenceBitmap = null;
+         self.displayMode.currentItem = 1;
          logLine("HDR preview settings: " + self.layers.value + " layers, " + self.strength.value + "% blend.");
          self.candidate = buildHDRCandidate(view, self.layers.value, self.strength.value);
          self.candidate.mainView.image.resetSelections();
@@ -2131,6 +2188,7 @@ constructor(view)
    this.sizer.spacing = 8;
    this.sizer.add(this.instructions);
    this.sizer.add(this.preview, 100);
+   this.sizer.add(this.comparisonOptions);
    this.sizer.add(this.options);
    this.sizer.add(this.previewStatus);
    this.sizer.add(this.keepComparison);
@@ -2247,9 +2305,9 @@ constructor(view)
    this.candidate = null;
    this.previewRevision = 0;
    this.previewStatus = new Label(this);
-   this.previewStatus.text = "Click Update Preview to calculate the right-hand image.";
+   this.previewStatus.text = "Click Update Preview, then switch Before / After at the same position.";
    this.instructions = new Label(this);
-   this.instructions.text = "Before (left) / adaptive blend (right). Update Preview after changing settings.\nApply keeps a separate adaptive result; Skip preserves the image before adaptive.";
+   this.instructions.text = "Switch Before / After to compare adaptive finishing. Difference x10 is for inspection only. Update Preview after changing settings.\nApply keeps a separate adaptive result; Skip preserves the image before adaptive.";
    this.layersLabel = new Label(this);
    this.layersLabel.text = "Strength:";
    this.layers = new ComboBox(this);
@@ -2271,22 +2329,26 @@ constructor(view)
    this.afterBitmap = null;
    this.preview = new Control(this);
    this.preview.setMinSize(640, 320);
+   installComparisonControls(this, view);
    this.preview.onPaint = function()
    {
       var g = new Graphics(this);
       try
       {
          g.fillRect(this.boundsRect, new Brush(0xff202020));
-         var half = Math.floor(this.width / 2);
-         var scale = Math.min((half - 12) / self.beforeBitmap.width,
-            (this.height - 12) / self.beforeBitmap.height);
-         var w = Math.round(self.beforeBitmap.width * scale);
-         var h = Math.round(self.beforeBitmap.height * scale);
-         var x = Math.round((half - w) / 2);
-         var y = Math.round((this.height - h) / 2);
-         g.drawScaledBitmap(new Rect(x, y, x + w, y + h), self.beforeBitmap);
-         if (self.afterBitmap !== null)
-            g.drawScaledBitmap(new Rect(half + x, y, half + x + w, y + h), self.afterBitmap);
+         var bitmap = self.displayMode.currentItem === 0 ? self.beforeBitmap :
+            self.displayMode.currentItem === 2 ? self.differenceBitmap : self.afterBitmap;
+         if (bitmap !== null)
+         {
+            var scale = self.zoomMode.currentItem === 0 ?
+               Math.min((this.width - 12) / bitmap.width, (this.height - 12) / bitmap.height) :
+               self.zoomMode.currentItem === 1 ? 1 : 2;
+            var w = Math.round(bitmap.width * scale);
+            var h = Math.round(bitmap.height * scale);
+            var x = Math.round((this.width - w) / 2);
+            var y = Math.round((this.height - h) / 2);
+            g.drawScaledBitmap(new Rect(x, y, x + w, y + h), bitmap);
+         }
       }
       finally { g.end(); }
    };
@@ -2317,6 +2379,8 @@ constructor(view)
       {
          if (self.candidate !== null) { self.candidate.forceClose(); self.candidate = null; }
          self.afterBitmap = null;
+         self.differenceBitmap = null;
+         self.displayMode.currentItem = 1;
          logLine("Adaptive preview settings: " + self.strength.value + "% strength.");
          self.candidate = buildAdaptiveCandidate(view, self.strength.value);
          self.candidate.mainView.image.resetSelections();
@@ -2352,6 +2416,7 @@ constructor(view)
    this.sizer.spacing = 8;
    this.sizer.add(this.instructions);
    this.sizer.add(this.preview, 100);
+   this.sizer.add(this.comparisonOptions);
    this.sizer.add(this.options);
    this.sizer.add(this.previewStatus);
    this.sizer.add(this.keepComparison);

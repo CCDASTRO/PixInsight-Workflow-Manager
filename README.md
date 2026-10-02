@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.10
+# CCDASTRO PixInsight Workflow Manager v1.1.11
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -65,6 +65,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.11:** HDR and adaptive previews use same-position Before/After switching, Fit/100%/200% centered zoom, and an inspection-only 10x absolute difference view. PixInsight runtime verification is pending.
 - **v1.1.10:** Forces immediate HDR/adaptive preview repaint, resets rendered image selections, and shows preview revision and sampled pixel-change statistics. Console logs record each preview settings selection.
 - **v1.1.9:** Uses a configured CCDASTRO_MLDenoise process icon so the neural network model path and denoise settings are retained. Preflight rejects missing models before processing.
 - **v1.1.8:** Adds optional image-adaptive brightness/contrast finishing after

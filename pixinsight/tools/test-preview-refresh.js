@@ -11,7 +11,7 @@ for (const name of ['HDRReviewDialog', 'AdaptiveReviewDialog']) {
   const calls = [], settings = [];
   const self = { enabled: true, applyButton: {}, previewRevision: 0, candidate: null, windowTitle: name,
     previewStatus: { repaint: () => calls.push('statusPaint') }, preview: { repaint: () => calls.push('paint') },
-    layers: { value: 6 }, strength: { value: 15 } };
+    displayMode: { currentItem: 2 }, layers: { value: 6 }, strength: { value: 15 } };
   let bitmapId = 0;
   function build(view, ...args) {
     settings.push(args);

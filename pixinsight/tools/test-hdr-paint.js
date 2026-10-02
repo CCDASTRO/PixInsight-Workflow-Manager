@@ -10,7 +10,7 @@ const paint = source.slice(start, end);
 class Brush { constructor(color) { this.color = color; } }
 const preview = { width: 640, height: 320, boundsRect: {} };
 let fills = 0, draws = 0, ended = 0;
-const self = { beforeBitmap: { width: 100, height: 80 }, afterBitmap: null };
+const self = { beforeBitmap: { width: 100, height: 80 }, displayMode: { currentItem: 0 }, zoomMode: { currentItem: 0 }, afterBitmap: null };
 const context = vm.createContext({
   self, preview, Brush, Math,
   Rect: function (...args) { this.coordinates = args; },
@@ -24,8 +24,9 @@ vm.runInContext("(function(){" + paint + "}).call({preview});", context);
 preview.onPaint();
 assert.equal(draws, 1);
 self.afterBitmap = { width: 100, height: 80 };
+self.displayMode.currentItem = 1;
 preview.onPaint();
-assert.equal(draws, 3);
+assert.equal(draws, 2);
 assert.equal(fills, 2);
 assert.equal(ended, 2);
-console.log("HDR preview painting regression passed: Brush argument and both comparison panes.");
+console.log("HDR preview painting regression passed: Brush argument and same-position Before/After rendering.");

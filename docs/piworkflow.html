@@ -216,9 +216,9 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
-<li><p><strong>v1.1.13:</strong> Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values.</p>
+<li><p><strong>v1.1.13:</strong> Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values. User confirmed successful PixInsight testing on 2026-10-02 after installing this fix.</p>
 </li>
-<li><p><strong>v1.1.12:</strong> Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. PixInsight runtime verification is pending.</p>
+<li><p><strong>v1.1.12:</strong> Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. Successful PixInsight testing was confirmed with the v1.1.13 enum fix.</p>
 </li>
 <li><p><strong>v1.1.11:</strong> HDR and adaptive previews use same-position Before/After switching, Fit/100%/200% centered zoom, and an inspection-only 10x absolute difference view. PixInsight runtime verification is pending.</p>
 </li>
@@ -707,7 +707,9 @@ the original stage image, so repeated updates do not accumulate changes.</li>
 produce substantial changes; inspect the preview and reduce Amount when needed.
 Other native curve channels remain at identity. This stage uses explicit editable
 points rather than the earlier percentile-derived protected curve.
-PixInsight runtime verification is pending. Automated checks cover selected
+User confirmed successful CurvesTransformation testing in PixInsight on 2026-10-02
+with v1.1.13 after the interpolation enum fix. This confirmation does not establish
+that every channel and control combination was tested. Automated checks cover selected
 channels, amount/identity behavior, input validation, editable controls, failure
 cleanup, comparison retention, and Apply/Skip.</p>
 <p>The final filename remains &lt;original_name&gt;_CCDASTROWorkflow_Final.xisf.

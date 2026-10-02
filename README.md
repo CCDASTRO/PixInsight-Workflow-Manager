@@ -65,8 +65,8 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
-- **v1.1.13:** Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values.
-- **v1.1.12:** Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. PixInsight runtime verification is pending.
+- **v1.1.13:** Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values. User confirmed successful PixInsight testing on 2026-10-02 after installing this fix.
+- **v1.1.12:** Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. Successful PixInsight testing was confirmed with the v1.1.13 enum fix.
 - **v1.1.11:** HDR and adaptive previews use same-position Before/After switching, Fit/100%/200% centered zoom, and an inspection-only 10x absolute difference view. PixInsight runtime verification is pending.
 - **v1.1.10:** Forces immediate HDR/adaptive preview repaint, resets rendered image selections, and shows preview revision and sampled pixel-change statistics. Console logs record each preview settings selection.
 - **v1.1.9:** Uses a configured CCDASTRO_MLDenoise process icon so the neural network model path and denoise settings are retained. Preflight rejects missing models before processing.
@@ -526,7 +526,9 @@ The default Brighten preset raises shadow and midtone values. Native curves can
 produce substantial changes; inspect the preview and reduce Amount when needed.
 Other native curve channels remain at identity. This stage uses explicit editable
 points rather than the earlier percentile-derived protected curve.
-PixInsight runtime verification is pending. Automated checks cover selected
+User confirmed successful CurvesTransformation testing in PixInsight on 2026-10-02
+with v1.1.13 after the interpolation enum fix. This confirmation does not establish
+that every channel and control combination was tested. Automated checks cover selected
 channels, amount/identity behavior, input validation, editable controls, failure
 cleanup, comparison retention, and Apply/Skip.
 

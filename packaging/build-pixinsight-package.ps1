@@ -21,7 +21,7 @@ $stageScriptDirectory = Join-Path $stageRoot 'src\scripts\CCDASTRO'
 $packageName = "CCDASTROWorkflowManager-$Version.zip"
 $packagePath = Join-Path $updatesDirectory $packageName
 $manifestPath = Join-Path $updatesDirectory 'updates.xri'
-$releaseDate = (Get-Date).ToUniversalTime().ToString('yyyyMMdd')
+$releaseDate = (Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss')
 $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
 
 if (-not (Test-Path -LiteralPath $sourceScript -PathType Leaf)) {
@@ -188,8 +188,8 @@ if ($packageNode.fileName -ne $packageName) {
 if ($packageNode.sha1 -ne $sha1) {
     throw 'Manifest SHA-1 validation failed.'
 }
-if ($packageNode.releaseDate -notmatch '^\d{8}$') {
-    throw 'Manifest releaseDate must use YYYYMMDD.'
+if ($packageNode.releaseDate -notmatch '^\d{14}$') {
+    throw 'Manifest releaseDate must use YYYYMMDDhhmmss UTC.'
 }
 $manifestBytes = [System.IO.File]::ReadAllBytes($manifestPath)
 if ($manifestBytes.Length -ge 3 -and

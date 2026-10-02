@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.1.8',
+    [string] $Version = '1.1.9',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -119,6 +119,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v1.1.9 uses a configured MLDenoise icon and validates the neural network model path before processing</li>
           <li>v1.1.8 adds optional image-adaptive brightness and contrast with protected background/highlights, strength controls, preview and comparison</li>
           <li>v1.1.7 fixes the HDR preview Graphics.fillRect Brush argument error</li>
           <li>v1.1.6 adds optional native HDR with before/after preview, layers and blend controls, Apply/Skip, and retained comparison images</li>

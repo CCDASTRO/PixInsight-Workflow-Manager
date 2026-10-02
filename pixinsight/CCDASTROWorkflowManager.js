@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.8"
+#define VERSION "1.1.9"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -38,7 +38,7 @@ var adapterHelp = {
    blurXTerminator: "Use BlurXTerminator for deconvolution and structure recovery while the image is linear.",
    syqonParallax: "Run the configured CCDASTRO_Parallax process icon for structure recovery.",
    noiseXTerminator: "Use NoiseXTerminator for the main noise-reduction pass.",
-   mlDenoise: "Use PixInsight MLDenoise with its default settings for the main noise-reduction pass.",
+   mlDenoise: "Use the configured CCDASTRO_MLDenoise process icon, including its neural network model path and denoise settings.",
    syqonPrism: "Run the configured CCDASTRO_Prism process icon for the main noise-reduction pass.",
    starXTerminator: "Use StarXTerminator and request a separate stars-only image.",
    starNet2: "Use StarNet2 in linear mode and request a separate stars-only image.",
@@ -674,6 +674,50 @@ function linearStageOrder(rows)
       : ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
 }
 
+function MLDenoiseAdapter()
+{
+   this.id = "mlDenoise";
+   this.label = "MLDenoise";
+}
+
+MLDenoiseAdapter.prototype.configuredProcess = function()
+{
+   if (resolveProcessClass(["MLDenoise"]) === null)
+      throw new Error("Install the MLDenoise PixInsight process.");
+   var process = ProcessInstance.fromIcon("CCDASTRO_MLDenoise");
+   if (process === null)
+      throw new Error("Configure MLDenoise with a neural network model file and drag its New Instance triangle to the workspace. Rename the icon CCDASTRO_MLDenoise.");
+   if (process.processId() !== "MLDenoise")
+      throw new Error("CCDASTRO_MLDenoise must contain an MLDenoise process instance.");
+   if (typeof process.modelPath !== "string" || process.modelPath.trim().length === 0)
+      throw new Error("CCDASTRO_MLDenoise has no model path. Select a neural network model file in MLDenoise, then replace the configured icon.");
+   if (!File.exists(process.modelPath))
+      throw new Error("MLDenoise model file not found: " + process.modelPath);
+   return process;
+};
+
+MLDenoiseAdapter.prototype.available = function()
+{
+   try { this.configuredProcess(); return true; }
+   catch (e) { return false; }
+};
+
+MLDenoiseAdapter.prototype.requirement = function()
+{
+   try { this.configuredProcess(); return "Configured MLDenoise model and settings are ready."; }
+   catch (e) { return errorMessage(e); }
+};
+
+MLDenoiseAdapter.prototype.execute = function(view)
+{
+   var process = this.configuredProcess();
+   checkAbortRequested();
+   logLine("Running configured MLDenoise on " + view.fullId);
+   if (!process.executeOn(view))
+      throw new Error("Configured MLDenoise failed.");
+   checkAbortRequested();
+};
+
 function InteractiveCropAdapter()
 {
    this.id = "interactiveCrop";
@@ -738,9 +782,8 @@ var adapters = {
          setFirstProperty(p, ["iterations"], 2);
       }),
 
-   // Use the installed process defaults; do not assume version-specific parameters.
-   mlDenoise: new ProcessAdapter(
-      "mlDenoise", "MLDenoise", ["MLDenoise"]),
+   // Preserve the user-selected model and settings; defaults have no model path.
+   mlDenoise: new MLDenoiseAdapter,
 
    syqonPrism: new ProcessIconAdapter(
       "syqonPrism", "SyQon Prism / DeepPrism", SYQON_PRISM_ICON),

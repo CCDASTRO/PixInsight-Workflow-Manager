@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.8
+# CCDASTRO PixInsight Workflow Manager v1.1.9
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -65,6 +65,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.9:** Uses a configured CCDASTRO_MLDenoise process icon so the neural network model path and denoise settings are retained. Preflight rejects missing models before processing.
 - **v1.1.8:** Adds optional image-adaptive brightness/contrast finishing after
   HDR and before Save As, with Mild/Medium/Custom strength, protected background
   and highlights, side-by-side preview, Apply/Skip, and comparison copies.
@@ -466,6 +467,24 @@ completed image receives one conservative linked stretch. This avoids stretching
 the extracted star layer separately, which can amplify subtraction residuals and
 create washed-out halos. Independent branch stretches remain advanced options;
 they use screen blending and disable the final recombined stretch.
+
+### MLDenoise setup
+
+MLDenoise requires a neural network model file; a fresh process instance has no
+model path. Before selecting MLDenoise in the workflow:
+
+1. Open the native MLDenoise process and select a compatible model file.
+2. Configure the denoise settings and test on a copy of your image.
+3. Drag the New Instance triangle to the workspace and rename the icon
+   `CCDASTRO_MLDenoise`. Keep this icon loaded when running the workflow.
+4. Select MLDenoise in the workflow and click Validate. The workflow checks the
+   icon's process type, nonempty model path, and that the file exists.
+
+Changing settings in the native dialog does not update an existing icon; replace
+the icon after changing the model or denoise parameters. The workflow executes
+the configured icon at the selected denoise placement. It cannot determine model
+compatibility from the filename; the native process validates it during execution.
+Automated adapter tests use mocked APIs; runtime verification is pending.
 
 ### Optional adaptive brightness and contrast
 

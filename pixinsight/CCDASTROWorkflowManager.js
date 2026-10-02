@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.9"
+#define VERSION "1.1.10"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2005,6 +2005,24 @@ function buildHDRCandidate(view, layers, strength)
    catch (e) { window.forceClose(); throw e; }
 }
 
+function previewChangeSummary(before, after)
+{
+   var total = 0, maximum = 0, count = 0;
+   var stepX = Math.max(1, Math.ceil(before.width / 128));
+   var stepY = Math.max(1, Math.ceil(before.height / 128));
+   for (var y = 0; y < before.height; y += stepY)
+      for (var x = 0; x < before.width; x += stepX)
+         for (var c = 0; c < (before.isColor ? 3 : 1); ++c)
+         {
+            var delta = Math.abs(after.sample(x, y, c) - before.sample(x, y, c));
+            total += delta;
+            maximum = Math.max(maximum, delta);
+            ++count;
+         }
+   return "Sampled change: mean " + (100 * total / Math.max(1, count)).toFixed(4) +
+      "%, max " + (100 * maximum).toFixed(4) + "%";
+}
+
 class HDRReviewDialog extends Dialog
 {
 constructor(view)
@@ -2013,6 +2031,9 @@ constructor(view)
    var self = this;
    this.windowTitle = "HDR preview and comparison";
    this.candidate = null;
+   this.previewRevision = 0;
+   this.previewStatus = new Label(this);
+   this.previewStatus.text = "Click Update Preview to calculate the right-hand image.";
    this.instructions = new Label(this);
    this.instructions.text = "Before (left) / HDR blend (right). Update Preview after changing settings.\nApply keeps a separate HDR result; Skip preserves the image before HDR.";
    this.layersLabel = new Label(this);
@@ -2030,7 +2051,7 @@ constructor(view)
    this.keepComparison = new CheckBox(this);
    this.keepComparison.text = "Keep a before-HDR comparison image";
    this.keepComparison.checked = true;
-   this.beforeBitmap = view.image.render();
+   this.beforeBitmap = view.image.render(1, false);
    this.afterBitmap = null;
    this.preview = new Control(this);
    this.preview.setMinSize(640, 320);
@@ -2062,19 +2083,27 @@ constructor(view)
    this.skipButton.text = "Skip HDR";
    this.skipButton.onClick = function() { self.cancel(); };
    this.applyButton.onClick = function() { self.ok(); };
-   var dirty = function() { self.applyButton.enabled = false; };
+   var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.layers.onValueUpdated = dirty;
    this.strength.onValueUpdated = dirty;
    this.updateButton.onClick = function()
    {
       self.enabled = false;
       self.applyButton.enabled = false;
+      self.previewStatus.text = "Calculating new preview...";
+      self.previewStatus.repaint();
       try
       {
          if (self.candidate !== null) { self.candidate.forceClose(); self.candidate = null; }
          self.afterBitmap = null;
+         logLine("HDR preview settings: " + self.layers.value + " layers, " + self.strength.value + "% blend.");
          self.candidate = buildHDRCandidate(view, self.layers.value, self.strength.value);
-         self.afterBitmap = self.candidate.mainView.image.render();
+         self.candidate.mainView.image.resetSelections();
+         self.afterBitmap = self.candidate.mainView.image.render(1, false);
+         ++self.previewRevision;
+         self.previewStatus.text = "Preview #" + self.previewRevision + ": " +
+            previewChangeSummary(view.image, self.candidate.mainView.image);
+         logLine(self.windowTitle + " - " + self.previewStatus.text);
          self.applyButton.enabled = true;
       }
       catch (e)
@@ -2082,7 +2111,7 @@ constructor(view)
          if (Console.abortRequested) { self.cancel(); return; }
          (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
       }
-      finally { self.enabled = true; self.preview.update(); }
+      finally { self.enabled = true; self.preview.repaint(); self.previewStatus.repaint(); CoreApplication.processEvents(); }
    };
    this.options = new HorizontalSizer;
    this.options.spacing = 8;
@@ -2103,6 +2132,7 @@ constructor(view)
    this.sizer.add(this.instructions);
    this.sizer.add(this.preview, 100);
    this.sizer.add(this.options);
+   this.sizer.add(this.previewStatus);
    this.sizer.add(this.keepComparison);
    this.sizer.add(this.buttons);
    this.adjustToContents();
@@ -2215,6 +2245,9 @@ constructor(view)
    var self = this;
    this.windowTitle = "adaptive preview and comparison";
    this.candidate = null;
+   this.previewRevision = 0;
+   this.previewStatus = new Label(this);
+   this.previewStatus.text = "Click Update Preview to calculate the right-hand image.";
    this.instructions = new Label(this);
    this.instructions.text = "Before (left) / adaptive blend (right). Update Preview after changing settings.\nApply keeps a separate adaptive result; Skip preserves the image before adaptive.";
    this.layersLabel = new Label(this);
@@ -2234,7 +2267,7 @@ constructor(view)
    this.keepComparison = new CheckBox(this);
    this.keepComparison.text = "Keep a before-adaptive comparison image";
    this.keepComparison.checked = true;
-   this.beforeBitmap = view.image.render();
+   this.beforeBitmap = view.image.render(1, false);
    this.afterBitmap = null;
    this.preview = new Control(this);
    this.preview.setMinSize(640, 320);
@@ -2266,7 +2299,7 @@ constructor(view)
    this.skipButton.text = "Skip adaptive";
    this.skipButton.onClick = function() { self.cancel(); };
    this.applyButton.onClick = function() { self.ok(); };
-   var dirty = function() { self.applyButton.enabled = false; };
+   var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.layers.onItemSelected = function(index)
    {
       self.strength.enabled = index === 2;
@@ -2278,12 +2311,20 @@ constructor(view)
    {
       self.enabled = false;
       self.applyButton.enabled = false;
+      self.previewStatus.text = "Calculating new preview...";
+      self.previewStatus.repaint();
       try
       {
          if (self.candidate !== null) { self.candidate.forceClose(); self.candidate = null; }
          self.afterBitmap = null;
+         logLine("Adaptive preview settings: " + self.strength.value + "% strength.");
          self.candidate = buildAdaptiveCandidate(view, self.strength.value);
-         self.afterBitmap = self.candidate.mainView.image.render();
+         self.candidate.mainView.image.resetSelections();
+         self.afterBitmap = self.candidate.mainView.image.render(1, false);
+         ++self.previewRevision;
+         self.previewStatus.text = "Preview #" + self.previewRevision + ": " +
+            previewChangeSummary(view.image, self.candidate.mainView.image);
+         logLine(self.windowTitle + " - " + self.previewStatus.text);
          self.applyButton.enabled = true;
       }
       catch (e)
@@ -2291,7 +2332,7 @@ constructor(view)
          if (Console.abortRequested) { self.cancel(); return; }
          (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
       }
-      finally { self.enabled = true; self.preview.update(); }
+      finally { self.enabled = true; self.preview.repaint(); self.previewStatus.repaint(); CoreApplication.processEvents(); }
    };
    this.options = new HorizontalSizer;
    this.options.spacing = 8;
@@ -2312,6 +2353,7 @@ constructor(view)
    this.sizer.add(this.instructions);
    this.sizer.add(this.preview, 100);
    this.sizer.add(this.options);
+   this.sizer.add(this.previewStatus);
    this.sizer.add(this.keepComparison);
    this.sizer.add(this.buttons);
    this.adjustToContents();

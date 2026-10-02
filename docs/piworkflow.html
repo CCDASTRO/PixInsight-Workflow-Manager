@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.9",
+    "softwareVersion": "1.1.10",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.9">CCDASTRO PixInsight Workflow Manager v1.1.9</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.10">CCDASTRO PixInsight Workflow Manager v1.1.10</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <h2 id="important-the-workflow-window-hides-while-processing">Important: the workflow window hides while processing</h2>
@@ -216,6 +216,8 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.10:</strong> Forces immediate HDR/adaptive preview repaint, resets rendered image selections, and shows preview revision and sampled pixel-change statistics. Console logs record each preview settings selection.</p>
+</li>
 <li><p><strong>v1.1.9:</strong> Uses a configured CCDASTRO_MLDenoise process icon so the neural network model path and denoise settings are retained. Preflight rejects missing models before processing.</p>
 </li>
 <li><p><strong>v1.1.8:</strong> Adds optional image-adaptive brightness/contrast finishing after
@@ -665,6 +667,12 @@ the icon after changing the model or denoise parameters. The workflow executes
 the configured icon at the selected denoise placement. It cannot determine model
 compatibility from the filename; the native process validates it during execution.
 Automated adapter tests use mocked APIs; runtime verification is pending.</p>
+<p>Preview updates now show a revision number and sampled mean/max absolute pixel
+change, expressed as a percentage of the normalized 0–1 pixel range. A small
+nonzero change may be hard to see at fit-to-window scale; inspect the retained
+comparison images at full resolution. Zero strength intentionally leaves pixels
+unchanged. The Process Console records settings and measured change for each
+recalculation. Runtime verification of the repaint changes is pending.</p>
 <h3 id="optional-adaptive-brightness-and-contrast">Optional adaptive brightness and contrast</h3>
 <p>Enable <strong>Optional adaptive brightness/contrast: preview before saving</strong> to
 review a gentle image-driven finishing curve after stretching, star reduction,

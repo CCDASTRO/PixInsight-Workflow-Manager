@@ -3,6 +3,28 @@
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
+## v1.1.14 quick start
+
+1. Select your original integrated, unstretched color master. Run **Validate**,
+   then **Run Workflow**. Processing uses a separate working copy; the original
+   pixels and input file remain unchanged. Save an unsaved original separately
+   if you need a permanent backup.
+2. Enable **Optional CurvesTransformation** for native curve adjustment after
+   HDR. Select a preset or edit the curve points, then **Update Preview**.
+3. Leave **Final inspection, local contrast, noise cleanup, saturation and sharing
+   export** enabled to review all five finishing steps. Inspect at 100% and drag
+   to pan. Each adjustment can be applied or skipped.
+4. For final noise cleanup, prepare a light nonlinear denoise instance named
+   **CCDASTRO_FinalDenoise**, or Skip that review. This is separate from the main
+   linear denoise icon. The default blend is 15%.
+5. Save the full-resolution XISF, then optionally export a separate sharing copy.
+   Your chosen default is **JPEG quality 95, longest edge 2048 pixels**. Smaller
+   images are not enlarged. Cancelling either save leaves the processed image open.
+
+The new v1.1.14 finishing stages and export still require PixInsight runtime
+verification. The native CurvesTransformation enum fix was successfully tested
+in v1.1.13.
+
 ## Important: the workflow window hides while processing
 
 > **After you confirm Run Workflow, the Workflow Manager window disappears temporarily. This is normal.**
@@ -476,7 +498,7 @@ identify where their color balance diverges.
 ## Starless processing behavior
 
 The deblur stage runs on the complete image while stars are present. When star
-separation is enabled, the original target becomes the starless branch and the
+separation is enabled, the working copy becomes the starless branch and the
 generated stars-only view becomes the stars branch.
 
 If starless denoise is selected, only the starless view receives the main
@@ -528,7 +550,7 @@ when stars are separated, automatic recombination are required.
    identity diagonal toward the edited curve; 100 uses the complete curve and
    0 leaves it at identity. Native Akima subspline interpolation is used.
 4. Click **Update Preview**, then switch **Before / After** at the same position.
-   Fit, centered 100%/200% zoom, and **Difference x10** remain available. The
+   Fit, 100%/200% zoom with drag-to-pan, and **Difference x10** remain available. The
    difference display is for inspection only. Every preview is calculated from
    the original stage image, so repeated updates do not accumulate changes.
 5. **Apply Curves** retains a separate &lt;image&gt;_Curves result for Save As.
@@ -609,21 +631,22 @@ separation is enabled, automatic recombination is required. Preflight also
 requires a final or starless stretch in this workflow; HDR is not applied to a
 linear master.
 
-When the HDR review dialog first opens, only the **Before** image on the left
-is displayed. The right pane is blank/black and **Apply HDR** is disabled because
-the HDR preview has not been calculated yet. This is expected and does not mean
-the HDR result is black.
+When the HDR review opens, **After** is selected and remains blank until you
+click **Update Preview**. Select **Before** to inspect the input. **Apply HDR**
+stays disabled until a fresh HDR preview has been calculated.
 
 1. Click **Update Preview** and wait for processing to finish. The calculated
-   HDR blend appears on the right and **Apply HDR** becomes available.
-2. Compare **Before** on the left with the **HDR blend** on the right. Both panes
-   show the entire image at the same fit-to-window scale.
+   HDR blend appears in **After**, and **Apply HDR** becomes available.
+2. Switch **Before / After** in the same display area. Use Fit or 100%/200%
+   zoom; drag to pan when zoomed. **Difference x10** reveals subtle changes
+   for inspection and does not alter the applied result.
 3. Adjust **Layers** (3–10, initially 6) and **Blend (%)** (0–100, initially 30),
    then click **Update Preview** again. Apply stays disabled until the updated
    settings have been calculated. More layers target larger structures;
    blending controls the contribution of the HDR result.
 4. Click **Apply HDR** to retain the separate `<image>_HDR` result and continue
-   to Save As, or **Skip HDR** to save the pre-HDR image instead. Closing the
+   to Curves and finishing reviews when enabled, or **Skip HDR** to continue
+   with the pre-HDR image. Closing the
    review dialog also skips HDR. Preview calculation does not modify the source.
 5. With **Keep a before-HDR comparison image** checked, an additional
    `<image>_BeforeHDR` image remains open after Apply for full-resolution

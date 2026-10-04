@@ -174,9 +174,12 @@ HDR. Select a preset or edit the curve points, then <strong>Update Preview</stro
 <li>Leave <strong>Final inspection, local contrast, noise cleanup, saturation and sharing
 export</strong> enabled to review all five finishing steps. Inspect at 100% and drag
 to pan. Each adjustment can be applied or skipped.</li>
-<li>For final noise cleanup, prepare a light nonlinear denoise instance named
-<strong>CCDASTRO_FinalDenoise</strong>, or Skip that review. This is separate from the main
-linear denoise icon. The default blend is 15%.</li>
+<li>For final noise cleanup, save your denoiser settings in a workspace icon named
+<strong>CCDASTRO_FinalDenoise</strong>. The icon stores a process and its settings; it does
+not point to an image. Use gentle settings for the already-stretched image,
+or <strong>Skip Noise cleanup</strong>. At the default 15% blend, the result combines
+85% of the pre-cleanup image with 15% of the denoised image.
+See <a href="#final-denoise-icon-what-it-stores-and-how-to-create-it">Final denoise icon: what it stores and how to create it</a>.</li>
 <li>Save the full-resolution XISF, then optionally export a separate sharing copy.
 Your chosen default is <strong>JPEG quality 95, longest edge 2048 pixels</strong>. Smaller
 images are not enlarged. Cancelling either save leaves the processed image open.</li>
@@ -767,19 +770,10 @@ makes no pixel changes.</li>
 <li><strong>Local contrast:</strong> native LocalHistogramEqualization, radius 64 pixels,
 slope limit 1.5 and Amount 20% by default. Radius and amount are adjustable.
 A smoothed brightness mask protects the dark background and bright highlights.</li>
-<li><strong>Noise cleanup:</strong> configure a light nonlinear denoise instance and name its
-workspace icon <strong>CCDASTRO_FinalDenoise</strong>: open the denoise process, configure
-light settings for a stretched image, drag its <strong>New Instance</strong> triangle to
-the workspace, then rename the icon exactly <strong>CCDASTRO_FinalDenoise</strong>.
-Save the process-icon file and reload it in future sessions; installing a
-denoise module alone does not create this workspace icon.
-Supported processes are NoiseXTerminator,
-MLDenoise (with an existing model file), ACDNR and MultiscaleLinearTransform.
-The selected process settings are retained; MLT is set to nonlinear mode.
-The denoised result is blended into the original stage image with Amount 15%
-by default. Amount is a blend, not the denoiser's internal strength. A missing
-or invalid icon prevents Apply but does not prevent Skip. This stage does not
-rerun deconvolution or reuse the main linear denoise icon automatically.</li>
+<li><strong>Noise cleanup:</strong> runs the denoise process and settings stored in the
+<strong>CCDASTRO_FinalDenoise</strong> workspace icon on a copy of the current image.
+Default Amount is a 15% blend of the denoised result. Use <strong>Skip Noise cleanup</strong>
+if the image already looks clean. Setup and blend details are explained below.</li>
 <li><strong>Saturation:</strong> a native CurvesTransformation saturation curve, Amount 10%
 by default, with a 0–50% adjustment range. The smoothed brightness mask
 protects dark background and bright highlights; grayscale images can Skip.
@@ -792,6 +786,41 @@ Aspect ratio is preserved; smaller images are never enlarged. Resize and
 integer sample conversion affect only the temporary sharing copy. Source and
 final-image filenames are protected, and existing outputs require confirmation.</li>
 </ol>
+<h3 id="final-denoise-icon-what-it-stores-and-how-to-create-it">Final denoise icon: what it stores and how to create it</h3>
+<p><strong>CCDASTRO_FinalDenoise is a saved set of settings for a denoise process</strong>,
+for example MLDenoise or NoiseXTerminator. It does not point to an image and
+is not an image file. Installing a denoise module does not create this icon.
+The name tells the workflow which saved process instance to read.</p>
+<p>Create it before starting the workflow:</p>
+<ol>
+<li>Open your preferred supported denoise process in PixInsight.</li>
+<li>Configure gentle noise reduction for the <strong>already-stretched image</strong>.
+Nonlinear here means the image has already been stretched for normal viewing.
+For MLDenoise, select an existing neural network model file; its path is part
+of the settings saved in the icon.</li>
+<li>Drag the process window's <strong>New Instance triangle</strong> onto the PixInsight workspace.
+This creates a workspace process icon containing those settings.</li>
+<li>Rename that workspace icon exactly <strong>CCDASTRO_FinalDenoise</strong>.</li>
+<li>Save your process-icon file and reload it in future sessions. If you change
+settings in a separate process window, replace/update the saved icon as well;
+the workflow reads the icon's stored settings.</li>
+</ol>
+<p>When you click <strong>Update Preview</strong> in Noise cleanup, the workflow reads the icon,
+runs that denoise process on a copy of the image carried forward from the previous
+step, and blends the denoised result with the image before cleanup. It does not
+apply the saved icon to your original unstretched master. Supported processes are
+NoiseXTerminator, MLDenoise, ACDNR and MultiscaleLinearTransform. MLDenoise requires
+an existing model file; MultiscaleLinearTransform is set to nonlinear mode.</p>
+<p><strong>Amount 15% means 85% of the image before cleanup plus 15% of the denoised
+image.</strong> It is separate from the denoiser's own strength setting. Amount 0%
+leaves the stage image unchanged; 100% uses the complete denoised result. The
+blend helps keep final cleanup gentle, but inspect faint detail before Apply.</p>
+<p>The final-cleanup icon is separate from the earlier linear denoise icon so you
+can keep different settings for the two stages. The workflow does not reuse the
+main denoise icon automatically. If the image already looks clean, or you have
+not created the final icon, click <strong>Skip Noise cleanup</strong>. The current image
+continues unchanged to the saturation review. A missing or invalid icon prevents
+Apply; it does not prevent Skip.</p>
 <p>The local contrast and saturation mask limits are editable on a 0–1000 scale.
 Defaults protect values below 50 (0.05) and above 850 (0.85), with soft transitions
 and a two-pixel Gaussian smoothing. The mask uses mean RGB brightness for color

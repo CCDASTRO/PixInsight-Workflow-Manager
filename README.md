@@ -620,7 +620,10 @@ Create it before starting the workflow:
 
 1. Open your preferred supported denoise process in PixInsight.
 2. Configure gentle noise reduction for the **already-stretched image**.
-   Nonlinear here means the image has already been stretched for normal viewing.
+   **No nonlinear checkbox is required.** Here, nonlinear describes the image
+   after stretching; it does not mean every denoiser has a linear/nonlinear
+   setting. If your denoiser has no such option, there is nothing to select.
+   Save gentle cleanup settings appropriate for the image you see in the preview.
    For MLDenoise, select an existing neural network model file; its path is part
    of the settings saved in the icon.
 3. Drag the process window's **New Instance triangle** onto the PixInsight workspace.
@@ -635,7 +638,8 @@ runs that denoise process on a copy of the image carried forward from the previo
 step, and blends the denoised result with the image before cleanup. It does not
 apply the saved icon to your original unstretched master. Supported processes are
 NoiseXTerminator, MLDenoise, ACDNR and MultiscaleLinearTransform. MLDenoise requires
-an existing model file; MultiscaleLinearTransform is set to nonlinear mode.
+an existing model file. For MultiscaleLinearTransform, the workflow itself sets
+the linear parameter to false; you do not need to locate a nonlinear checkbox.
 
 **Amount 15% means 85% of the image before cleanup plus 15% of the denoised
 image.** It is separate from the denoiser's own strength setting. Amount 0%

@@ -49,7 +49,7 @@ function fixture(options = {}) {
     if (!(id in context.adapters)) context.adapters[id] = { available: () => true };
   }
   const dialog = {
-    rowsById, rows: Object.values(rowsById), linearConfirmation: { checked: true },
+    finishingEnabled: { checked: false }, rowsById, rows: Object.values(rowsById), linearConfirmation: { checked: true },
     noisePlacement: { currentItem: 0 }, starlessStretch: { currentItem: 0 }, starsStretch: { currentItem: 0 },
     recombine: { checked: false }, finalStretch: { currentItem: 0 }, starReduction: { checked: false }, imageType: { currentItem: 0 }
   };
@@ -121,17 +121,27 @@ test("HDR requires a stretch and recombined final image", () => {
   f.context.resolveProcessClass = () => null;
   assert.ok(f.validate().errors.some(x => x.includes("HDRMultiscaleTransform is unavailable")));
 });
-test("adaptive finishing preflight requires stretch, recombination and PixelMath", () => {
+test("Curves preflight requires stretch, recombination and CurvesTransformation", () => {
   const f = fixture({ solved: true });
   f.dialog.adaptiveEnabled = { checked: true };
-  assert.ok(f.validate().errors.some(x => x.includes("Adaptive finishing requires an image stretch")));
+  assert.ok(f.validate().errors.some(x => x.includes("Curves review requires an image stretch")));
   f.dialog.finalStretch.currentItem = 1;
-  assert.ok(!f.validate().errors.some(x => x.includes("Adaptive")));
+  assert.ok(!f.validate().errors.some(x => x.includes("Curves")));
   f.dialog.rowsById.starSeparation.enabled.checked = true;
-  assert.ok(f.validate().errors.some(x => x.includes("Adaptive finishing requires a recombined")));
+  assert.ok(f.validate().errors.some(x => x.includes("Curves review requires a recombined")));
   f.dialog.recombine.checked = true;
-  assert.ok(!f.validate().errors.some(x => x.includes("Adaptive")));
+  assert.ok(!f.validate().errors.some(x => x.includes("Curves")));
   f.context.resolveProcessClass = () => null;
-  assert.ok(f.validate().errors.some(x => x.includes("Adaptive finishing requires PixelMath")));
+  assert.ok(f.validate().errors.some(x => x.includes("Curves review requires CurvesTransformation")));
 });
 console.log(`${count} tests passed. These use mocked PixInsight APIs, not real image processing.`);
+test("final finishing requires a stretch and recombination", () => {
+  const f = fixture({ solved: true });
+  f.dialog.finishingEnabled.checked = true;
+  assert.ok(f.validate().errors.some(x => x.includes("Final finishing requires a workflow stretch")));
+  f.dialog.finalStretch.currentItem = 1;
+  f.dialog.rowsById.starSeparation.enabled.checked = true;
+  assert.ok(f.validate().errors.some(x => x.includes("Final finishing requires a recombined image")));
+  f.dialog.recombine.checked = true;
+  assert.ok(!f.validate().errors.some(x => x.includes("Final finishing")));
+});

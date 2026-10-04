@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.1.13',
+    [string] $Version = '1.1.14',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -119,6 +119,7 @@ $manifest = @"
       <description>
         <p>Configurable PixInsight post-processing workflow manager.</p>
         <ul>
+          <li>v1.1.14 preserves the original input and adds optional finishing reviews plus separate resized sharing export</li>
           <li>v1.1.13 fixes native CurvesTransformation interpolation enums for the V8 runtime</li>
           <li>v1.1.12 replaces adaptive finishing with native CurvesTransformation, editable curve points, channel selection and amount controls</li>
           <li>v1.1.11 adds same-position Before/After, centered zoom, and an inspection-only amplified difference view</li>

@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.13"
+#define VERSION "1.1.14"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -133,7 +133,7 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 5,
+      schemaVersion: 6,
       resumeAfterCrop: resumeAfterCrop === true,
       imageType: dialog.imageType.currentItem,
       steps: {},
@@ -143,6 +143,7 @@ function captureWorkflowState(dialog, resumeAfterCrop)
       finalStretch: dialog.finalStretch.currentItem,
       hdrEnabled: dialog.hdrEnabled.checked,
       adaptiveEnabled: dialog.adaptiveEnabled.checked,
+      finishingEnabled: dialog.finishingEnabled.checked,
       recombine: dialog.recombine.checked,
       starReduction: dialog.starReduction.checked,
       starReductionMethod: dialog.starReductionMethod.currentItem,
@@ -194,9 +195,9 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || (state.schemaVersion !== 4 && state.schemaVersion !== 5) || !state.steps)
+      if (!state || (state.schemaVersion !== 4 && state.schemaVersion !== 5 && state.schemaVersion !== 6) || !state.steps)
          return false;
-      if (state.schemaVersion === 5 && state.imageType >= 0 &&
+      if (state.schemaVersion >= 5 && state.imageType >= 0 &&
           state.imageType < WORKFLOW_PROFILES.length)
          dialog.imageType.currentItem = state.imageType;
       else
@@ -232,6 +233,7 @@ function restoreWorkflowState(dialog)
       dialog.recombine.checked = state.recombine === true;
       dialog.hdrEnabled.checked = state.hdrEnabled === true;
       dialog.adaptiveEnabled.checked = state.adaptiveEnabled === true;
+      dialog.finishingEnabled.checked = state.finishingEnabled !== false;
       dialog.starReduction.checked = state.starReduction === true;
       if (state.starReductionMethod >= 0 &&
           state.starReductionMethod < dialog.starReductionMethod.numberOfItems)
@@ -294,6 +296,7 @@ function resetWorkflowControls(dialog)
    dialog.recombine.checked = true;
    dialog.hdrEnabled.checked = false;
    dialog.adaptiveEnabled.checked = false;
+   dialog.finishingEnabled.checked = true;
    dialog.starReduction.checked = false;
    dialog.starReductionMethod.currentItem = 1;
    dialog.starReductionIterations.value = 1;
@@ -1276,6 +1279,16 @@ PreflightValidator.prototype.validate = function()
       if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
          result.errors.push("Curves review requires an image stretch in this workflow.");
    }
+   if (this.dialog.finishingEnabled.checked)
+   {
+      if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
+         result.errors.push("Final finishing requires a workflow stretch.");
+      if (separationEnabled && !this.dialog.recombine.checked)
+         result.errors.push("Final finishing requires a recombined image.");
+      for (var f = 0, required = ["LocalHistogramEqualization", "Convolution", "PixelMath", "CurvesTransformation", "Resample"]; f < required.length; ++f)
+         if (resolveProcessClass([required[f]]) === null)
+            result.errors.push("Final finishing requires " + required[f] + ".");
+   }
    if (this.dialog.starsStretch.currentItem > 0)
       result.warnings.push("Automatic stretching of a stars-only branch can amplify subtraction residuals. " +
          "Keep the stars linear unless a separate stars stretch is clearly needed.");
@@ -1744,6 +1757,11 @@ constructor()
    this.adaptiveEnabled.checked = false;
    this.adaptiveEnabled.toolTip = "Apply native CurvesTransformation after HDR. Choose RGB/K, Lightness or Saturation, edit curve points and amount, and compare the preview before Apply or Skip.";
    this.branchesBox.sizer.add(this.adaptiveEnabled);
+   this.finishingEnabled = new CheckBox(this.content);
+   this.finishingEnabled.text = "Final inspection, local contrast, noise cleanup, saturation and sharing export";
+   this.finishingEnabled.checked = true;
+   this.finishingEnabled.toolTip = "Review each optional finishing step after Curves. Every processing stage has Apply/Skip. Save full-resolution XISF, then optionally export a separate resized JPEG/PNG.";
+   this.branchesBox.sizer.add(this.finishingEnabled);
    this.starReductionMethodControl = starReductionMethodControl;
    this.applyImageType = function(applyDefaults)
    {
@@ -1925,7 +1943,7 @@ constructor()
       }
       if (self.rowsById.crop.enabled.checked)
       {
-         if ((new MessageBox("The workflow will close and open DynamicCrop for the active image. " +
+         if ((new MessageBox("The workflow will preserve the original and open DynamicCrop on a separate copy. " +
              "Apply the crop, then launch this workflow again and run Validate.\n\nOpen DynamicCrop now?",
              TITLE, StdIcon.Information, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
             return;
@@ -1934,7 +1952,7 @@ constructor()
          self.ok();
          return;
       }
-      if ((new MessageBox(resultText(result) + "\n\nRun on the active view?", TITLE,
+      if ((new MessageBox(resultText(result) + "\n\nRun on a separate copy? The original input will remain unchanged.", TITLE,
           StdIcon.Warning, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
          return;
 
@@ -1969,6 +1987,17 @@ function cloneHDRView(view, suffix)
       window.mainView.beginProcess(UndoFlag.NoSwapFile);
       try { window.mainView.image.assign(image); }
       finally { window.mainView.endProcess(); }
+      window.keywords = view.window.keywords;
+      window.rgbWorkingSpace = view.window.rgbWorkingSpace;
+      var properties = view.properties;
+      for (var i = 0; i < properties.length; ++i)
+      {
+         var id = properties[i], attributes = view.propertyAttributes(id);
+         if ((attributes & PropertyAttribute.Storable) !== 0 && (attributes & PropertyAttribute.Reserved) === 0 && id.indexOf("PixInsight:") !== 0)
+            if (!window.mainView.setPropertyValue(id, view.propertyValue(id), view.propertyType(id), attributes))
+               throw new Error("Could not copy input property: " + id);
+      }
+      if (imageHasAstrometricSolution(view.window)) window.copyAstrometricSolution(view.window);
       return window;
    }
    catch (e) { window.forceClose(); throw e; }
@@ -2035,6 +2064,20 @@ function installComparisonControls(self, view)
    self.zoomMode.addItem("100% (center)");
    self.zoomMode.addItem("200% (center)");
    self.differenceBitmap = null;
+   self.previewOffsetX = self.previewOffsetY = 0;
+   var drag = null;
+   self.preview.onMousePress = function(x, y) { drag = [x, y]; return true; };
+   self.preview.onMouseMove = function(x, y, buttons)
+   {
+      if (drag !== null && buttons !== 0 && self.zoomMode.currentItem > 0)
+      {
+         self.previewOffsetX += x - drag[0]; self.previewOffsetY += y - drag[1]; drag = [x, y];
+         self.preview.repaint();
+      }
+      else if (buttons === 0) drag = null;
+      return true;
+   };
+   self.preview.onMouseRelease = function() { drag = null; return true; };
    self.displayMode.onItemSelected = function(index)
    {
       try
@@ -2066,7 +2109,7 @@ function installComparisonControls(self, view)
       }
       self.preview.repaint();
    };
-   self.zoomMode.onItemSelected = function() { self.preview.repaint(); };
+   self.zoomMode.onItemSelected = function() { self.previewOffsetX = self.previewOffsetY = 0; self.preview.repaint(); };
    self.comparisonOptions = new HorizontalSizer;
    self.comparisonOptions.spacing = 8;
    self.comparisonOptions.add(self.displayMode);
@@ -2122,8 +2165,8 @@ constructor(view)
                self.zoomMode.currentItem === 1 ? 1 : 2;
             var w = Math.round(bitmap.width * scale);
             var h = Math.round(bitmap.height * scale);
-            var x = Math.round((this.width - w) / 2);
-            var y = Math.round((this.height - h) / 2);
+            var x = Math.round((this.width - w) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetX : 0);
+            var y = Math.round((this.height - h) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetY : 0);
             g.drawScaledBitmap(new Rect(x, y, x + w, y + h), bitmap);
          }
       }
@@ -2356,8 +2399,8 @@ constructor(view)
                self.zoomMode.currentItem === 1 ? 1 : 2;
             var w = Math.round(bitmap.width * scale);
             var h = Math.round(bitmap.height * scale);
-            var x = Math.round((this.width - w) / 2);
-            var y = Math.round((this.height - h) / 2);
+            var x = Math.round((this.width - w) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetX : 0);
+            var y = Math.round((this.height - h) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetY : 0);
             g.drawScaledBitmap(new Rect(x, y, x + w, y + h), bitmap);
          }
       }
@@ -2476,6 +2519,373 @@ function reviewAdaptive(view)
    }
 }
 
+function cloneWorkflowInput(view)
+{
+   var window = cloneHDRView(view, "_Working");
+   try
+   {
+      window.mainView.setPropertyValue("CCDASTRO:SourcePath", workflowSourcePath(view), PropertyType.String, PropertyAttribute.Storable | PropertyAttribute.Permanent);
+      window.mainView.setPropertyValue("CCDASTRO:SourceId", workflowSourceId(view), PropertyType.String, PropertyAttribute.Storable | PropertyAttribute.Permanent);
+      window.show();
+      window.bringToFront();
+      logLine("Original input retained unchanged: " + view.fullId + ". Processing copy: " + window.mainView.fullId);
+      return window.mainView;
+   }
+   catch (e) { window.forceClose(); throw e; }
+}
+
+function workflowSourcePath(view)
+{
+   return view.hasProperty("CCDASTRO:SourcePath") ? view.propertyValue("CCDASTRO:SourcePath") : view.window.filePath;
+}
+
+function workflowSourceId(view)
+{
+   return view.hasProperty("CCDASTRO:SourceId") ? view.propertyValue("CCDASTRO:SourceId") : view.id;
+}
+
+function finishingMaskExpression(view, low, high)
+{
+   if (!finiteNumber(low) || !finiteNumber(high) || low < 0 || high > 1 || low >= high)
+      throw new Error("Mask background limit must be below the highlight limit (0–1).");
+   var l = view.image.isColor ? "(" + view.id + "[0]+" + view.id + "[1]+" + view.id + "[2])/3" : view.id;
+   var rise = "min(1,max(0,((" + l + ")-" + low + ")/0.1))";
+   var fall = "min(1,max(0,(" + high + "-(" + l + "))/0.1))";
+   return "(" + rise + ")*(" + fall + ")";
+}
+
+function createFinishingMask(view, low, high)
+{
+   var mask = new ImageWindow(view.image.width, view.image.height, 1, 32, true, false,
+      uniqueMainViewId(view.id + "_FinishingMask"));
+   try
+   {
+      var p = new PixelMath;
+      p.useSingleExpression = true; p.createNewImage = false; p.rescale = false; p.truncate = true;
+      p.expression = finishingMaskExpression(view, low, high);
+      if (!p.executeOn(mask.mainView)) throw new Error("Could not create finishing mask.");
+      var blur = new Convolution;
+      blur.mode = Convolution.Parametric; blur.sigma = 2; blur.shape = 2;
+      blur.aspectRatio = 1; blur.rotationAngle = 0; blur.rescaleHighPass = false;
+      if (!blur.executeOn(mask.mainView)) throw new Error("Could not smooth finishing mask.");
+      return mask;
+   }
+   catch (e) { mask.forceClose(); throw e; }
+}
+
+function configuredFinalDenoise()
+{
+   var p = ProcessInstance.fromIcon("CCDASTRO_FinalDenoise");
+   if (p === null)
+      throw new Error("Configure a light nonlinear denoise process and name its workspace icon CCDASTRO_FinalDenoise. Supported: NoiseXTerminator, MLDenoise, ACDNR or MultiscaleLinearTransform. You can also Skip this stage.");
+   var id = p.processId();
+   if (["NoiseXTerminator", "MLDenoise", "ACDNR", "MultiscaleLinearTransform"].indexOf(id) < 0)
+      throw new Error("CCDASTRO_FinalDenoise must contain a supported denoise process configured for a stretched image.");
+   if (id === "MultiscaleLinearTransform") p.linear = false;
+   if (id === "MLDenoise" && (!p.modelPath || !File.exists(p.modelPath)))
+      throw new Error("Final MLDenoise icon requires an existing model file.");
+   return p;
+}
+
+function buildFinishingCandidate(view, kind, amount, radius, low, high)
+{
+   if (!finiteNumber(amount) || amount < 0 || amount > 100)
+      throw new Error("Finishing amount must be between 0 and 100 percent.");
+   if (["Local contrast", "Noise cleanup", "Saturation"].indexOf(kind) < 0)
+      throw new Error("Unknown finishing stage.");
+   if (kind === "Saturation" && !view.image.isColor)
+      throw new Error("Saturation requires a color image. Skip this stage.");
+   if (amount === 0) return cloneHDRView(view, "_" + kind.replace(/ /g, ""));
+   var process;
+   if (kind === "Local contrast")
+   {
+      process = new LocalHistogramEqualization;
+      process.radius = radius;
+      process.slopeLimit = 1.5; process.amount = amount / 100; process.circularKernel = true;
+      // Leave histogramBins at the native default; no legacy enum access.
+   }
+   else if (kind === "Noise cleanup") process = configuredFinalDenoise();
+   else
+   {
+      process = new CurvesTransformation;
+      var a = amount / 100;
+      process.S = [[0,0],[0.25,0.25 + 0.5*a],[0.5,0.5 + 0.35*a],[0.75,0.75 + 0.15*a],[1,1]];
+      process.St = CurvesTransformation.AkimaSubsplines;
+   }
+   var candidate = cloneHDRView(view, "_" + kind.replace(/ /g, ""));
+   var mask = null;
+   try
+   {
+      checkAbortRequested();
+      if (amount === 0) return candidate;
+      if (kind !== "Noise cleanup")
+      {
+         mask = createFinishingMask(view, low, high);
+         candidate.setMask(mask); candidate.maskEnabled = true;
+         candidate.maskInverted = false; candidate.maskVisible = false;
+      }
+      if (!process.executeOn(candidate.mainView)) throw new Error(kind + " failed.");
+      candidate.removeMask();
+      if (kind === "Noise cleanup")
+      {
+         // Blend a configured denoise result back gently; no implicit model settings.
+         var blend = new PixelMath;
+         blend.useSingleExpression = true; blend.createNewImage = false;
+         blend.rescale = false; blend.truncate = true;
+         blend.expression = "(" + (1-amount/100) + ")*" + view.id + "+(" + amount/100 + ")*$T";
+         if (!blend.executeOn(candidate.mainView)) throw new Error("Noise cleanup blend failed.");
+      }
+      checkAbortRequested();
+      return candidate;
+   }
+   catch (e) { try { candidate.removeMask(); } finally { candidate.forceClose(); } throw e; }
+   finally { if (mask !== null) mask.forceClose(); }
+}
+
+function reviewFinishing(view, kind)
+{
+   var dialog = new FinishingReviewDialog(view, kind);
+   var accepted = false;
+   try
+   {
+      if (!dialog.execute()) { checkAbortRequested(); return view; }
+      if (dialog.candidate === null || !dialog.applyButton.enabled)
+         throw new Error("Update the " + kind + " preview before applying.");
+      if (dialog.keepComparison.checked)
+      {
+         var before = cloneHDRView(view, "_Before" + kind.replace(/ /g, "")); before.show();
+      }
+      dialog.candidate.show(); accepted = true;
+      logLine(kind + " applied: " + dialog.strength.value + "%. Original view retained.");
+      return dialog.candidate.mainView;
+   }
+   finally { if (!accepted && dialog.candidate !== null) dialog.candidate.forceClose(); }
+}
+
+function inspectFinalImage(view)
+{
+   var dialog = new FinishingReviewDialog(view, "Inspection");
+   dialog.execute();
+   checkAbortRequested();
+}
+
+function sharingDimensions(width, height, longestEdge)
+{
+   var scale = Math.min(1, longestEdge / Math.max(width, height));
+   return [Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale))];
+}
+
+function sharingOutputPath(sourcePath, sourceId, extension)
+{
+   return finalOutputPath(sourcePath, sourceId).replace(/_Final\.xisf$/i, "_Share." + extension);
+}
+
+function exportSharingImage(view, sourcePath, sourceId)
+{
+   var options = new Dialog;
+   options.windowTitle = "Separate sharing image";
+   var label = new Label(options); label.text = "Export a resized copy. The full-resolution image is preserved.";
+   var sizeLabel = new Label(options); sizeLabel.text = "Longest edge (pixels):";
+   var size = new SpinBox(options); size.minValue = 256; size.maxValue = 12000; size.value = 2048;
+   var type = new ComboBox(options); type.addItem("JPEG (quality 95)"); type.addItem("PNG (16-bit)"); type.currentItem = 0;
+   var buttons = new HorizontalSizer; buttons.spacing = 8;
+   var saveButton = new PushButton(options); saveButton.text = "Export sharing copy"; saveButton.onClick = function() { options.ok(); };
+   var skipButton = new PushButton(options); skipButton.text = "Skip export"; skipButton.onClick = function() { options.cancel(); };
+   buttons.addStretch(); buttons.add(saveButton); buttons.add(skipButton);
+   options.sizer = new VerticalSizer; options.sizer.margin = 10; options.sizer.spacing = 8;
+   options.sizer.add(label); options.sizer.add(sizeLabel); options.sizer.add(size); options.sizer.add(type); options.sizer.add(buttons);
+   options.adjustToContents();
+   if (!options.execute()) return "Sharing export skipped.";
+   var extension = type.currentItem === 0 ? "jpg" : "png";
+   var save = new SaveFileDialog; save.caption = "Save separate sharing image";
+   save.initialPath = sharingOutputPath(sourcePath, sourceId, extension);
+   save.filters = extension === "jpg" ? [["JPEG images", "*.jpg"]] : [["PNG images", "*.png"]];
+   save.overwritePrompt = true;
+   var output;
+   for (;;)
+   {
+      if (!save.execute()) return "Sharing export skipped.";
+      output = save.filePath;
+      if (!(new RegExp("\\." + extension + "$", "i")).test(output)) output += "." + extension;
+      var normalized = output.replace(/\\/g,"/").toLowerCase();
+      if ((sourcePath && normalized === sourcePath.replace(/\\/g,"/").toLowerCase()) ||
+          (view.window.filePath && normalized === view.window.filePath.replace(/\\/g,"/").toLowerCase()))
+      { (new MessageBox("Choose a separate filename for the sharing image.",TITLE,StdIcon.Warning,StdButton.Ok)).execute(); continue; }
+      if (File.exists(output) && (new MessageBox("Replace existing file?\n\n"+output,TITLE,StdIcon.Warning,StdButton.Yes,StdButton.No)).execute() !== StdButton.Yes) continue;
+      break;
+   }
+   var copy = cloneHDRView(view, "_SharingCopy");
+   var file = null;
+   try
+   {
+      var dims = sharingDimensions(view.image.width, view.image.height, size.value);
+      if (dims[0] !== view.image.width || dims[1] !== view.image.height)
+      {
+         var resize = new Resample;
+         resize.mode = Resample.AbsolutePixels; resize.absoluteMode = Resample.ForceWidthAndHeight;
+         resize.xSize = dims[0]; resize.ySize = dims[1]; resize.interpolation = Resample.Auto;
+         resize.noGUIMessages = true;
+         if (!resize.executeOn(copy.mainView)) throw new Error("Sharing resize failed.");
+      }
+      copy.setSampleFormat(extension === "jpg" ? 8 : 16, false);
+      var format = new FileFormat("." + extension, false, true);
+      if (format.isNull) throw new Error("Sharing file format is unavailable.");
+      file = new FileFormatInstance(format);
+      if (file.isNull || !file.create(output, extension === "jpg" ? "quality 95" : "")) throw new Error("Could not create sharing file.");
+      if (!file.writeImage(copy.mainView.image)) throw new Error("Could not write sharing image.");
+      if (!file.close()) throw new Error("Could not finish writing the sharing image.");
+      file = null;
+      return "Sharing image saved: " + output + " (" + dims[0] + " x " + dims[1] + ").";
+   }
+   finally { try { if (file !== null && !file.isNull && file.isOpen) file.close(); } finally { copy.forceClose(); } }
+}
+
+class FinishingReviewDialog extends Dialog
+{
+constructor(view, kind)
+{
+   super();
+   var self = this;
+   this.windowTitle = kind + " review";
+   this.candidate = null;
+   this.previewRevision = 0;
+   this.previewStatus = new Label(this);
+   this.previewStatus.text = "Click Update Preview, then switch Before / After at the same position.";
+   this.instructions = new Label(this);
+   this.instructions.text = kind === "Inspection" ? "Inspect at 100%: background noise, star halos, clipped highlights and faint detail. Drag to pan." : "Preview " + kind + ". Compare Before / After at 100%; drag to pan. Apply keeps a separate result.\nLocal contrast and saturation protect dark background and bright highlights with a smooth brightness mask.";
+   this.layersLabel = new Label(this);
+   this.layersLabel.text = "Radius (pixels):";
+   this.layers = new SpinBox(this);
+   this.layers.minValue = 16;
+   this.layers.maxValue = 256;
+   this.layers.value = 64;
+   this.strengthLabel = new Label(this);
+   this.strengthLabel.text = "Amount (%):";
+   this.strength = new SpinBox(this);
+   this.strength.minValue = 0;
+   this.strength.maxValue = 100;
+   this.strength.value = kind === "Local contrast" ? 20 : kind === "Noise cleanup" ? 15 : 10;
+   if (kind === "Saturation") this.strength.maxValue = 50;
+   this.keepComparison = new CheckBox(this);
+   this.keepComparison.text = "Keep a before-" + kind + " comparison image";
+   this.keepComparison.checked = true;
+   this.beforeBitmap = view.image.render(1, false);
+   this.afterBitmap = null;
+   this.preview = new Control(this);
+   this.preview.setMinSize(640, 320);
+   installComparisonControls(this, view);
+   this.zoomMode.currentItem = 1;
+   this.preview.onPaint = function()
+   {
+      var g = new Graphics(this);
+      try
+      {
+         g.fillRect(this.boundsRect, new Brush(0xff202020));
+         var bitmap = self.displayMode.currentItem === 0 ? self.beforeBitmap :
+            self.displayMode.currentItem === 2 ? self.differenceBitmap : self.afterBitmap;
+         if (bitmap !== null)
+         {
+            var scale = self.zoomMode.currentItem === 0 ?
+               Math.min((this.width - 12) / bitmap.width, (this.height - 12) / bitmap.height) :
+               self.zoomMode.currentItem === 1 ? 1 : 2;
+            var w = Math.round(bitmap.width * scale);
+            var h = Math.round(bitmap.height * scale);
+            var x = Math.round((this.width - w) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetX : 0);
+            var y = Math.round((this.height - h) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetY : 0);
+            g.drawScaledBitmap(new Rect(x, y, x + w, y + h), bitmap);
+         }
+      }
+      finally { g.end(); }
+   };
+   this.updateButton = new PushButton(this);
+   this.updateButton.text = "Update Preview";
+   this.applyButton = new PushButton(this);
+   this.applyButton.text = "Apply " + kind;
+   this.applyButton.enabled = false;
+   this.skipButton = new PushButton(this);
+   this.skipButton.text = "Skip " + kind;
+   this.skipButton.onClick = function() { self.cancel(); };
+   this.applyButton.onClick = function() { self.ok(); };
+   var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   this.maskLow = new SpinBox(this); this.maskLow.minValue = 0; this.maskLow.maxValue = 999; this.maskLow.value = 50;
+   this.maskHigh = new SpinBox(this); this.maskHigh.minValue = 1; this.maskHigh.maxValue = 1000; this.maskHigh.value = 850;
+   this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0–1000):";
+   this.maskLow.onValueUpdated = dirty; this.maskHigh.onValueUpdated = dirty;
+   this.maskOptions = new HorizontalSizer; this.maskOptions.spacing = 8;
+   this.maskOptions.add(this.maskLabel); this.maskOptions.add(this.maskLow); this.maskOptions.add(this.maskHigh); this.maskOptions.addStretch();
+   this.denoiseHint = new Label(this);
+   this.denoiseHint.text = kind === "Noise cleanup" ? "Uses CCDASTRO_FinalDenoise configured for a stretched image, blended by Amount. Skip if noise is acceptable." : "";
+   this.layers.onValueUpdated = dirty;
+   this.strength.onValueUpdated = dirty;
+   this.updateButton.onClick = function()
+   {
+      self.enabled = false;
+      self.applyButton.enabled = false;
+      self.previewStatus.text = "Calculating new preview...";
+      self.previewStatus.repaint();
+      try
+      {
+         if (self.candidate !== null) { self.candidate.forceClose(); self.candidate = null; }
+         self.afterBitmap = null;
+         self.differenceBitmap = null;
+         self.displayMode.currentItem = 1;
+         logLine(kind + " preview settings: " + self.strength.value + "% amount.");
+         self.candidate = buildFinishingCandidate(view, kind, self.strength.value, self.layers.value, self.maskLow.value/1000, self.maskHigh.value/1000);
+         self.candidate.mainView.image.resetSelections();
+         self.afterBitmap = self.candidate.mainView.image.render(1, false);
+         ++self.previewRevision;
+         self.previewStatus.text = "Preview #" + self.previewRevision + ": " +
+            previewChangeSummary(view.image, self.candidate.mainView.image);
+         logLine(self.windowTitle + " - " + self.previewStatus.text);
+         self.applyButton.enabled = true;
+      }
+      catch (e)
+      {
+         if (Console.abortRequested) { self.cancel(); return; }
+         (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
+      }
+      finally { self.enabled = true; self.preview.repaint(); self.previewStatus.repaint(); CoreApplication.processEvents(); }
+   };
+   this.options = new HorizontalSizer;
+   this.options.spacing = 8;
+   this.options.add(this.layersLabel);
+   this.options.add(this.layers);
+   this.options.add(this.strengthLabel);
+   this.options.add(this.strength);
+   this.options.add(this.updateButton);
+   this.options.addStretch();
+   this.buttons = new HorizontalSizer;
+   this.buttons.spacing = 8;
+   this.buttons.addStretch();
+   this.buttons.add(this.applyButton);
+   this.buttons.add(this.skipButton);
+   this.sizer = new VerticalSizer;
+   this.sizer.margin = 10;
+   this.sizer.spacing = 8;
+   this.sizer.add(this.instructions);
+   this.sizer.add(this.preview, 100);
+   this.sizer.add(this.comparisonOptions);
+   this.sizer.add(this.options);
+   this.sizer.add(this.maskOptions);
+   this.sizer.add(this.denoiseHint);
+   this.sizer.add(this.previewStatus);
+   this.sizer.add(this.keepComparison);
+   this.sizer.add(this.buttons);
+   this.layers.visible = this.layersLabel.visible = kind === "Local contrast";
+   this.maskLow.visible = this.maskHigh.visible = this.maskLabel.visible = kind === "Local contrast" || kind === "Saturation";
+   if (kind === "Inspection")
+   {
+      this.strength.visible = this.strengthLabel.visible = this.updateButton.visible = this.keepComparison.visible = false;
+      this.applyButton.text = "Continue finishing"; this.applyButton.enabled = true;
+      this.skipButton.text = "Continue";
+      this.displayMode.currentItem = 0; this.displayMode.enabled = false; this.zoomMode.currentItem = 1;
+      this.previewStatus.text = "100% inspection. Drag the image to inspect different areas; use Fit for the full frame.";
+   }
+   this.adjustToContents();
+}
+}
+
+
 function finalOutputPath(sourcePath, sourceId)
 {
    var normalized = sourcePath.replace(/\\/g, "/");
@@ -2531,8 +2941,9 @@ function executeWorkflow(self)
    try
    {
       var view = ImageWindow.activeWindow.currentView;
-      var sourcePath = view.window.filePath;
-      var sourceId = view.id;
+      var sourcePath = workflowSourcePath(view);
+      var sourceId = workflowSourceId(view);
+      view = cloneWorkflowInput(view);
       clearDisplaySTF(view);
       checkAbortRequested();
       var linearOrder = linearStageOrder(self.rowsById);
@@ -2647,7 +3058,17 @@ function executeWorkflow(self)
          if (self.adaptiveEnabled.checked)
             finalView = reviewAdaptive(finalView);
          checkAbortRequested();
+         if (self.finishingEnabled.checked)
+         {
+            inspectFinalImage(finalView);
+            finalView = reviewFinishing(finalView, "Local contrast");
+            finalView = reviewFinishing(finalView, "Noise cleanup");
+            finalView = reviewFinishing(finalView, "Saturation");
+         }
          completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);
+         if (self.finishingEnabled.checked)
+            completion += "\n\n" + exportSharingImage(finalView, sourcePath, sourceId);
+         completion += "\n\nOriginal unstretched input remains unchanged and open.";
       }
       else
          completion += "\n\nSeparate branches remain open; no final image was saved.";
@@ -2684,9 +3105,16 @@ function main()
    }
    if (dialog.launchCropRequested)
    {
+      var cropView;
+      try { cropView = cloneWorkflowInput(ImageWindow.activeWindow.currentView); }
+      catch (e)
+      {
+         (new MessageBox("Could not preserve the original before crop: " + errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
+         return;
+      }
       try
       {
-         applyLinkedAutoSTF(ImageWindow.activeWindow.currentView, 0.25);
+         applyLinkedAutoSTF(cropView, 0.25);
       }
       catch (e)
       {

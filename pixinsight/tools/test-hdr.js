@@ -11,9 +11,9 @@ function fixture(fail) {
   const windows = [], processes = [], calls = [];
   let aborts = 0;
   const image = { width: 100, height: 80, numberOfChannels: 3, bitsPerSample: 32, isReal: true, isColor: true };
-  const view = { id: "original", fullId: "original", image };
+  const view = { id: "original", fullId: "original", image, properties: [], window: { keywords: [], rgbWorkingSpace: {} } };
   const context = vm.createContext({
-    UndoFlag: { NoSwapFile: 0 }, uniqueMainViewId: x => x,
+    UndoFlag: { NoSwapFile: 0 }, uniqueMainViewId: x => x, imageHasAstrometricSolution: () => false,
     checkAbortRequested: () => { if (fail === "abort" && ++aborts === 2) throw Error("abort"); },
     logLine: () => {},
     ImageWindow: function (...args) {

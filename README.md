@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.13
+# CCDASTRO PixInsight Workflow Manager v1.1.14
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
@@ -65,6 +65,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.14:** Preserves the original input and metadata by processing a separate copy, including before DynamicCrop. Adds 100% inspection with panning, optional masked local contrast, configured final denoise with blend, masked saturation, full-resolution XISF save and separate resized JPEG/PNG export. Finishing-stage and export runtime verification is pending.
 - **v1.1.13:** Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values. User confirmed successful PixInsight testing on 2026-10-02 after installing this fix.
 - **v1.1.12:** Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. Successful PixInsight testing was confirmed with the v1.1.13 enum fix.
 - **v1.1.11:** HDR and adaptive previews use same-position Before/After switching, Fit/100%/200% centered zoom, and an inspection-only 10x absolute difference view. PixInsight runtime verification is pending.
@@ -238,6 +239,19 @@ correct native processes. If the image is unsolved, review the gradient
 **Setup...** dialog for coordinates and image scale.
 
 
+## Preserve the original input
+
+The workflow processes a separate pixel copy from its first processing step.
+The original unstretched image remains unchanged and open, including its screen
+stretch; its existing file is never overwritten. FITS keywords, RGB working
+space, storable nonreserved properties and any astrometric solution are copied
+to the working image. An unsaved original remains in memory: save it separately
+as XISF if you need a permanent backup before closing PixInsight.
+
+DynamicCrop also opens on a separate working copy. After cropping, restart the
+workflow with that copy active. The original source filename is retained for
+final output naming and overwrite protection. Processing history is not copied.
+
 ## Configure optional cropping
 
 The validator warns when it detects high-confidence zero or nonfinite pixels
@@ -245,7 +259,7 @@ along the image borders. Crop integration and registration borders before
 GradientCorrection.
 
 To crop the current image, enable **Open DynamicCrop before workflow** and click
-**Run Workflow**. The workflow applies a display-only linked AutoSTF, closes,
+**Run Workflow**. The workflow first creates a separate working copy, then applies a display-only linked AutoSTF to the copy, closes,
 and opens DynamicCrop. Draw and apply the crop, then launch the workflow again
 and run **Validate** before processing. AutoSTF does not alter the linear pixels.
 
@@ -534,6 +548,53 @@ cleanup, comparison retention, and Apply/Skip.
 
 The final filename remains &lt;original_name&gt;_CCDASTROWorkflow_Final.xisf.
 Enabling HDR and CurvesTransformation adds two separate interactive reviews.
+
+### Final inspection and optional finishing
+
+Enable **Final inspection, local contrast, noise cleanup, saturation and sharing
+export** for the sequence below. It is enabled by default and remembered with
+workflow settings. Each processing stage has **Update Preview**, **Apply** and
+**Skip**; changing settings disables Apply until a fresh preview is calculated.
+Repeated previews start from the input to that stage rather than accumulating
+adjustments. Original stage views remain open. Closing a processing review skips
+it; cancelling the final save or sharing export leaves the images open.
+
+1. **Inspection:** starts at 100%. Drag the preview to inspect different areas,
+   or select Fit. Check background noise, star halos, clipped highlights and
+   retained faint detail. This step makes no pixel changes.
+2. **Local contrast:** native LocalHistogramEqualization, radius 64 pixels,
+   slope limit 1.5 and Amount 20% by default. Radius and amount are adjustable.
+   A smoothed brightness mask protects the dark background and bright highlights.
+3. **Noise cleanup:** configure a light nonlinear denoise instance and name its
+   workspace icon **CCDASTRO_FinalDenoise**. Supported processes are NoiseXTerminator,
+   MLDenoise (with an existing model file), ACDNR and MultiscaleLinearTransform.
+   The selected process settings are retained; MLT is set to nonlinear mode.
+   The denoised result is blended into the original stage image with Amount 15%
+   by default. Amount is a blend, not the denoiser's internal strength. A missing
+   or invalid icon prevents Apply but does not prevent Skip. This stage does not
+   rerun deconvolution or reuse the main linear denoise icon automatically.
+4. **Saturation:** a native CurvesTransformation saturation curve, Amount 10%
+   by default, with a 0–50% adjustment range. The smoothed brightness mask
+   protects dark background and bright highlights; grayscale images can Skip.
+   This is brightness protection, not a star-specific mask. Inspect colored
+   stars and halos before applying.
+5. **Save and share:** save the full-resolution XISF using the existing final
+   filename convention, then optionally export a separate sharing copy. Default:
+   JPEG quality 95, longest edge 2048 pixels. Choose another size or 16-bit PNG.
+   Aspect ratio is preserved; smaller images are never enlarged. Resize and
+   integer sample conversion affect only the temporary sharing copy. Source and
+   final-image filenames are protected, and existing outputs require confirmation.
+
+The local contrast and saturation mask limits are editable on a 0–1000 scale.
+Defaults protect values below 50 (0.05) and above 850 (0.85), with soft transitions
+and a two-pixel Gaussian smoothing. The mask uses mean RGB brightness for color
+images. These limits are starting points; adjust them to the target and stretch.
+**Keep a before-stage comparison image** retains an additional full-resolution
+comparison. The mask and temporary sharing copy are closed after use.
+
+Runtime verification of the new finishing stages and exports is pending.
+Automated checks use mocked APIs to cover masks, input preservation and metadata,
+failure cleanup, denoise blending, preview controls, resize geometry and saving.
 
 ### Optional HDR preview and comparison
 

@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.15",
+    "softwareVersion": "1.1.16",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,10 +160,10 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.15">CCDASTRO PixInsight Workflow Manager v1.1.15</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.16">CCDASTRO PixInsight Workflow Manager v1.1.16</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
-<h2 id="v1.1.15-quick-start">v1.1.15 quick start</h2>
+<h2 id="v1.1.16-quick-start">v1.1.16 quick start</h2>
 <ol>
 <li>Select your original integrated, unstretched color master. Run <strong>Validate</strong>,
 then <strong>Run Workflow</strong>. Processing uses a separate working copy; the original
@@ -237,6 +237,8 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.16:</strong> Checks for the optional final denoise icon before loading it and provides setup/Skip instructions instead of the native missing-icon exception.</p>
+</li>
 <li><p><strong>v1.1.15:</strong> Replaces duplicate inspection Continue buttons with a single Continue to finishing button; inspection makes no pixel changes. All reviews open on Before, switch to After after successful calculation, and return to Before on preview failure. Zoomed panning is bounded to keep the image visible.</p>
 </li>
 <li><p><strong>v1.1.14:</strong> Preserves the original input and metadata by processing a separate copy, including before DynamicCrop. Adds 100% inspection with panning, optional masked local contrast, configured final denoise with blend, masked saturation, full-resolution XISF save and separate resized JPEG/PNG export. Finishing-stage and export runtime verification is pending.</p>
@@ -766,7 +768,12 @@ makes no pixel changes.</li>
 slope limit 1.5 and Amount 20% by default. Radius and amount are adjustable.
 A smoothed brightness mask protects the dark background and bright highlights.</li>
 <li><strong>Noise cleanup:</strong> configure a light nonlinear denoise instance and name its
-workspace icon <strong>CCDASTRO_FinalDenoise</strong>. Supported processes are NoiseXTerminator,
+workspace icon <strong>CCDASTRO_FinalDenoise</strong>: open the denoise process, configure
+light settings for a stretched image, drag its <strong>New Instance</strong> triangle to
+the workspace, then rename the icon exactly <strong>CCDASTRO_FinalDenoise</strong>.
+Save the process-icon file and reload it in future sessions; installing a
+denoise module alone does not create this workspace icon.
+Supported processes are NoiseXTerminator,
 MLDenoise (with an existing model file), ACDNR and MultiscaleLinearTransform.
 The selected process settings are retained; MLT is set to nonlinear mode.
 The denoised result is blended into the original stage image with Amount 15%

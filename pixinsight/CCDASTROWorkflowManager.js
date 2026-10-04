@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.15"
+#define VERSION "1.1.16"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2590,6 +2590,8 @@ function createFinishingMask(view, low, high)
 
 function configuredFinalDenoise()
 {
+   if (ProcessInstance.icons().indexOf("CCDASTRO_FinalDenoise") < 0)
+      throw new Error("Final denoise icon is not configured. Open a supported denoise process, choose light settings for a stretched image, drag its New Instance triangle to the workspace, and rename the icon CCDASTRO_FinalDenoise. Save/load your process-icon file for future sessions. You can Skip noise cleanup now.");
    var p = ProcessInstance.fromIcon("CCDASTRO_FinalDenoise");
    if (p === null)
       throw new Error("Configure a light nonlinear denoise process and name its workspace icon CCDASTRO_FinalDenoise. Supported: NoiseXTerminator, MLDenoise, ACDNR or MultiscaleLinearTransform. You can also Skip this stage.");

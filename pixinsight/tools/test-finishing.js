@@ -11,7 +11,7 @@ const Resample=proc('Resample');Resample.AbsolutePixels=1;Resample.ForceWidthAnd
 let files=[],savePaths=['/share.jpg'];
 const ctx=vm.createContext({finiteNumber:Number.isFinite,cloneHDRView:()=>window(),uniqueMainViewId:x=>x,
  ImageWindow:window,PixelMath,Convolution,CurvesTransformation:Curves,LocalHistogramEqualization:proc('LocalHistogramEqualization'),Resample,
- ProcessInstance:{fromIcon:()=>icon},File:{exists:()=>false},checkAbortRequested(){},logLine(){},
+ ProcessInstance:{icons:()=>icon===null?[]:["CCDASTRO_FinalDenoise"],fromIcon:()=>{if(icon===null)throw Error("No such instance icon");return icon;}},File:{exists:()=>false},checkAbortRequested(){},logLine(){},
  Dialog:control,Control:control,Label:control,ComboBox:control,SpinBox:control,CheckBox:control,PushButton:control,HorizontalSizer:sizer,VerticalSizer:sizer,
  installComparisonControls:self=>{self.displayMode={currentItem:1};self.zoomMode={currentItem:0};self.comparisonOptions={};},
  previewChangeSummary:()=>'',CoreApplication:{processEvents(){}},Console:{abortRequested:false},TITLE:'test',errorMessage:String,

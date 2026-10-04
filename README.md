@@ -1,9 +1,9 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.15
+# CCDASTRO PixInsight Workflow Manager v1.1.16
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v1.1.15 quick start
+## v1.1.16 quick start
 
 1. Select your original integrated, unstretched color master. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -87,6 +87,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.16:** Checks for the optional final denoise icon before loading it and provides setup/Skip instructions instead of the native missing-icon exception.
 - **v1.1.15:** Replaces duplicate inspection Continue buttons with a single Continue to finishing button; inspection makes no pixel changes. All reviews open on Before, switch to After after successful calculation, and return to Before on preview failure. Zoomed panning is bounded to keep the image visible.
 - **v1.1.14:** Preserves the original input and metadata by processing a separate copy, including before DynamicCrop. Adds 100% inspection with panning, optional masked local contrast, configured final denoise with blend, masked saturation, full-resolution XISF save and separate resized JPEG/PNG export. Finishing-stage and export runtime verification is pending.
 - **v1.1.13:** Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values. User confirmed successful PixInsight testing on 2026-10-02 after installing this fix.
@@ -590,7 +591,12 @@ it; cancelling the final save or sharing export leaves the images open.
    slope limit 1.5 and Amount 20% by default. Radius and amount are adjustable.
    A smoothed brightness mask protects the dark background and bright highlights.
 3. **Noise cleanup:** configure a light nonlinear denoise instance and name its
-   workspace icon **CCDASTRO_FinalDenoise**. Supported processes are NoiseXTerminator,
+   workspace icon **CCDASTRO_FinalDenoise**: open the denoise process, configure
+   light settings for a stretched image, drag its **New Instance** triangle to
+   the workspace, then rename the icon exactly **CCDASTRO_FinalDenoise**.
+   Save the process-icon file and reload it in future sessions; installing a
+   denoise module alone does not create this workspace icon.
+   Supported processes are NoiseXTerminator,
    MLDenoise (with an existing model file), ACDNR and MultiscaleLinearTransform.
    The selected process settings are retained; MLT is set to nonlinear mode.
    The denoised result is blended into the original stage image with Amount 15%

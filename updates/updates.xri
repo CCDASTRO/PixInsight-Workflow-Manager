@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.15.zip" sha1="d671452ad284db6c9917c9ac3eb03f9b5a0edcef" type="script" releaseDate="20261004224252">
-         <title>CCDASTRO Workflow Manager 1.1.15</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.16.zip" sha1="3721e3c3b85e700e28604842fdcfa00b1ba7fabf" type="script" releaseDate="20261004225106">
+         <title>CCDASTRO Workflow Manager 1.1.16</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
+               <li>v1.1.16 provides setup instructions for a missing optional final denoise icon</li>
                <li>v1.1.15 simplifies inspection to one Continue button and displays Before until a preview result exists</li>
                <li>v1.1.14 preserves the original input and adds optional finishing reviews plus separate resized sharing export</li>
                <li>v1.1.13 fixes native CurvesTransformation interpolation enums for the V8 runtime</li>
@@ -71,4 +72,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-04T22:43:09.844Z" encoding="Base64">oN4rk2kTPFYWsiuzMgOYA4nfNY4Lehk1jGwIExmWgR6NoYz6GQDzH6N+Ok8h3R2n0qZcFKL5b107YBknRFW/Dw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-04T22:51:22.322Z" encoding="Base64">RtewqVH1p0UOio/7DIMw2bLKxCH7SGrczpkOpwFq7560g13Z9cP6NF9jYv0XJiJ8d6vUslLl1w9gnlY592DeBQ==</Signature>

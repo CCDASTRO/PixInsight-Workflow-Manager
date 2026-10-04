@@ -1,9 +1,9 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.14
+# CCDASTRO PixInsight Workflow Manager v1.1.15
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v1.1.14 quick start
+## v1.1.15 quick start
 
 1. Select your original integrated, unstretched color master. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -87,6 +87,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.15:** Replaces duplicate inspection Continue buttons with a single Continue to finishing button; inspection makes no pixel changes. All reviews open on Before, switch to After after successful calculation, and return to Before on preview failure. Zoomed panning is bounded to keep the image visible.
 - **v1.1.14:** Preserves the original input and metadata by processing a separate copy, including before DynamicCrop. Adds 100% inspection with panning, optional masked local contrast, configured final denoise with blend, masked saturation, full-resolution XISF save and separate resized JPEG/PNG export. Finishing-stage and export runtime verification is pending.
 - **v1.1.13:** Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values. User confirmed successful PixInsight testing on 2026-10-02 after installing this fix.
 - **v1.1.12:** Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. Successful PixInsight testing was confirmed with the v1.1.13 enum fix.
@@ -583,7 +584,8 @@ it; cancelling the final save or sharing export leaves the images open.
 
 1. **Inspection:** starts at 100%. Drag the preview to inspect different areas,
    or select Fit. Check background noise, star halos, clipped highlights and
-   retained faint detail. This step makes no pixel changes.
+   retained faint detail. Click **Continue to finishing** to proceed. This step
+   makes no pixel changes.
 2. **Local contrast:** native LocalHistogramEqualization, radius 64 pixels,
    slope limit 1.5 and Amount 20% by default. Radius and amount are adjustable.
    A smoothed brightness mask protects the dark background and bright highlights.
@@ -631,8 +633,8 @@ separation is enabled, automatic recombination is required. Preflight also
 requires a final or starless stretch in this workflow; HDR is not applied to a
 linear master.
 
-When the HDR review opens, **After** is selected and remains blank until you
-click **Update Preview**. Select **Before** to inspect the input. **Apply HDR**
+When the HDR review opens, **Before** immediately displays the input. Click
+**Update Preview** to calculate the result and switch to **After**. **Apply HDR**
 stays disabled until a fresh HDR preview has been calculated.
 
 1. Click **Update Preview** and wait for processing to finish. The calculated

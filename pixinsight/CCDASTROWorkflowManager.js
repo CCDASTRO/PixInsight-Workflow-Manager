@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.14"
+#define VERSION "1.1.15"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2058,7 +2058,7 @@ function installComparisonControls(self, view)
    self.displayMode.addItem("Before");
    self.displayMode.addItem("After");
    self.displayMode.addItem("Difference x10 (inspection only)");
-   self.displayMode.currentItem = 1;
+   self.displayMode.currentItem = 0;
    self.zoomMode = new ComboBox(self);
    self.zoomMode.addItem("Fit");
    self.zoomMode.addItem("100% (center)");
@@ -2080,6 +2080,13 @@ function installComparisonControls(self, view)
    self.preview.onMouseRelease = function() { drag = null; return true; };
    self.displayMode.onItemSelected = function(index)
    {
+      if (index !== 0 && self.candidate === null)
+      {
+         self.displayMode.currentItem = 0;
+         self.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
+         self.preview.repaint();
+         return;
+      }
       try
       {
          if (index === 2 && self.candidate !== null && self.differenceBitmap === null)
@@ -2127,7 +2134,7 @@ constructor(view)
    this.candidate = null;
    this.previewRevision = 0;
    this.previewStatus = new Label(this);
-   this.previewStatus.text = "Click Update Preview, then switch Before / After at the same position.";
+   this.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
    this.instructions = new Label(this);
    this.instructions.text = "Switch Before / After to compare HDR. Difference x10 is for inspection only. Update Preview after changing settings.\nApply keeps a separate HDR result; Skip preserves the image before HDR.";
    this.layersLabel = new Label(this);
@@ -2167,6 +2174,8 @@ constructor(view)
             var h = Math.round(bitmap.height * scale);
             var x = Math.round((this.width - w) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetX : 0);
             var y = Math.round((this.height - h) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetY : 0);
+            if (w > this.width) x = Math.min(0, Math.max(this.width - w, x));
+            if (h > this.height) y = Math.min(0, Math.max(this.height - h, y));
             g.drawScaledBitmap(new Rect(x, y, x + w, y + h), bitmap);
          }
       }
@@ -2209,6 +2218,8 @@ constructor(view)
       catch (e)
       {
          if (Console.abortRequested) { self.cancel(); return; }
+         self.displayMode.currentItem = 0;
+         self.previewStatus.text = "Preview failed; showing Before. " + errorMessage(e);
          (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
       }
       finally { self.enabled = true; self.preview.repaint(); self.previewStatus.repaint(); CoreApplication.processEvents(); }
@@ -2332,7 +2343,7 @@ constructor(view)
    this.candidate = null;
    this.previewRevision = 0;
    this.previewStatus = new Label(this);
-   this.previewStatus.text = "Click Update Preview, then switch Before / After at the same position.";
+   this.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
    this.instructions = new Label(this);
    this.instructions.text = "Native CurvesTransformation. Edit input/output points (0–1000 = 0–1), then Update Preview.\nSwitch Before / After to compare. Apply keeps a separate result; Skip preserves the original.";
    this.layersLabel = new Label(this);
@@ -2401,6 +2412,8 @@ constructor(view)
             var h = Math.round(bitmap.height * scale);
             var x = Math.round((this.width - w) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetX : 0);
             var y = Math.round((this.height - h) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetY : 0);
+            if (w > this.width) x = Math.min(0, Math.max(this.width - w, x));
+            if (h > this.height) y = Math.min(0, Math.max(this.height - h, y));
             g.drawScaledBitmap(new Rect(x, y, x + w, y + h), bitmap);
          }
       }
@@ -2460,6 +2473,8 @@ constructor(view)
       catch (e)
       {
          if (Console.abortRequested) { self.cancel(); return; }
+         self.displayMode.currentItem = 0;
+         self.previewStatus.text = "Preview failed; showing Before. " + errorMessage(e);
          (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
       }
       finally { self.enabled = true; self.preview.repaint(); self.previewStatus.repaint(); CoreApplication.processEvents(); }
@@ -2750,7 +2765,7 @@ constructor(view, kind)
    this.candidate = null;
    this.previewRevision = 0;
    this.previewStatus = new Label(this);
-   this.previewStatus.text = "Click Update Preview, then switch Before / After at the same position.";
+   this.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
    this.instructions = new Label(this);
    this.instructions.text = kind === "Inspection" ? "Inspect at 100%: background noise, star halos, clipped highlights and faint detail. Drag to pan." : "Preview " + kind + ". Compare Before / After at 100%; drag to pan. Apply keeps a separate result.\nLocal contrast and saturation protect dark background and bright highlights with a smooth brightness mask.";
    this.layersLabel = new Label(this);
@@ -2792,6 +2807,8 @@ constructor(view, kind)
             var h = Math.round(bitmap.height * scale);
             var x = Math.round((this.width - w) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetX : 0);
             var y = Math.round((this.height - h) / 2) + (self.zoomMode.currentItem > 0 ? self.previewOffsetY : 0);
+            if (w > this.width) x = Math.min(0, Math.max(this.width - w, x));
+            if (h > this.height) y = Math.min(0, Math.max(this.height - h, y));
             g.drawScaledBitmap(new Rect(x, y, x + w, y + h), bitmap);
          }
       }
@@ -2842,6 +2859,8 @@ constructor(view, kind)
       catch (e)
       {
          if (Console.abortRequested) { self.cancel(); return; }
+         self.displayMode.currentItem = 0;
+         self.previewStatus.text = "Preview failed; showing Before. " + errorMessage(e);
          (new MessageBox(errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
       }
       finally { self.enabled = true; self.preview.repaint(); self.previewStatus.repaint(); CoreApplication.processEvents(); }
@@ -2858,7 +2877,7 @@ constructor(view, kind)
    this.buttons.spacing = 8;
    this.buttons.addStretch();
    this.buttons.add(this.applyButton);
-   this.buttons.add(this.skipButton);
+   if (kind !== "Inspection") this.buttons.add(this.skipButton);
    this.sizer = new VerticalSizer;
    this.sizer.margin = 10;
    this.sizer.spacing = 8;
@@ -2876,8 +2895,8 @@ constructor(view, kind)
    if (kind === "Inspection")
    {
       this.strength.visible = this.strengthLabel.visible = this.updateButton.visible = this.keepComparison.visible = false;
-      this.applyButton.text = "Continue finishing"; this.applyButton.enabled = true;
-      this.skipButton.text = "Continue";
+      this.applyButton.text = "Continue to finishing"; this.applyButton.enabled = true;
+      this.skipButton.visible = false;
       this.displayMode.currentItem = 0; this.displayMode.enabled = false; this.zoomMode.currentItem = 1;
       this.previewStatus.text = "100% inspection. Drag the image to inspect different areas; use Fit for the full frame.";
    }

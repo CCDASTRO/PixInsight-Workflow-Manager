@@ -1,11 +1,13 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.16
+# CCDASTRO PixInsight Workflow Manager v1.1.21
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
-## v1.1.16 quick start
+[Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-1. Select your original integrated, unstretched color master. Run **Validate**,
+## v1.1.21 quick start
+
+1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
    pixels and input file remain unchanged. Save an unsaved original separately
    if you need a permanent backup.
@@ -24,9 +26,7 @@ manager for an integrated linear color master.
    Your chosen default is **JPEG quality 95, longest edge 2048 pixels**. Smaller
    images are not enlarged. Cancelling either save leaves the processed image open.
 
-The new v1.1.14 finishing stages and export still require PixInsight runtime
-verification. The native CurvesTransformation enum fix was successfully tested
-in v1.1.13.
+The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
 
 ## Important: the workflow window hides while processing
 
@@ -89,6 +89,10 @@ visible. It returns automatically when the run ends.**
 ## [short video](https://youtu.be/0G-PI8F51rE)
 
 ## Revision history
+
+- **v1.1.21:** Integrated rectangular crop preview executes native DynamicCrop and returns automatically to the same workflow settings. Original linear input is preserved; Crop is unchecked on return. Rotation remains a manual operation.
+- **v1.1.18–v1.1.20:** Intermediate crop handoff changes, superseded by v1.1.21.
+- **v1.1.17:** BlurXTerminator uses the configured **CCDASTRO_BlurX** workspace icon and logs Correct Only and sharpening settings, avoiding reliance on fresh-instance defaults.
 
 - **v1.1.16:** Checks for the optional final denoise icon before loading it and provides setup/Skip instructions instead of the native missing-icon exception.
 - **v1.1.15:** Replaces duplicate inspection Continue buttons with a single Continue to finishing button; inspection makes no pixel changes. All reviews open on Before, switch to After after successful calculation, and return to Before on preview failure. Zoomed panning is bounded to keep the image visible.
@@ -285,16 +289,11 @@ The validator warns when it detects high-confidence zero or nonfinite pixels
 along the image borders. Crop integration and registration borders before
 GradientCorrection.
 
-To crop the current image, enable **Open DynamicCrop before workflow** and click
-**Run Workflow**. The workflow first creates a separate working copy, then applies a display-only linked AutoSTF to the copy, closes,
-and opens DynamicCrop. Draw and apply the crop, then launch the workflow again
-and run **Validate** before processing. AutoSTF does not alter the linear pixels.
+To crop the current image, enable **Review crop before workflow** and click **Run Workflow**. A separate linear working copy opens in the integrated crop preview. Drag a rectangle and choose **Apply Crop**, or choose **Skip Crop**. The same workflow window returns automatically with the working copy selected and Crop unchecked. Review and Validate before continuing.
 
-With **Remember workflow settings** enabled, the workflow restores enabled
-steps, selected tools, denoise placement, stretch choices, and recombination
-after the crop handoff or a normal restart. The crop option is restored off and
-the linear-image safety confirmation must always be selected again. Click
-**Reset Defaults** to clear the saved state.
+The display stretch is applied only to a temporary preview copy; the original and cropped working pixels remain linear. This preview supports rectangular trimming without rotation. For rotation or other advanced crop operations, use native DynamicCrop manually before starting the workflow.
+
+With **Remember workflow settings** enabled, choices also persist across normal restarts. The linear-image confirmation is not restored on restart. Click **Reset Defaults** to clear saved choices.
 
 Deblur runs before the main denoise pass. Gradient correction precedes SPCC,
 and SPCC requires a plate-solved image.
@@ -797,4 +796,4 @@ For an initial conservative test: Latest ML model, Correct Only on, Automatic PS
 Preflight requires the icon to contain BlurXTerminator. No fresh-instance fallback is used. The console records Correct Only and both sharpening settings. Processing remains before star separation, denoise, and stretch.
 
 ### Crop preview and automatic return (v1.1.21)
-The Crop stage opens an internal preview on a separate linear working copy. Drag a rectangle, then Apply Crop. The script executes the native DynamicCrop process and automatically returns to the same workflow settings with the working copy selected and Crop unchecked. Skip Crop also returns. The preview uses a temporary stretched display copy; input pixels remain linear. This supports rectangular trimming without rotation. For advanced rotation, use native DynamicCrop manually before starting the workflow. Native verification is pending.
+The Crop stage opens an internal preview on a separate linear working copy. Drag a rectangle, then Apply Crop. The script executes the native DynamicCrop process and automatically returns to the same workflow settings with the working copy selected and Crop unchecked. Skip Crop also returns. The preview uses a temporary stretched display copy; input pixels remain linear. This supports rectangular trimming without rotation. For advanced rotation, use native DynamicCrop manually before starting the workflow. The crop preview and automatic return were confirmed working in PixInsight v1.1.21.

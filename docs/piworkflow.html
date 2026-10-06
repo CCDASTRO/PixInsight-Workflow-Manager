@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.16",
+    "softwareVersion": "1.1.21",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,12 +160,13 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.16">CCDASTRO PixInsight Workflow Manager v1.1.16</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.21">CCDASTRO PixInsight Workflow Manager v1.1.21</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
-<h2 id="v1.1.16-quick-start">v1.1.16 quick start</h2>
+<p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
+<h2 id="v1.1.21-quick-start">v1.1.21 quick start</h2>
 <ol>
-<li>Select your original integrated, unstretched color master. Run <strong>Validate</strong>,
+<li>Select your original integrated, unstretched color master. For BlurXTerminator, load your configured <strong>CCDASTRO_BlurX</strong> workspace icon; its Correct Only and sharpening settings control the run. Run <strong>Validate</strong>,
 then <strong>Run Workflow</strong>. Processing uses a separate working copy; the original
 pixels and input file remain unchanged. Save an unsaved original separately
 if you need a permanent backup.</li>
@@ -184,9 +185,7 @@ See <a href="#final-denoise-icon-what-it-stores-and-how-to-create-it">Final deno
 Your chosen default is <strong>JPEG quality 95, longest edge 2048 pixels</strong>. Smaller
 images are not enlarged. Cancelling either save leaves the processed image open.</li>
 </ol>
-<p>The new v1.1.14 finishing stages and export still require PixInsight runtime
-verification. The native CurvesTransformation enum fix was successfully tested
-in v1.1.13.</p>
+<p>The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.</p>
 <h2 id="important-the-workflow-window-hides-while-processing">Important: the workflow window hides while processing</h2>
 <blockquote>
 <p><strong>After you confirm Run Workflow, the Workflow Manager window disappears temporarily. This is normal.</strong></p>
@@ -240,6 +239,12 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.21:</strong> Integrated rectangular crop preview executes native DynamicCrop and returns automatically to the same workflow settings. Original linear input is preserved; Crop is unchecked on return. Rotation remains a manual operation.</p>
+</li>
+<li><p><strong>v1.1.18–v1.1.20:</strong> Intermediate crop handoff changes, superseded by v1.1.21.</p>
+</li>
+<li><p><strong>v1.1.17:</strong> BlurXTerminator uses the configured <strong>CCDASTRO_BlurX</strong> workspace icon and logs Correct Only and sharpening settings, avoiding reliance on fresh-instance defaults.</p>
+</li>
 <li><p><strong>v1.1.16:</strong> Checks for the optional final denoise icon before loading it and provides setup/Skip instructions instead of the native missing-icon exception.</p>
 </li>
 <li><p><strong>v1.1.15:</strong> Replaces duplicate inspection Continue buttons with a single Continue to finishing button; inspection makes no pixel changes. All reviews open on Before, switch to After after successful calculation, and return to Before on preview failure. Zoomed panning is bounded to keep the image visible.</p>
@@ -464,15 +469,9 @@ final output naming and overwrite protection. Processing history is not copied.<
 <p>The validator warns when it detects high-confidence zero or nonfinite pixels
 along the image borders. Crop integration and registration borders before
 GradientCorrection.</p>
-<p>To crop the current image, enable <strong>Open DynamicCrop before workflow</strong> and click
-<strong>Run Workflow</strong>. The workflow first creates a separate working copy, then applies a display-only linked AutoSTF to the copy, closes,
-and opens DynamicCrop. Draw and apply the crop, then launch the workflow again
-and run <strong>Validate</strong> before processing. AutoSTF does not alter the linear pixels.</p>
-<p>With <strong>Remember workflow settings</strong> enabled, the workflow restores enabled
-steps, selected tools, denoise placement, stretch choices, and recombination
-after the crop handoff or a normal restart. The crop option is restored off and
-the linear-image safety confirmation must always be selected again. Click
-<strong>Reset Defaults</strong> to clear the saved state.</p>
+<p>To crop the current image, enable <strong>Review crop before workflow</strong> and click <strong>Run Workflow</strong>. A separate linear working copy opens in the integrated crop preview. Drag a rectangle and choose <strong>Apply Crop</strong>, or choose <strong>Skip Crop</strong>. The same workflow window returns automatically with the working copy selected and Crop unchecked. Review and Validate before continuing.</p>
+<p>The display stretch is applied only to a temporary preview copy; the original and cropped working pixels remain linear. This preview supports rectangular trimming without rotation. For rotation or other advanced crop operations, use native DynamicCrop manually before starting the workflow.</p>
+<p>With <strong>Remember workflow settings</strong> enabled, choices also persist across normal restarts. The linear-image confirmation is not restored on restart. Click <strong>Reset Defaults</strong> to clear saved choices.</p>
 <p>Deblur runs before the main denoise pass. Gradient correction precedes SPCC,
 and SPCC requires a plate-solved image.</p>
 <h2 id="requirements">Requirements</h2>
@@ -945,7 +944,7 @@ generate stars. For SyQon Starless, use Subtraction and rename its process icon
 <p>For an initial conservative test: Latest ML model, Correct Only on, Automatic PSF on, star sharpening 0, nonstellar sharpening 0, halo adjustment 0, Lunar/Planetary Mode off, overlap 0.20, and your working GPU. Correct Only omits additional sharpening. Inspect at 100%; settings must be evaluated on your own data.</p>
 <p>Preflight requires the icon to contain BlurXTerminator. No fresh-instance fallback is used. The console records Correct Only and both sharpening settings. Processing remains before star separation, denoise, and stretch.</p>
 <h3 id="crop-preview-and-automatic-return-v1.1.21">Crop preview and automatic return (v1.1.21)</h3>
-<p>The Crop stage opens an internal preview on a separate linear working copy. Drag a rectangle, then Apply Crop. The script executes the native DynamicCrop process and automatically returns to the same workflow settings with the working copy selected and Crop unchecked. Skip Crop also returns. The preview uses a temporary stretched display copy; input pixels remain linear. This supports rectangular trimming without rotation. For advanced rotation, use native DynamicCrop manually before starting the workflow. Native verification is pending.</p>
+<p>The Crop stage opens an internal preview on a separate linear working copy. Drag a rectangle, then Apply Crop. The script executes the native DynamicCrop process and automatically returns to the same workflow settings with the working copy selected and Crop unchecked. Skip Crop also returns. The preview uses a temporary stretched display copy; input pixels remain linear. This supports rectangular trimming without rotation. For advanced rotation, use native DynamicCrop manually before starting the workflow. The crop preview and automatic return were confirmed working in PixInsight v1.1.21.</p>
 
       <footer class="footer">CCDASTRO PixInsight Workflow Manager v1.1.1 · Chuck Faranda / CCDASTRO, Inc.</footer>
     </main>

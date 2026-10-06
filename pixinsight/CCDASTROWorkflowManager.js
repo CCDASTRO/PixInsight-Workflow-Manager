@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.18"
+#define VERSION "1.1.19"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1979,7 +1979,7 @@ constructor()
       if (self.rowsById.crop.enabled.checked)
       {
          if ((new MessageBox("The workflow will preserve the original and open DynamicCrop on a separate copy. " +
-             "Apply the crop; this workflow will return for review and validation.\n\nOpen DynamicCrop now?",
+             "Apply the crop, close DynamicCrop, then click Return to workflow.\n\nOpen DynamicCrop now?",
              TITLE, StdIcon.Information, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
             return;
          saveWorkflowState(self, true);
@@ -3154,8 +3154,8 @@ function waitForWorkflowCrop(view)
    handoff.windowTitle = "DynamicCrop handoff";
    var returnRequested = false;
    handoff.note = new Label(handoff);
-   handoff.note.text = "Apply DynamicCrop to the working copy. The workflow returns when its dimensions change.\n" +
-      "If you cancel crop or keep the same dimensions, close DynamicCrop and click Return to workflow.";
+   handoff.note.text = "Apply DynamicCrop to the working copy, then close the DynamicCrop interface.\n" +
+      "Click Return to workflow when you are finished (also if you cancel the crop).";
    handoff.returnButton = new PushButton(handoff);
    handoff.returnButton.text = "Return to workflow";
    handoff.returnButton.onClick = function() { returnRequested = true; };
@@ -3168,17 +3168,16 @@ function waitForWorkflowCrop(view)
    handoff.adjustToContents();
    if (!(new DynamicCrop).launch())
       throw new Error("Could not open DynamicCrop.");
-   handoff.open();
+   handoff.show();
    try
    {
-      while (!returnRequested && !view.window.isNull &&
-             view.image.width === width && view.image.height === height)
+      while (!returnRequested && !view.window.isNull)
       {
          processEvents();
          System.msleep(100);
       }
    }
-   finally { handoff.cancel(); }
+   finally { handoff.hide(); }
    if (view.window.isNull) throw new Error("The crop working copy was closed.");
    view.window.bringToFront();
 }

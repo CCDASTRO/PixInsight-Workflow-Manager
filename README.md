@@ -795,3 +795,7 @@ Create a BlurXTerminator workspace icon named **CCDASTRO_BlurX** by dragging its
 For an initial conservative test: Latest ML model, Correct Only on, Automatic PSF on, star sharpening 0, nonstellar sharpening 0, halo adjustment 0, Lunar/Planetary Mode off, overlap 0.20, and your working GPU. Correct Only omits additional sharpening. Inspect at 100%; settings must be evaluated on your own data.
 
 Preflight requires the icon to contain BlurXTerminator. No fresh-instance fallback is used. The console records Correct Only and both sharpening settings. Processing remains before star separation, denoise, and stretch.
+
+### DynamicCrop return (v1.1.18)
+The workflow remains active while DynamicCrop operates on a separate linear copy. It returns to the same settings window when the working copy dimensions change, with crop unchecked and the cropped copy selected. If crop is canceled or dimensions stay unchanged, close DynamicCrop and click Return to workflow in the handoff window. Review and Validate before continuing; processing does not start automatically. Native PixInsight verification is pending.
+

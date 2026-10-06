@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.17"
+#define VERSION "1.1.18"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -29,7 +29,7 @@ var SYQON_PRISM_ICON = "CCDASTRO_Prism";
 var SYQON_STARLESS_ICON = "CCDASTRO_Starless";
 
 var adapterHelp = {
-   interactiveCrop: "Close the workflow and open DynamicCrop for the active image.",
+   interactiveCrop: "Open DynamicCrop on a separate copy, then return to this workflow.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
    mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Requires CCDASTRO_SPFC and CCDASTRO_MGC process icons and suitable MARS data. SPCC remains separate.",
@@ -859,7 +859,7 @@ function defaultWorkflow()
    return [
       new WorkflowStep("crop", "0. Open DynamicCrop before workflow",
          ["interactiveCrop"], "interactiveCrop",
-         "Optional: closes this workflow and opens DynamicCrop for the active image.", false),
+         "Optional: opens DynamicCrop on a separate copy and returns for review.", false),
       new WorkflowStep("gradient", "1. Gradient correction",
          ["gradientCorrection", "graxpert", "mgc"], "gradientCorrection",
          "Runs before color calibration. MGC includes an earlier plate solve and SPFC prerequisite."),
@@ -1979,7 +1979,7 @@ constructor()
       if (self.rowsById.crop.enabled.checked)
       {
          if ((new MessageBox("The workflow will preserve the original and open DynamicCrop on a separate copy. " +
-             "Apply the crop, then launch this workflow again and run Validate.\n\nOpen DynamicCrop now?",
+             "Apply the crop; this workflow will return for review and validation.\n\nOpen DynamicCrop now?",
              TITLE, StdIcon.Information, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
             return;
          saveWorkflowState(self, true);
@@ -3147,6 +3147,42 @@ function executeWorkflow(self)
    }
 }
 
+function waitForWorkflowCrop(view)
+{
+   var width = view.image.width, height = view.image.height;
+   var handoff = new Dialog;
+   handoff.windowTitle = "DynamicCrop handoff";
+   var returnRequested = false;
+   handoff.note = new Label(handoff);
+   handoff.note.text = "Apply DynamicCrop to the working copy. The workflow returns when its dimensions change.\n" +
+      "If you cancel crop or keep the same dimensions, close DynamicCrop and click Return to workflow.";
+   handoff.returnButton = new PushButton(handoff);
+   handoff.returnButton.text = "Return to workflow";
+   handoff.returnButton.onClick = function() { returnRequested = true; };
+   handoff.onReturn = function() { returnRequested = true; };
+   handoff.sizer = new VerticalSizer;
+   handoff.sizer.margin = 10;
+   handoff.sizer.spacing = 8;
+   handoff.sizer.add(handoff.note);
+   handoff.sizer.add(handoff.returnButton);
+   handoff.adjustToContents();
+   if (!(new DynamicCrop).launch())
+      throw new Error("Could not open DynamicCrop.");
+   handoff.open();
+   try
+   {
+      while (!returnRequested && !view.window.isNull &&
+             view.image.width === width && view.image.height === height)
+      {
+         processEvents();
+         System.msleep(100);
+      }
+   }
+   finally { handoff.cancel(); }
+   if (view.window.isNull) throw new Error("The crop working copy was closed.");
+   view.window.bringToFront();
+}
+
 function main()
 {
    Console.hide();
@@ -3154,30 +3190,28 @@ function main()
    for (;;)
    {
       dialog.runRequested = false;
+      dialog.launchCropRequested = false;
       dialog.execute();
-      if (!dialog.runRequested)
-         break;
+      if (dialog.launchCropRequested)
+      {
+         try
+         {
+            var cropView = cloneWorkflowInput(ImageWindow.activeWindow.currentView);
+            try { applyLinkedAutoSTF(cropView, 0.25); }
+            catch (e) { logLine("Automatic screen stretch could not be applied: " + errorMessage(e)); }
+            waitForWorkflowCrop(cropView);
+            dialog.rowsById.crop.enabled.checked = false;
+            dialog.inputLabel.text = "Active view: " + cropView.fullId;
+            dialog.statusText.text = "Crop handoff completed. Review the cropped input, Validate, then Run Workflow.";
+         }
+         catch (e)
+         {
+            (new MessageBox("Crop handoff stopped: " + errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
+         }
+         continue;
+      }
+      if (!dialog.runRequested) break;
       executeWorkflow(dialog);
-   }
-   if (dialog.launchCropRequested)
-   {
-      var cropView;
-      try { cropView = cloneWorkflowInput(ImageWindow.activeWindow.currentView); }
-      catch (e)
-      {
-         (new MessageBox("Could not preserve the original before crop: " + errorMessage(e), TITLE, StdIcon.Error, StdButton.Ok)).execute();
-         return;
-      }
-      try
-      {
-         applyLinkedAutoSTF(cropView, 0.25);
-      }
-      catch (e)
-      {
-         logLine("Automatic screen stretch could not be applied: " + errorMessage(e));
-      }
-      logLine("Opening DynamicCrop. Apply the crop, then launch the workflow again.");
-      (new DynamicCrop).launch();
    }
 }
 

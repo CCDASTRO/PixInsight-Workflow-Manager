@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.20"
+#define VERSION "1.1.21"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -29,7 +29,7 @@ var SYQON_PRISM_ICON = "CCDASTRO_Prism";
 var SYQON_STARLESS_ICON = "CCDASTRO_Starless";
 
 var adapterHelp = {
-   interactiveCrop: "Open DynamicCrop on a separate copy. Close DynamicCrop and reopen Workflow Manager to continue.",
+   interactiveCrop: "Review a rectangular crop on a separate linear copy and return to workflow settings.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
    mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Requires CCDASTRO_SPFC and CCDASTRO_MGC process icons and suitable MARS data. SPCC remains separate.",
@@ -767,7 +767,7 @@ MLDenoiseAdapter.prototype.execute = function(view)
 function InteractiveCropAdapter()
 {
    this.id = "interactiveCrop";
-   this.label = "Open DynamicCrop";
+   this.label = "Workflow crop preview";
 }
 
 InteractiveCropAdapter.prototype.available = function()
@@ -857,9 +857,9 @@ function WorkflowStep(id, label, adapterIds, defaultAdapter, note, enabled)
 function defaultWorkflow()
 {
    return [
-      new WorkflowStep("crop", "0. Open DynamicCrop before workflow",
+      new WorkflowStep("crop", "0. Review crop before workflow",
          ["interactiveCrop"], "interactiveCrop",
-         "Optional: opens DynamicCrop on a separate copy. Reopen Workflow Manager after cropping.", false),
+         "Optional: rectangular crop preview; Apply or Skip returns to workflow settings.", false),
       new WorkflowStep("gradient", "1. Gradient correction",
          ["gradientCorrection", "graxpert", "mgc"], "gradientCorrection",
          "Runs before color calibration. MGC includes an earlier plate solve and SPFC prerequisite."),
@@ -1979,7 +1979,7 @@ constructor()
       if (self.rowsById.crop.enabled.checked)
       {
          if ((new MessageBox("The workflow will preserve the original and open DynamicCrop on a separate copy. " +
-             "Apply or cancel the crop, close DynamicCrop, then reopen Workflow Manager.\n\nOpen DynamicCrop now?",
+             "Select a rectangle in the workflow crop preview. Apply or Skip returns to this window.\n\nOpen DynamicCrop now?",
              TITLE, StdIcon.Information, StdButton.Yes, StdButton.No)).execute() !== StdButton.Yes)
             return;
          saveWorkflowState(self, true);
@@ -3147,6 +3147,75 @@ function executeWorkflow(self)
    }
 }
 
+function applyWorkflowCrop(view, edges)
+{
+   var w = view.image.width, h = view.image.height;
+   var left = edges[0], top = edges[1], right = edges[2], bottom = edges[3];
+   if (left < 0 || top < 0 || right > w || bottom > h || right <= left || bottom <= top)
+      throw new Error("Select a nonempty crop rectangle inside the image.");
+   var crop = new DynamicCrop;
+   crop.centerX = (left + right) / (2*w);
+   crop.centerY = (top + bottom) / (2*h);
+   crop.width = (right-left)/w;
+   crop.height = (bottom-top)/h;
+   crop.angle = 0;
+   crop.scaleX = crop.scaleY = 1;
+   if (!crop.executeOn(view)) throw new Error("DynamicCrop did not complete.");
+}
+
+function reviewWorkflowCrop(view)
+{
+   var d = new Dialog, w = view.image.width, h = view.image.height;
+   d.windowTitle = "Workflow crop preview";
+   var temporary = cloneHDRView(view, "_CropDisplay");
+   var bitmap;
+   try { applyLinkedAutoHistogram(temporary.mainView, 0.25); bitmap = temporary.mainView.image.render(1, false); }
+   finally { temporary.forceClose(); }
+   d.note = new Label(d);
+   d.note.text = "Drag a rectangle to trim the linear working copy. Preview stretch is display-only.\n" +
+      "Apply Crop or Skip returns to workflow settings. Rectangular trimming only; no rotation.";
+   d.preview = new Control(d);
+   d.preview.setMinSize(640, 420);
+   var edges = [0,0,w,h], anchor = null;
+   function geometry() {
+      var scale = Math.min(d.preview.width/w, d.preview.height/h);
+      return [scale,(d.preview.width-w*scale)/2,(d.preview.height-h*scale)/2];
+   }
+   function point(x,y) {
+      var g=geometry(); return [Math.max(0,Math.min(w,Math.round((x-g[1])/g[0]))),
+         Math.max(0,Math.min(h,Math.round((y-g[2])/g[0])))];
+   }
+   d.preview.onPaint = function() {
+      var g = new Graphics(this), q=geometry();
+      try {
+         g.fillRect(this.boundsRect,new Brush(0xff202020));
+         g.drawScaledBitmap(new Rect(q[1],q[2],q[1]+w*q[0],q[2]+h*q[0]),bitmap);
+         g.pen = new Pen(0xffffff00,2);
+         g.drawRect(new Rect(q[1]+edges[0]*q[0],q[2]+edges[1]*q[0],q[1]+edges[2]*q[0],q[2]+edges[3]*q[0]));
+      } finally { g.end(); }
+   };
+   d.preview.onMousePress = function(x,y) { anchor=point(x,y); };
+   d.preview.onMouseMove = function(x,y) {
+      if (anchor === null) return;
+      var p=point(x,y); edges=[Math.min(anchor[0],p[0]),Math.min(anchor[1],p[1]),Math.max(anchor[0],p[0]),Math.max(anchor[1],p[1])];
+      this.update();
+   };
+   d.preview.onMouseRelease = function(x,y) { this.onMouseMove(x,y); anchor=null; };
+   d.apply = new PushButton(d); d.apply.text="Apply Crop";
+   d.apply.onClick=function() {
+      if(edges[2]<=edges[0] || edges[3]<=edges[1]) {
+         (new MessageBox("Select a nonempty crop rectangle.",TITLE,StdIcon.Error,StdButton.Ok)).execute(); return;
+      }
+      d.ok();
+   };
+   d.skip = new PushButton(d); d.skip.text="Skip Crop"; d.skip.onClick=function(){d.cancel();};
+   var buttons=new HorizontalSizer;buttons.addStretch();buttons.add(d.apply);buttons.add(d.skip);
+   d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=8;d.sizer.add(d.note);d.sizer.add(d.preview,100);d.sizer.add(buttons);
+   d.resize(760,580);
+   if(d.execute()) applyWorkflowCrop(view,edges);
+   view.window.bringToFront();
+}
+
 function main()
 {
    Console.hide();
@@ -3163,11 +3232,7 @@ function main()
             var cropView = cloneWorkflowInput(ImageWindow.activeWindow.currentView);
             try { applyLinkedAutoSTF(cropView, 0.25); }
             catch (e) { logLine("Automatic screen stretch could not be applied: " + errorMessage(e)); }
-            logLine("Opening DynamicCrop on " + cropView.fullId +
-               ". Apply or cancel the crop, close DynamicCrop, then reopen Workflow Manager.");
-            if (!(new DynamicCrop).launch())
-               throw new Error("Could not open DynamicCrop.");
-            return;
+            reviewWorkflowCrop(cropView);
             dialog.rowsById.crop.enabled.checked = false;
             dialog.inputLabel.text = "Active view: " + cropView.fullId;
             dialog.statusText.text = "Crop handoff completed. Review the cropped input, Validate, then Run Workflow.";

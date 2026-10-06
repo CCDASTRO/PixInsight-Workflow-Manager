@@ -944,8 +944,8 @@ generate stars. For SyQon Starless, use Subtraction and rename its process icon
 <p>Create a BlurXTerminator workspace icon named <strong>CCDASTRO_BlurX</strong> by dragging its New Instance triangle and renaming it. Save/reload your process icons between sessions. The workflow preserves all settings in that icon, including Correct Only, model, sharpening, PSF, overlap, and compute device. Changing the open process window alone does not update the saved icon.</p>
 <p>For an initial conservative test: Latest ML model, Correct Only on, Automatic PSF on, star sharpening 0, nonstellar sharpening 0, halo adjustment 0, Lunar/Planetary Mode off, overlap 0.20, and your working GPU. Correct Only omits additional sharpening. Inspect at 100%; settings must be evaluated on your own data.</p>
 <p>Preflight requires the icon to contain BlurXTerminator. No fresh-instance fallback is used. The console records Correct Only and both sharpening settings. Processing remains before star separation, denoise, and stretch.</p>
-<h3 id="dynamiccrop-return-v1.1.19">DynamicCrop return (v1.1.19)</h3>
-<p>The workflow keeps a nonmodal handoff window open while DynamicCrop operates on a separate linear copy. Apply or cancel the crop, close the DynamicCrop interface, then click Return to workflow. The same workflow settings return with crop unchecked and the working copy selected. Processing does not start automatically; review and Validate before continuing. Native PixInsight verification is pending.</p>
+<h3 id="dynamiccrop-handoff-v1.1.20">DynamicCrop handoff (v1.1.20)</h3>
+<p>DynamicCrop runs on a separate linear copy after the workflow script exits, without a waiting dialog or polling loop. Apply or cancel the crop, close DynamicCrop, select the working copy, then reopen Workflow Manager. With Remember workflow settings enabled, previous choices return with Crop unchecked. Review and Validate before continuing. Automatic reopening is not implemented: the earlier waiting approach blocked native crop interaction.</p>
 
       <footer class="footer">CCDASTRO PixInsight Workflow Manager v1.1.1 · Chuck Faranda / CCDASTRO, Inc.</footer>
     </main>

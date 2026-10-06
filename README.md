@@ -796,5 +796,5 @@ For an initial conservative test: Latest ML model, Correct Only on, Automatic PS
 
 Preflight requires the icon to contain BlurXTerminator. No fresh-instance fallback is used. The console records Correct Only and both sharpening settings. Processing remains before star separation, denoise, and stretch.
 
-### DynamicCrop return (v1.1.19)
-The workflow keeps a nonmodal handoff window open while DynamicCrop operates on a separate linear copy. Apply or cancel the crop, close the DynamicCrop interface, then click Return to workflow. The same workflow settings return with crop unchecked and the working copy selected. Processing does not start automatically; review and Validate before continuing. Native PixInsight verification is pending.
+### DynamicCrop handoff (v1.1.20)
+DynamicCrop runs on a separate linear copy after the workflow script exits, without a waiting dialog or polling loop. Apply or cancel the crop, close DynamicCrop, select the working copy, then reopen Workflow Manager. With Remember workflow settings enabled, previous choices return with Crop unchecked. Review and Validate before continuing. Automatic reopening is not implemented: the earlier waiting approach blocked native crop interaction.

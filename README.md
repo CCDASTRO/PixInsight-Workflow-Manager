@@ -786,3 +786,12 @@ pixel size. Alternatively, run ImageSolver manually and reopen the manager.
 **No stars-only view is detected.** Configure the selected star-removal tool to
 generate stars. For SyQon Starless, use Subtraction and rename its process icon
 `CCDASTRO_Starless`.
+
+
+### BlurXTerminator configured icon (v1.1.17)
+
+Create a BlurXTerminator workspace icon named **CCDASTRO_BlurX** by dragging its New Instance triangle and renaming it. Save/reload your process icons between sessions. The workflow preserves all settings in that icon, including Correct Only, model, sharpening, PSF, overlap, and compute device. Changing the open process window alone does not update the saved icon.
+
+For an initial conservative test: Latest ML model, Correct Only on, Automatic PSF on, star sharpening 0, nonstellar sharpening 0, halo adjustment 0, Lunar/Planetary Mode off, overlap 0.20, and your working GPU. Correct Only omits additional sharpening. Inspect at 100%; settings must be evaluated on your own data.
+
+Preflight requires the icon to contain BlurXTerminator. No fresh-instance fallback is used. The console records Correct Only and both sharpening settings. Processing remains before star separation, denoise, and stretch.

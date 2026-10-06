@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.16"
+#define VERSION "1.1.17"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -35,7 +35,7 @@ var adapterHelp = {
    mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Requires CCDASTRO_SPFC and CCDASTRO_MGC process icons and suitable MARS data. SPCC remains separate.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
    spcc: "Use SpectrophotometricColorCalibration. The image must have an astrometric solution.",
-   blurXTerminator: "Use BlurXTerminator for deconvolution and structure recovery while the image is linear.",
+   blurXTerminator: "Use the configured CCDASTRO_BlurX process icon for linear deconvolution. Its Correct Only, sharpening, model, and device settings are preserved.",
    syqonParallax: "Run the configured CCDASTRO_Parallax process icon for structure recovery.",
    noiseXTerminator: "Use NoiseXTerminator for the main noise-reduction pass.",
    mlDenoise: "Use the configured CCDASTRO_MLDenoise process icon, including its neural network model path and denoise settings.",
@@ -677,6 +677,49 @@ function linearStageOrder(rows)
       : ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
 }
 
+function BlurXIconAdapter()
+{
+   this.id = "blurXTerminator";
+   this.label = "BlurXTerminator";
+}
+
+BlurXIconAdapter.prototype.configuredProcess = function()
+{
+   if (resolveProcessClass(["BlurXTerminator"]) === null)
+      throw new Error("Install the BlurXTerminator PixInsight process.");
+   if (ProcessInstance.icons().indexOf("CCDASTRO_BlurX") < 0)
+      throw new Error("Configure BlurXTerminator, drag its New Instance triangle to the workspace, and name the icon CCDASTRO_BlurX. Choose Correct Only explicitly.");
+   var process = ProcessInstance.fromIcon("CCDASTRO_BlurX");
+   if (process === null || process.processId() !== "BlurXTerminator")
+      throw new Error("CCDASTRO_BlurX must contain a BlurXTerminator process instance.");
+   return process;
+};
+
+BlurXIconAdapter.prototype.available = function()
+{
+   try { this.configuredProcess(); return true; }
+   catch (e) { return false; }
+};
+
+BlurXIconAdapter.prototype.requirement = function()
+{
+   try { this.configuredProcess(); return "Configured CCDASTRO_BlurX settings are ready."; }
+   catch (e) { return errorMessage(e); }
+};
+
+BlurXIconAdapter.prototype.execute = function(view)
+{
+   var process = this.configuredProcess();
+   checkAbortRequested();
+   logLine("Running configured BlurXTerminator on " + view.fullId +
+      "; Correct Only=" + process.correct_only +
+      "; Sharpen Stars=" + process.sharpen_stars +
+      "; Sharpen Nonstellar=" + process.sharpen_nonstellar);
+   if (!process.executeOn(view))
+      throw new Error("Configured BlurXTerminator failed.");
+   checkAbortRequested();
+};
+
 function MLDenoiseAdapter()
 {
    this.id = "mlDenoise";
@@ -764,15 +807,7 @@ var adapters = {
          setFirstProperty(p, ["autoLimitMagnitude"], true);
       }),
 
-   blurXTerminator: new ProcessAdapter(
-      "blurXTerminator", "BlurXTerminator", ["BlurXTerminator"], function(p)
-      {
-         setFirstProperty(p, ["nonstellar_then_stellar"], false);
-         setFirstProperty(p, ["sharpen_stars", "sharpenStars"], 0.25);
-         setFirstProperty(p, ["adjust_halos", "adjustHalos"], 0.00);
-         setFirstProperty(p, ["auto_nonstellar_psf"], true);
-         setFirstProperty(p, ["sharpen_nonstellar", "sharpenNonstellar"], 0.50);
-      }),
+   blurXTerminator: new BlurXIconAdapter,
 
    syqonParallax: new ProcessIconAdapter(
       "syqonParallax", "SyQon Parallax", SYQON_PARALLAX_ICON),
@@ -1791,7 +1826,7 @@ constructor()
       self.refreshStarReductionControls();
       self.noisePlacementControl.label.visible = profileContainsStep(profile, "noiseReduction");
       self.noisePlacement.visible = profileContainsStep(profile, "noiseReduction");
-      self.stepsSection.title = profile.label + " — linear workflow";
+      self.stepsSection.title = profile.label + " â€” linear workflow";
       if (self.refreshScrollableLayout !== undefined)
          self.refreshScrollableLayout();
    };
@@ -2345,7 +2380,7 @@ constructor(view)
    this.previewStatus = new Label(this);
    this.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
    this.instructions = new Label(this);
-   this.instructions.text = "Native CurvesTransformation. Edit input/output points (0–1000 = 0–1), then Update Preview.\nSwitch Before / After to compare. Apply keeps a separate result; Skip preserves the original.";
+   this.instructions.text = "Native CurvesTransformation. Edit input/output points (0â€“1000 = 0â€“1), then Update Preview.\nSwitch Before / After to compare. Apply keeps a separate result; Skip preserves the original.";
    this.layersLabel = new Label(this);
    this.layersLabel.text = "Preset:";
    this.layers = new ComboBox(this);
@@ -2381,8 +2416,8 @@ constructor(view)
       input.minValue = 1; input.maxValue = 999; input.value = defaults[i][0];
       var output = new SpinBox(this);
       output.minValue = 0; output.maxValue = 1000; output.value = defaults[i][1];
-      input.toolTip = "Input brightness on a 0–1000 scale. Inputs must increase from shadows to highlights.";
-      output.toolTip = "Output value on a 0–1000 scale. Above input raises this part of the curve; below input lowers it.";
+      input.toolTip = "Input brightness on a 0â€“1000 scale. Inputs must increase from shadows to highlights.";
+      output.toolTip = "Output value on a 0â€“1000 scale. Above input raises this part of the curve; below input lowers it.";
       this.curveInputs.push(input); this.curveOutputs.push(output);
       row.add(label); row.addStretch(); row.add(input); row.add(output);
       this.curveOptions.add(row);
@@ -2562,7 +2597,7 @@ function workflowSourceId(view)
 function finishingMaskExpression(view, low, high)
 {
    if (!finiteNumber(low) || !finiteNumber(high) || low < 0 || high > 1 || low >= high)
-      throw new Error("Mask background limit must be below the highlight limit (0–1).");
+      throw new Error("Mask background limit must be below the highlight limit (0â€“1).");
    var l = view.image.isColor ? "(" + view.id + "[0]+" + view.id + "[1]+" + view.id + "[2])/3" : view.id;
    var rise = "min(1,max(0,((" + l + ")-" + low + ")/0.1))";
    var fall = "min(1,max(0,(" + high + "-(" + l + "))/0.1))";
@@ -2828,7 +2863,7 @@ constructor(view, kind)
    var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.maskLow = new SpinBox(this); this.maskLow.minValue = 0; this.maskLow.maxValue = 999; this.maskLow.value = 50;
    this.maskHigh = new SpinBox(this); this.maskHigh.minValue = 1; this.maskHigh.maxValue = 1000; this.maskHigh.value = 850;
-   this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0–1000):";
+   this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0â€“1000):";
    this.maskLow.onValueUpdated = dirty; this.maskHigh.onValueUpdated = dirty;
    this.maskOptions = new HorizontalSizer; this.maskOptions.spacing = 8;
    this.maskOptions.add(this.maskLabel); this.maskOptions.add(this.maskLow); this.maskOptions.add(this.maskHigh); this.maskOptions.addStretch();

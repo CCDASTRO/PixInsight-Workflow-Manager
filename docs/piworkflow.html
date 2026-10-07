@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.21",
+    "softwareVersion": "1.1.22",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,11 +160,11 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.21">CCDASTRO PixInsight Workflow Manager v1.1.21</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.22">CCDASTRO PixInsight Workflow Manager v1.1.22</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
-<h2 id="v1.1.21-quick-start">v1.1.21 quick start</h2>
+<h2 id="v1.1.22-quick-start">v1.1.22 quick start</h2>
 <ol>
 <li>Select your original integrated, unstretched color master. For BlurXTerminator, load your configured <strong>CCDASTRO_BlurX</strong> workspace icon; its Correct Only and sharpening settings control the run. Run <strong>Validate</strong>,
 then <strong>Run Workflow</strong>. Processing uses a separate working copy; the original
@@ -186,6 +186,32 @@ Your chosen default is <strong>JPEG quality 95, longest edge 2048 pixels</strong
 images are not enlarged. Cancelling either save leaves the processed image open.</li>
 </ol>
 <p>The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.</p>
+<h2 id="color-calibration-spcc-or-pcc">Color calibration: SPCC or PCC</h2>
+<p><strong>SPCC remains the default.</strong> In <strong>3. Color calibration</strong>, choose
+<strong>PhotometricColorCalibration (PCC)</strong> to use catalog-based photometric color
+calibration instead. Only the selected method runs. Both methods require an
+astrometric solution; leave <strong>Plate Solve if needed</strong> enabled for unsolved images.</p>
+<p>For PCC:</p>
+<ol>
+<li>Open PixInsight's <strong>PhotometricColorCalibration</strong> process and select the
+appropriate catalog, white reference, and background-neutralization settings.
+Enable <strong>Apply color calibration</strong>.</li>
+<li>Drag its <strong>New Instance</strong> triangle to the workspace and rename the process
+icon <strong>CCDASTRO_PCC</strong>. This icon stores the process settings, not an image.</li>
+<li>Select PCC in the workflow, then <strong>Validate</strong> and <strong>Run Workflow</strong>. The
+configured icon is applied to the current linear working copy after gradient
+correction and plate solving, before deblur, denoise, and stretching.</li>
+</ol>
+<p>The workflow preserves the icon's settings. A missing icon, wrong process type,
+or disabled calibration blocks preflight with an explanation. Update the icon
+when changing PCC settings. PixInsight checks catalog access and photometry
+requirements during execution. Native PCC execution in this workflow is pending
+user testing; automated checks cover the adapter and its failure cases.</p>
+<p>For comparison, process separate copies of the original linear master with SPCC
+and PCC, using identical <strong>Linked Auto Histogram</strong> settings. Do not apply one
+calibration on top of the other. Calibration establishes color balance; stretching,
+curves, and saturation still determine the final appearance. PCC does not reproduce
+Photoshop Auto Color or HDR Toning automatically.</p>
 <h2 id="important-the-workflow-window-hides-while-processing">Important: the workflow window hides while processing</h2>
 <blockquote>
 <p><strong>After you confirm Run Workflow, the Workflow Manager window disappears temporarily. This is normal.</strong></p>
@@ -239,6 +265,8 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.22:</strong> Adds PCC as an alternative to default SPCC using the configured CCDASTRO_PCC icon; shared plate-solving preflight and preserved calibration settings. Native PCC testing pending.</p>
+</li>
 <li><p><strong>v1.1.21:</strong> Integrated rectangular crop preview executes native DynamicCrop and returns automatically to the same workflow settings. Original linear input is preserved; Crop is unchecked on return. Rotation remains a manual operation.</p>
 </li>
 <li><p><strong>v1.1.18–v1.1.20:</strong> Intermediate crop handoff changes, superseded by v1.1.21.</p>
@@ -398,7 +426,7 @@ profile when the image needs different color treatment.</p>
 <li>Optional interactive DynamicCrop handoff</li>
 <li>GradientCorrection or GraXpert</li>
 <li>ImageSolver when the image does not already have an astrometric solution</li>
-<li>SpectrophotometricColorCalibration (SPCC)</li>
+<li>Selected color calibration: SPCC (default) or configured PCC</li>
 <li>BlurXTerminator or SyQon Parallax</li>
 <li>StarXTerminator, StarNet2, or SyQon Starless</li>
 <li>NoiseXTerminator, MLDenoise, or SyQon Prism on the starless branch</li>

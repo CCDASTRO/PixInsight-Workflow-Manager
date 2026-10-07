@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.21"
+#define VERSION "1.1.22"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -35,6 +35,7 @@ var adapterHelp = {
    mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Requires CCDASTRO_SPFC and CCDASTRO_MGC process icons and suitable MARS data. SPCC remains separate.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
    spcc: "Use SpectrophotometricColorCalibration. The image must have an astrometric solution.",
+   pcc: "Use PhotometricColorCalibration from the configured CCDASTRO_PCC process icon. Preserves catalog, white reference, and background settings; requires a solved image.",
    blurXTerminator: "Use the configured CCDASTRO_BlurX process icon for linear deconvolution. Its Correct Only, sharpening, model, and device settings are preserved.",
    syqonParallax: "Run the configured CCDASTRO_Parallax process icon for structure recovery.",
    noiseXTerminator: "Use NoiseXTerminator for the main noise-reduction pass.",
@@ -764,6 +765,49 @@ MLDenoiseAdapter.prototype.execute = function(view)
    checkAbortRequested();
 };
 
+function PCCIconAdapter()
+{
+   this.id = "pcc";
+   this.label = "PhotometricColorCalibration (PCC)";
+}
+
+PCCIconAdapter.prototype.configuredProcess = function()
+{
+   if (resolveProcessClass(["PhotometricColorCalibration"]) === null)
+      throw new Error("Install or restore PixInsight's PhotometricColorCalibration process.");
+   if (ProcessInstance.icons().indexOf("CCDASTRO_PCC") < 0)
+      throw new Error("Configure PhotometricColorCalibration and drag its New Instance triangle to the workspace. Rename the icon CCDASTRO_PCC.");
+   var process = ProcessInstance.fromIcon("CCDASTRO_PCC");
+   if (process === null || process.processId() !== "PhotometricColorCalibration")
+      throw new Error("CCDASTRO_PCC must contain a PhotometricColorCalibration process instance.");
+   if (propertyExists(process, "applyCalibration") && !process.applyCalibration)
+      throw new Error("Enable Apply color calibration in CCDASTRO_PCC, then replace the icon.");
+   return process;
+};
+
+PCCIconAdapter.prototype.available = function()
+{
+   try { this.configuredProcess(); return true; }
+   catch (e) { return false; }
+};
+
+PCCIconAdapter.prototype.requirement = function()
+{
+   try { this.configuredProcess(); return "Configured CCDASTRO_PCC settings are ready."; }
+   catch (e) { return errorMessage(e); }
+};
+
+PCCIconAdapter.prototype.execute = function(view)
+{
+   var process = this.configuredProcess();
+   if (!imageHasAstrometricSolution(view.window))
+      throw new Error("PCC requires an astrometric solution. Solve the image first.");
+   checkAbortRequested();
+   logLine("Running configured PhotometricColorCalibration (CCDASTRO_PCC) on " + view.fullId);
+   if (!process.executeOn(view))
+      throw new Error("Configured PhotometricColorCalibration failed.");
+   checkAbortRequested();
+};
 function InteractiveCropAdapter()
 {
    this.id = "interactiveCrop";
@@ -806,6 +850,8 @@ var adapters = {
          setFirstProperty(p, ["catalogId"], "GaiaDR3SP");
          setFirstProperty(p, ["autoLimitMagnitude"], true);
       }),
+
+   pcc: new PCCIconAdapter,
 
    blurXTerminator: new BlurXIconAdapter,
 
@@ -867,7 +913,7 @@ function defaultWorkflow()
          ["plateSolve"], "plateSolve",
          "Uses metadata-derived seed values and skips images that are already solved."),
       new WorkflowStep("colorCalibration", "3. Color calibration",
-         ["spcc"], "spcc", "SPCC requires a solved color image."),
+         ["spcc", "pcc"], "spcc", "SPCC and PCC require a solved color image. PCC uses CCDASTRO_PCC."),
       new WorkflowStep("deconvolution", "4. Deblur / structure recovery",
          ["blurXTerminator", "syqonParallax"], "blurXTerminator",
          "Runs on linear data before the main denoise pass."),
@@ -890,7 +936,7 @@ var WORKFLOW_PROFILES = [
    },
    {
       id: "emissionBroadband", label: "Broadband color emission nebula",
-      description: "SPCC-calibrated color workflow with starless-branch denoise and optional star reduction.",
+      description: "Color-calibrated workflow (SPCC or PCC) with starless-branch denoise and optional star reduction.",
       visible: ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
       enabled: { gradient: true, plateSolve: true, colorCalibration: true, deconvolution: true, noiseReduction: true, starSeparation: true },
       noisePlacement: 1, showBranches: true, recombine: true, finalStretch: 1, starReduction: true
@@ -1262,15 +1308,15 @@ PreflightValidator.prototype.validate = function()
       result.errors.push("Select at least one processing step.");
 
    var plateSolveRow = this.dialog.rowsById.plateSolve;
-   var spccRow = this.dialog.rowsById.colorCalibration;
+   var calibrationRow = this.dialog.rowsById.colorCalibration;
    var alreadySolved = imageHasAstrometricSolution(window);
    var mgcSelected = usesMGC(this.dialog.rowsById);
    if (mgcSelected && !alreadySolved && !adapters.plateSolve.available())
       result.errors.push("MGC: " + adapters.plateSolve.requirement());
    if ((plateSolveRow.enabled.checked || mgcSelected) && !alreadySolved && !plateSolveSettings.complete())
       result.errors.push("Plate Solve if needed: " + adapters.plateSolve.requirement());
-   if (spccRow.enabled.checked && !alreadySolved && !plateSolveRow.enabled.checked && !mgcSelected)
-      result.errors.push("SPCC requires an astrometric solution. Enable Plate Solve if needed or solve the image first.");
+   if (calibrationRow.enabled.checked && !alreadySolved && !plateSolveRow.enabled.checked && !mgcSelected)
+      result.errors.push(adapters[calibrationRow.adapterId()].label + " requires an astrometric solution. Enable Plate Solve if needed or solve the image first.");
    if (mgcSelected)
    {
       if (WORKFLOW_PROFILES[this.dialog.imageType.currentItem].id === "emissionMapped")

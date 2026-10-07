@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.21
+# CCDASTRO PixInsight Workflow Manager v1.1.22
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.21 quick start
+## v1.1.22 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -28,6 +28,35 @@ manager for an integrated linear color master.
 
 The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
 
+## Color calibration: SPCC or PCC
+
+**SPCC remains the default.** In **3. Color calibration**, choose
+**PhotometricColorCalibration (PCC)** to use catalog-based photometric color
+calibration instead. Only the selected method runs. Both methods require an
+astrometric solution; leave **Plate Solve if needed** enabled for unsolved images.
+
+For PCC:
+
+1. Open PixInsight's **PhotometricColorCalibration** process and select the
+   appropriate catalog, white reference, and background-neutralization settings.
+   Enable **Apply color calibration**.
+2. Drag its **New Instance** triangle to the workspace and rename the process
+   icon **CCDASTRO_PCC**. This icon stores the process settings, not an image.
+3. Select PCC in the workflow, then **Validate** and **Run Workflow**. The
+   configured icon is applied to the current linear working copy after gradient
+   correction and plate solving, before deblur, denoise, and stretching.
+
+The workflow preserves the icon's settings. A missing icon, wrong process type,
+or disabled calibration blocks preflight with an explanation. Update the icon
+when changing PCC settings. PixInsight checks catalog access and photometry
+requirements during execution. Native PCC execution in this workflow is pending
+user testing; automated checks cover the adapter and its failure cases.
+
+For comparison, process separate copies of the original linear master with SPCC
+and PCC, using identical **Linked Auto Histogram** settings. Do not apply one
+calibration on top of the other. Calibration establishes color balance; stretching,
+curves, and saturation still determine the final appearance. PCC does not reproduce
+Photoshop Auto Color or HDR Toning automatically.
 ## Important: the workflow window hides while processing
 
 > **After you confirm Run Workflow, the Workflow Manager window disappears temporarily. This is normal.**
@@ -90,6 +119,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.22:** Adds PCC as an alternative to default SPCC using the configured CCDASTRO_PCC icon; shared plate-solving preflight and preserved calibration settings. Native PCC testing pending.
 - **v1.1.21:** Integrated rectangular crop preview executes native DynamicCrop and returns automatically to the same workflow settings. Original linear input is preserved; Crop is unchecked on return. Rotation remains a manual operation.
 - **v1.1.18–v1.1.20:** Intermediate crop handoff changes, superseded by v1.1.21.
 - **v1.1.17:** BlurXTerminator uses the configured **CCDASTRO_BlurX** workspace icon and logs Correct Only and sharpening settings, avoiding reliance on fresh-instance defaults.
@@ -205,7 +235,7 @@ The default General Color Image order is:
 1. Optional interactive DynamicCrop handoff
 2. GradientCorrection or GraXpert
 3. ImageSolver when the image does not already have an astrometric solution
-4. SpectrophotometricColorCalibration (SPCC)
+4. Selected color calibration: SPCC (default) or configured PCC
 5. BlurXTerminator or SyQon Parallax
 6. StarXTerminator, StarNet2, or SyQon Starless
 7. NoiseXTerminator, MLDenoise, or SyQon Prism on the starless branch

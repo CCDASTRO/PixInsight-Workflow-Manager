@@ -75,7 +75,7 @@ ctx.adapters={test:{execute:v=>{assert.notEqual(v,view);working=v;v.image.value=
 ctx.applySelectedAutoHistogram=v=>{assert.equal(v,working);v.image.value=.8;};
 ctx.saveFinalImage=v=>{assert.equal(v,working);return 'saved';};
 vm.runInContext(source.slice(source.indexOf('function executeWorkflow('),source.indexOf('function main()')),ctx);
-const workflow={enabled:true,statusText:{},rowsById:{gradient:{enabled:{checked:true},adapterId:()=> 'test'},noiseReduction:{enabled:{checked:false}},starSeparation:{enabled:{checked:false}}},noisePlacement:{currentItem:0},finalStretch:{currentItem:1},hdrEnabled:{checked:false},adaptiveEnabled:{checked:false},finishingEnabled:{checked:false},recombine:{checked:true}};
+const workflow={finishStarless:{checked:false},enabled:true,statusText:{},rowsById:{gradient:{enabled:{checked:true},adapterId:()=> 'test'},noiseReduction:{enabled:{checked:false}},starSeparation:{enabled:{checked:false}}},noisePlacement:{currentItem:0},finalStretch:{currentItem:1},hdrEnabled:{checked:false},adaptiveEnabled:{checked:false},finishingEnabled:{checked:false},recombine:{checked:true}};
 ctx.executeWorkflow(workflow);assert.match(workflow.statusText.text,/completed successfully/);assert.equal(working.image.value,.8);assert.equal(view.image.value,undefined);assert.equal(view.stf,undefined);
 processingFailure=true;ctx.executeWorkflow(workflow);assert.match(workflow.statusText.text,/stopped/);assert.equal(view.image.value,undefined);assert.equal(view.stf,undefined);
 console.log('Finishing masks, failure cleanup, optional denoise blend, controls, inspection, sharing export, dimensions, metadata and input preservation passed (mocked APIs).');

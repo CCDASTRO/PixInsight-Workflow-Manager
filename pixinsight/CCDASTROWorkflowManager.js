@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.22"
+#define VERSION "1.1.23"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -134,7 +134,9 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 6,
+      schemaVersion: 7,
+      finishStarless: dialog.finishStarless.checked,
+      starBrightness: dialog.starBrightness.value,
       resumeAfterCrop: resumeAfterCrop === true,
       imageType: dialog.imageType.currentItem,
       steps: {},
@@ -232,6 +234,9 @@ function restoreWorkflowState(dialog)
       if (state.finalStretch >= 0 && state.finalStretch < dialog.finalStretch.numberOfItems)
          dialog.finalStretch.currentItem = state.finalStretch;
       dialog.recombine.checked = state.recombine === true;
+      dialog.finishStarless.checked = state.finishStarless === true;
+      if (finiteNumber(state.starBrightness) && state.starBrightness >= 0 && state.starBrightness <= 100)
+         dialog.starBrightness.value = state.starBrightness;
       dialog.hdrEnabled.checked = state.hdrEnabled === true;
       dialog.adaptiveEnabled.checked = state.adaptiveEnabled === true;
       dialog.finishingEnabled.checked = state.finishingEnabled !== false;
@@ -290,6 +295,8 @@ function resetWorkflowControls(dialog)
       row.refreshChoiceHelp();
       row.refreshStatus();
    }
+   dialog.finishStarless.checked = false;
+   dialog.starBrightness.value = 70;
    dialog.noisePlacement.currentItem = 1;
    dialog.starlessStretch.currentItem = 0;
    dialog.starsStretch.currentItem = 0;
@@ -1175,7 +1182,7 @@ function possibleIntegrationBorders(view)
    return total > 0 && invalid/total >= 0.01;
 }
 
-function recombineScreen(starlessView, starsView, nonlinear)
+function recombineScreen(starlessView, starsView, nonlinear, starsAmount)
 {
    if (starlessView.image.width !== starsView.image.width ||
        starlessView.image.height !== starsView.image.height)
@@ -1186,9 +1193,11 @@ function recombineScreen(starlessView, starsView, nonlinear)
    process.rescale = false;
    process.truncate = false;
    process.symbols = "";
+   var stars = typeof starsAmount === "number"
+      ? "(" + starsAmount + "*" + starsView.fullId + ")" : starsView.fullId;
    process.expression = nonlinear
-      ? "$T + " + starsView.fullId + " - $T*" + starsView.fullId
-      : "$T + " + starsView.fullId;
+      ? "$T + " + stars + " - $T*" + stars
+      : "$T + " + stars;
    logLine("Recombining stars into " + starlessView.fullId +
       (nonlinear ? " with screen blending" : " with linear addition"));
    if (!process.executeOn(starlessView))
@@ -1327,6 +1336,15 @@ PreflightValidator.prototype.validate = function()
    }
 
    var separationEnabled = this.dialog.rowsById.starSeparation.enabled.checked;
+   if (this.dialog.finishStarless && this.dialog.finishStarless.checked)
+   {
+      if (!separationEnabled || !this.dialog.recombine.checked)
+         result.errors.push("Starless enhancement requires star separation and automatic recombination.");
+      if (this.dialog.finalStretch.currentItem === 0)
+         result.errors.push("Starless enhancement requires a final stretch selection; it is applied to the starless branch before recombination.");
+      if (this.dialog.starlessStretch.currentItem > 0 || this.dialog.starsStretch.currentItem > 0)
+         result.errors.push("For starless enhancement, keep both advanced branch stretches at Keep linear. The new path stretches both branches itself.");
+   }
    if (this.dialog.noisePlacement.currentItem === 1 &&
        this.dialog.rowsById.noiseReduction.enabled.checked && !separationEnabled)
       result.errors.push("Starless-branch denoise requires star separation.");
@@ -1760,6 +1778,23 @@ constructor()
       ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 0,
       "Advanced option. Keep linear for the recommended single stretch after recombination.");
    this.starlessStretch = starlessStretchControl.combo;
+   this.finishStarless = new CheckBox(this.content);
+   this.finishStarless.text = "Enhance starless image before adding stars back";
+   this.finishStarless.checked = false;
+   this.finishStarless.toolTip = "Uses the selected final stretch on the starless image, then selected HDR, Curves and finishing reviews before adding gently stretched stars. Keep both advanced branch stretches linear.";
+   this.starBrightness = new SpinBox(this.content);
+   this.starBrightness.minValue = 0;
+   this.starBrightness.maxValue = 100;
+   this.starBrightness.value = 70;
+   this.starBrightness.toolTip = "Stars brightness (%) for the starless enhancement path. 70 is a starting point; 0 keeps only nebulosity, 100 uses the full gently stretched stars layer.";
+   var starBrightnessLabel = new Label(this.content);
+   starBrightnessLabel.text = "Stars brightness (%):";
+   var starBrightnessSizer = new HorizontalSizer;
+   starBrightnessSizer.spacing = 8;
+   starBrightnessSizer.add(starBrightnessLabel);
+   starBrightnessSizer.add(this.starBrightness);
+   starBrightnessSizer.addStretch();
+
    var starsStretchControl = labeledCombo(this.content, "Stars stretch:",
       ["Keep linear", "Gentle Linked Auto Histogram", "Gentle Unlinked Auto Histogram"], 0,
       "Advanced option. Keep linear to avoid amplifying subtraction residuals and halos.");
@@ -1770,8 +1805,18 @@ constructor()
    this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
    var finalStretchControl = labeledCombo(this.content, "Final image stretch:",
       ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 1,
-      "Applies to the recombined image when star separation is used, or directly to the active image otherwise.");
+      "With starless enhancement enabled, stretches the starless branch before reviews and recombination. Otherwise stretches the combined image or the active image without separation.");
    this.finalStretch = finalStretchControl.combo;
+   this.finishStarless.onCheck = function(checked)
+   {
+      if (checked)
+      {
+         self.starlessStretch.currentItem = 0;
+         self.starsStretch.currentItem = 0;
+         self.finalStretch.currentItem = 1;
+         self.recombine.checked = true;
+      }
+   };
    this.starlessStretchControl = starlessStretchControl;
    this.starsStretchControl = starsStretchControl;
    this.finalStretchControl = finalStretchControl;
@@ -1805,6 +1850,9 @@ constructor()
       self.starsStretchControl.label.visible = visible;
       self.starsStretch.visible = visible;
       self.recombine.visible = visible;
+      self.finishStarless.visible = visible;
+      self.starBrightness.visible = visible;
+      starBrightnessLabel.visible = visible;
       self.starReduction.visible = visible;
       self.starReductionMethodControl.label.visible = visible;
       self.starReductionMethod.visible = visible;
@@ -1820,6 +1868,8 @@ constructor()
    };
    this.starReduction.onCheck = function() { self.refreshStarReductionControls(); };
    this.refreshStarReductionControls();
+   this.branchesBox.sizer.add(this.finishStarless);
+   this.branchesBox.sizer.add(starBrightnessSizer);
    this.branchesBox.sizer.add(starlessStretchControl.sizer);
    this.branchesBox.sizer.add(starsStretchControl.sizer);
    this.branchesBox.sizer.add(this.recombine);
@@ -1862,6 +1912,7 @@ constructor()
       if (applyDefaults && profile.enabled !== null)
       {
          self.noisePlacement.currentItem = profile.noisePlacement;
+         self.finishStarless.checked = false;
          self.starlessStretch.currentItem = 0;
          self.starsStretch.currentItem = 0;
          self.finalStretch.currentItem = profile.finalStretch;
@@ -3035,6 +3086,33 @@ function saveFinalImage(view, sourcePath, sourceId)
    }
 }
 
+function enhanceStarlessAndRecombine(self, branches)
+{
+   logLine("Enhancing starless branch before recombination; stars brightness=" + self.starBrightness.value + "%.");
+   var nebula = branches.starlessView;
+   clearDisplaySTF(nebula);
+   applySelectedAutoHistogram(nebula, self.finalStretch.currentItem, 0.18);
+   if (self.hdrEnabled.checked) nebula = reviewHDR(nebula);
+   if (self.adaptiveEnabled.checked) nebula = reviewAdaptive(nebula);
+   if (self.finishingEnabled.checked)
+   {
+      inspectFinalImage(nebula);
+      nebula = reviewFinishing(nebula, "Local contrast");
+      nebula = reviewFinishing(nebula, "Noise cleanup");
+      nebula = reviewFinishing(nebula, "Saturation");
+   }
+   checkAbortRequested();
+   var combined = cloneHDRView(nebula, "_Recombined").mainView;
+   clearDisplaySTF(branches.starsView);
+   applySelectedAutoHistogram(branches.starsView, 1, 0.08);
+   recombineScreen(combined, branches.starsView, true, self.starBrightness.value/100);
+   if (self.starReduction.checked)
+      applyBlanshanStarReduction(combined, nebula, self.starReductionIterations.value,
+         self.starReductionMethod.currentItem + 1);
+   checkAbortRequested();
+   return combined;
+}
+
 function executeWorkflow(self)
 {
    Console.show();
@@ -3085,6 +3163,10 @@ function executeWorkflow(self)
             adapters[noiseRow.adapterId()].execute(branches.starlessView);
             checkAbortRequested();
          }
+         if (self.finishStarless.checked)
+            branches.starlessView = enhanceStarlessAndRecombine(self, branches);
+         else
+         {
          var nonlinear = false;
          if (self.starlessStretch.currentItem > 0)
          {
@@ -3143,6 +3225,7 @@ function executeWorkflow(self)
             }
          }
       }
+      }
       else if (self.finalStretch.currentItem > 0)
       {
          checkAbortRequested();
@@ -3155,17 +3238,20 @@ function executeWorkflow(self)
       if (branches === null || self.recombine.checked)
       {
          var finalView = branches === null ? view : branches.starlessView;
-         if (self.hdrEnabled.checked)
+         if (!self.finishStarless.checked && self.hdrEnabled.checked)
             finalView = reviewHDR(finalView);
-         if (self.adaptiveEnabled.checked)
+         if (!self.finishStarless.checked && self.adaptiveEnabled.checked)
             finalView = reviewAdaptive(finalView);
          checkAbortRequested();
          if (self.finishingEnabled.checked)
          {
             inspectFinalImage(finalView);
-            finalView = reviewFinishing(finalView, "Local contrast");
-            finalView = reviewFinishing(finalView, "Noise cleanup");
-            finalView = reviewFinishing(finalView, "Saturation");
+            if (!self.finishStarless.checked)
+            {
+               finalView = reviewFinishing(finalView, "Local contrast");
+               finalView = reviewFinishing(finalView, "Noise cleanup");
+               finalView = reviewFinishing(finalView, "Saturation");
+            }
          }
          completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);
          if (self.finishingEnabled.checked)

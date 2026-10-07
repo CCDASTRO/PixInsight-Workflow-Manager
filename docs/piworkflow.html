@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.22",
+    "softwareVersion": "1.1.23",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,11 +160,11 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.22">CCDASTRO PixInsight Workflow Manager v1.1.22</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.23">CCDASTRO PixInsight Workflow Manager v1.1.23</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
-<h2 id="v1.1.22-quick-start">v1.1.22 quick start</h2>
+<h2 id="v1.1.23-quick-start">v1.1.23 quick start</h2>
 <ol>
 <li>Select your original integrated, unstretched color master. For BlurXTerminator, load your configured <strong>CCDASTRO_BlurX</strong> workspace icon; its Correct Only and sharpening settings control the run. Run <strong>Validate</strong>,
 then <strong>Run Workflow</strong>. Processing uses a separate working copy; the original
@@ -186,6 +186,33 @@ Your chosen default is <strong>JPEG quality 95, longest edge 2048 pixels</strong
 images are not enlarged. Cancelling either save leaves the processed image open.</li>
 </ol>
 <p>The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.</p>
+<h2 id="enhance-nebulosity-before-adding-stars-back-v1.1.23">Enhance nebulosity before adding stars back (v1.1.23)</h2>
+<p>For a dense star field with subdued faint structure, enable <strong>Enhance starless
+image before adding stars back</strong> in <strong>Stretch and star branches</strong>. This optional
+path preserves the original linear master and changes the order of stretching
+and finishing, rather than adding stronger sharpening.</p>
+<ol>
+<li>Enable star separation and automatic branch recombination. Choose your normal
+linear color calibration, deblur and denoise settings.</li>
+<li>Keep <strong>Starless stretch</strong> and <strong>Stars stretch</strong> at <strong>Keep linear</strong>. Select
+<strong>Linked Auto Histogram</strong> under <strong>Final image stretch</strong>. In this mode that
+selection stretches the starless branch, before recombination.</li>
+<li>Start <strong>Stars brightness (%)</strong> at <strong>70</strong>. This scales the gently linked-stretched
+stars layer before screen blending; it is separate from star reduction.</li>
+<li>Selected HDR, Curves, local contrast, noise cleanup and saturation reviews
+operate on the starless image. Each can still be skipped. Inspect noise and
+star-removal residuals before accepting stronger contrast.</li>
+<li>The workflow keeps the enhanced starless view, makes a separate recombined
+image, gently stretches the stars, and adds them back. Optional Bill Blanshan
+reduction runs afterward. Final inspection, XISF save and sharing export use
+the recombined result. Enhancements are not repeated on the combined image.</li>
+</ol>
+<p>For an initial test, leave star reduction off, use conservative denoise and BlurX
+Correct Only, and begin with Curves alone before enabling other enhancements.
+Compare identical regions at 100%. Removing stars can improve visibility and
+permit a different stretch, but this does not guarantee recovery of missing
+signal. Old saved configurations retain the previous combined-image processing
+path until this option is enabled. Native testing of the new path is pending.</p>
 <h2 id="color-calibration-spcc-or-pcc">Color calibration: SPCC or PCC</h2>
 <p><strong>SPCC remains the default.</strong> In <strong>3. Color calibration</strong>, choose
 <strong>PhotometricColorCalibration (PCC)</strong> to use catalog-based photometric color
@@ -265,6 +292,8 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.23:</strong> Optional starless stretch and enhancement before controlled-brightness star recombination; retains the enhanced starless view. Native testing pending.</p>
+</li>
 <li><p><strong>v1.1.22:</strong> Adds PCC as an alternative to default SPCC using the configured CCDASTRO_PCC icon; shared plate-solving preflight and preserved calibration settings. Native PCC testing pending.</p>
 </li>
 <li><p><strong>v1.1.21:</strong> Integrated rectangular crop preview executes native DynamicCrop and returns automatically to the same workflow settings. Original linear input is preserved; Crop is unchecked on return. Rotation remains a manual operation.</p>

@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.23
+# CCDASTRO PixInsight Workflow Manager v1.1.24
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.23 quick start
+## v1.1.24 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -28,7 +28,7 @@ manager for an integrated linear color master.
 
 The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
 
-## Enhance nebulosity before adding stars back (v1.1.23)
+## Enhance nebulosity before adding stars back (v1.1.24)
 
 For a dense star field with subdued faint structure, enable **Enhance starless
 image before adding stars back** in **Stretch and star branches**. This optional
@@ -40,22 +40,28 @@ and finishing, rather than adding stronger sharpening.
 2. Keep **Starless stretch** and **Stars stretch** at **Keep linear**. Select
    **Linked Auto Histogram** under **Final image stretch**. In this mode that
    selection stretches the starless branch, before recombination.
-3. Start **Stars brightness (%)** at **70**. This scales the gently linked-stretched
-   stars layer before screen blending; it is separate from star reduction.
+3. Start **Stars brightness (%)** at **70**. This scales the controlled stars layer
+   before screen blending; it is separate from star reduction.
 4. Selected HDR, Curves, local contrast, noise cleanup and saturation reviews
    operate on the starless image. Each can still be skipped. Inspect noise and
    star-removal residuals before accepting stronger contrast.
-5. The workflow keeps the enhanced starless view, makes a separate recombined
-   image, gently stretches the stars, and adds them back. Optional Bill Blanshan
-   reduction runs afterward. Final inspection, XISF save and sharing export use
-   the recombined result. Enhancements are not repeated on the combined image.
+5. The workflow derives a controlled stars layer using the same linked stretch
+   on the full linear image and its matching starless image, before starless
+   denoise or enhancement. It preserves the original linear stars layer. It never
+   calculates an automatic stretch from sparse stars-only statistics in this mode.
+6. In **Stars recombination review**, adjust brightness and **Update Preview**.
+   Compare Before (enhanced starless) and After at 100%, then **Apply recombination**
+   or **Keep starless**. Any selected Bill Blanshan reduction is included in the
+   preview; leave it off for the first test. Changes require a fresh preview.
+   The enhanced starless view remains open. Final inspection, XISF save and sharing
+   export use the accepted result. Enhancements are not repeated after recombination.
 
 For an initial test, leave star reduction off, use conservative denoise and BlurX
 Correct Only, and begin with Curves alone before enabling other enhancements.
 Compare identical regions at 100%. Removing stars can improve visibility and
 permit a different stretch, but this does not guarantee recovery of missing
 signal. Old saved configurations retain the previous combined-image processing
-path until this option is enabled. Native testing of the new path is pending.
+path until this option is enabled. Native testing of the revised stars path is pending. v1.1.23 could over-stretch the stars layer and amplify halos; update before using this mode.
 
 ## Color calibration: SPCC or PCC
 
@@ -148,6 +154,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.24:** Replaces sparse stars-only automatic stretch with matched full/starless reference stretches; preserves linear stars and adds adjustable recombination preview with Apply or Keep starless. Native testing pending.
 - **v1.1.23:** Optional starless stretch and enhancement before controlled-brightness star recombination; retains the enhanced starless view. Native testing pending.
 - **v1.1.22:** Adds PCC as an alternative to default SPCC using the configured CCDASTRO_PCC icon; shared plate-solving preflight and preserved calibration settings. Native PCC testing pending.
 - **v1.1.21:** Integrated rectangular crop preview executes native DynamicCrop and returns automatically to the same workflow settings. Original linear input is preserved; Crop is unchecked on return. Rotation remains a manual operation.

@@ -1,26 +1,26 @@
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const path = require('node:path');
-const src = fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
+const assert=require('node:assert/strict'), fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const src=fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
 new vm.Script(src.replace(/^#.*$/gm,''));
-const helper = src.slice(src.indexOf('function enhanceStarlessAndRecombine('),src.indexOf('function executeWorkflow('));
-for (const reviews of [false,true]) {
- const events=[]; const nebula={fullId:'Nebula'}, stars={fullId:'Stars'}, combined={fullId:'Combined'};
- const ctx=vm.createContext({logLine:()=>{}, clearDisplaySTF:()=>{}, applySelectedAutoHistogram:(v,m,t)=>events.push(['stretch',v.fullId,m,t]), reviewHDR:v=>{events.push(['hdr',v.fullId]);return v;}, reviewAdaptive:v=>{events.push(['curves',v.fullId]);return v;}, inspectFinalImage:v=>events.push(['inspect',v.fullId]), reviewFinishing:(v,k)=>{events.push([k,v.fullId]);return v;}, checkAbortRequested:()=>{}, cloneHDRView:(v,s)=>{assert.equal(v,nebula);assert.equal(s,'_Recombined');events.push(['clone']);return {mainView:combined};}, recombineScreen:(v,st,n,a)=>{assert.equal(v,combined);assert.equal(st,stars);assert.equal(n,true);assert.equal(a,.7);events.push(['combine']);}, applyBlanshanStarReduction:(v,ref)=>{assert.equal(v,combined);assert.equal(ref,nebula);events.push(['reduce']);}});
- vm.runInContext(helper,ctx);
- const self={starBrightness:{value:70},finalStretch:{currentItem:1},hdrEnabled:{checked:reviews},adaptiveEnabled:{checked:reviews},finishingEnabled:{checked:reviews},starReduction:{checked:true},starReductionIterations:{value:1},starReductionMethod:{currentItem:2}};
- assert.equal(ctx.enhanceStarlessAndRecombine(self,{starlessView:nebula,starsView:stars}),combined);
- assert.deepEqual(events[0],['stretch','Nebula',1,.18]);
- assert.deepEqual(events.at(-3),['stretch','Stars',1,.08]);
- assert.deepEqual(events.at(-2),['combine']);assert.deepEqual(events.at(-1),['reduce']);
- if(reviews) assert.deepEqual(events.slice(1,6).map(e=>e[0]),['hdr','curves','inspect','Local contrast','Noise cleanup']);
+const code=src.slice(src.indexOf('function buildControlledStars('),src.indexOf('function executeWorkflow('));
+for(const failure of [null,'histogram','pixelmath']) {
+ const windows=[],histograms=[];let formula;
+ const vec=v=>({at:()=>v,mul(){}});
+ const full={image:{isColor:true},computeOrFetchProperty:n=>vec(n==='Median'?.02:.002)};
+ const raw={image:{isColor:true},computeOrFetchProperty:()=>{throw Error('must not use sparse statistics');}};
+ const ctx=vm.createContext({Math:Object.assign(Object.create(Math),{range:(x,a,b)=>Math.max(a,Math.min(b,x)),mtf:()=>.04}),cloneHDRView:(v,s)=>{const w={isNull:false,mainView:{fullId:s},forceClose(){this.isNull=true;}};windows.push(w);return w;},clearDisplaySTF:()=>{},HistogramTransformation:function(){this.executeOn=v=>{histograms.push(JSON.stringify(this.H));return failure!=='histogram';};},PixelMath:function(){this.executeOn=()=>{formula=this.expression;return failure!=='pixelmath';};},logLine:()=>{}});
+ vm.runInContext(code,ctx);
+ if(failure){assert.throws(()=>ctx.buildControlledStars(full,raw));assert.ok(windows.every(w=>w.isNull));}
+ else {const stars=ctx.buildControlledStars(full,raw);assert.equal(histograms.length,2);assert.equal(histograms[0],histograms[1]);assert.ok(windows[0].isNull&&windows[1].isNull);assert.equal(stars.isNull,false);assert.match(formula,/max\(0\.000001,1-/);}
 }
-let expression;
-const recombine=src.slice(src.indexOf('function recombineScreen('),src.indexOf('function cloneViewForStarReduction('));
-const ctx=vm.createContext({PixelMath:function(){this.executeOn=()=>{expression=this.expression;return true;};},logLine:()=>{}});
-vm.runInContext(recombine,ctx);
-const v={image:{width:10,height:10},fullId:'N'},st={image:{width:10,height:10},fullId:'Stars'};
-ctx.recombineScreen(v,st,true,.7);assert.equal(expression,'$T + (0.7*Stars) - $T*(0.7*Stars)');
-ctx.recombineScreen(v,st,false);assert.equal(expression,'$T + Stars');
-console.log('Starless review order, retained reference, gentle star stretch, weighted recombination, reduction order, legacy addition and syntax passed (mocked APIs).');
+// Derived screen stars reconstruct the matched full image at 100%, including zero/near-one limits.
+for(const n of [0,.01,.2,.75,.999999])for(const f of [n,(n+1)/2,1]) {const st=Math.min(1,Math.max(0,(f-n)/Math.max(.000001,1-n)));assert.ok(Math.abs(n+st-n*st-f)<1e-6);assert.equal(n+0-n*0,n);}
+for(const mode of ['apply','skip','failed']) {
+ let closed=0, shown=0,blends=0;const nebula={fullId:'nebula',image:{},window:{show(){}}},stars={};
+ const ctx=vm.createContext({HDRReviewDialog:function(){Object.assign(this,{instructions:{},layers:{},layersLabel:{},strengthLabel:{},strength:{},applyButton:{enabled:false},skipButton:{},keepComparison:{},updateButton:{},displayMode:{},previewStatus:{repaint(){}},preview:{repaint(){}},candidate:null,execute(){this.updateButton.onClick();return mode==='apply';}});},cloneHDRView:()=>({isNull:false,mainView:{image:{resetSelections(){},render(){return {};}}},forceClose(){closed++;},show(){shown++;}}),recombineScreen:()=>{blends++;if(mode==='failed')throw Error('blend failed');},checkAbortRequested:()=>{},previewChangeSummary:()=> 'changed',CoreApplication:{processEvents(){}},errorMessage:e=>e.message});
+ vm.runInContext(code,ctx);
+ const self={starBrightness:{value:70},starReduction:{checked:false}};
+ const result=ctx.reviewStarRecombination(nebula,stars,self);
+ assert.equal(blends,1);if(mode==='apply'){assert.notEqual(result,nebula);assert.equal(shown,1);assert.equal(closed,0);}else{assert.equal(result,nebula);assert.equal(closed,1);}
+}
+assert.doesNotMatch(src.slice(src.indexOf('function enhanceStarlessAndRecombine('),src.indexOf('function executeWorkflow(')),/applySelectedAutoHistogram\(branches\.starsView/);
+console.log('Matched reference stretch, screen reconstruction, no sparse statistics, temporary cleanup, recombination Apply/Skip/failure and syntax passed (mocked APIs).');

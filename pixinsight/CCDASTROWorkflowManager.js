@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.23"
+#define VERSION "1.1.24"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1781,12 +1781,12 @@ constructor()
    this.finishStarless = new CheckBox(this.content);
    this.finishStarless.text = "Enhance starless image before adding stars back";
    this.finishStarless.checked = false;
-   this.finishStarless.toolTip = "Uses the selected final stretch on the starless image, then selected HDR, Curves and finishing reviews before adding gently stretched stars. Keep both advanced branch stretches linear.";
+   this.finishStarless.toolTip = "Uses the selected final stretch on the starless image, then selected HDR, Curves and finishing reviews before reviewing controlled stars recombination. Keep both advanced branch stretches linear.";
    this.starBrightness = new SpinBox(this.content);
    this.starBrightness.minValue = 0;
    this.starBrightness.maxValue = 100;
    this.starBrightness.value = 70;
-   this.starBrightness.toolTip = "Stars brightness (%) for the starless enhancement path. 70 is a starting point; 0 keeps only nebulosity, 100 uses the full gently stretched stars layer.";
+   this.starBrightness.toolTip = "Stars brightness (%) for the starless enhancement path. 70 is a starting point; 0 keeps only nebulosity, 100 uses the full controlled stars layer derived with a full-image reference stretch.";
    var starBrightnessLabel = new Label(this.content);
    starBrightnessLabel.text = "Stars brightness (%):";
    var starBrightnessSizer = new HorizontalSizer;
@@ -3086,6 +3086,133 @@ function saveFinalImage(view, sourcePath, sourceId)
    }
 }
 
+// Use full-image statistics, never a sparse stars-only background target.
+function buildControlledStars(fullView, rawStarlessView)
+{
+   var full = null, starless = null, stars = null;
+   try
+   {
+      full = cloneHDRView(fullView, "_StarsReference");
+      starless = cloneHDRView(rawStarlessView, "_StarsReferenceStarless");
+      var median = fullView.computeOrFetchProperty("Median");
+      var mad = fullView.computeOrFetchProperty("MAD");
+      mad.mul(1.4826);
+      var channels = fullView.image.isColor ? 3 : 1;
+      var shadows = 0, center = 0;
+      for (var c = 0; c < channels; ++c)
+      {
+         shadows += median.at(c) - 2.8*mad.at(c);
+         center += median.at(c);
+      }
+      shadows = Math.range(shadows/channels, 0, 1);
+      center /= channels;
+      if (center <= shadows || center >= 1)
+         throw new Error("Cannot calculate the full-image reference stretch for stars.");
+      var row = [shadows, Math.mtf(0.15, center-shadows), 1, 0, 1];
+      var histogram = new HistogramTransformation;
+      histogram.H = [row, row, row, [0,0.5,1,0,1], [0,0.5,1,0,1]];
+      clearDisplaySTF(full.mainView);
+      clearDisplaySTF(starless.mainView);
+      if (!histogram.executeOn(full.mainView) || !histogram.executeOn(starless.mainView))
+         throw new Error("Full-image reference stretch failed.");
+      stars = cloneHDRView(fullView, "_ControlledStars");
+      clearDisplaySTF(stars.mainView);
+      var process = new PixelMath;
+      process.useSingleExpression = true;
+      process.createNewImage = false;
+      process.rescale = false;
+      process.truncate = true;
+      process.symbols = "";
+      // A screen layer that reconstructs the matched full image at 100%.
+      process.expression = "min(1,max(0,(" + full.mainView.fullId + "-" +
+         starless.mainView.fullId + ")/max(0.000001,1-" + starless.mainView.fullId + ")))";
+      if (!process.executeOn(stars.mainView))
+         throw new Error("Controlled stars extraction failed.");
+      logLine("Controlled stars derived from matching full/starless linked stretches; original linear stars retained.");
+      var result = stars;
+      stars = null;
+      return result;
+   }
+   finally
+   {
+      if (full !== null && !full.isNull) full.forceClose();
+      if (starless !== null && !starless.isNull) starless.forceClose();
+      if (stars !== null && !stars.isNull) stars.forceClose();
+   }
+}
+
+function buildRecombinedCandidate(nebula, stars, amount, self)
+{
+   var candidate = cloneHDRView(nebula, "_Recombined");
+   try
+   {
+      recombineScreen(candidate.mainView, stars, true, amount/100);
+      if (self.starReduction.checked)
+         applyBlanshanStarReduction(candidate.mainView, nebula,
+            self.starReductionIterations.value, self.starReductionMethod.currentItem + 1);
+      checkAbortRequested();
+      return candidate;
+   }
+   catch (e) { candidate.forceClose(); throw e; }
+}
+
+function reviewStarRecombination(nebula, stars, self)
+{
+   var dialog = new HDRReviewDialog(nebula);
+   dialog.windowTitle = "Stars recombination review";
+   dialog.instructions.text = "Before: enhanced starless image. After: stars added back. Compare at 100%; drag to pan.\nAdjust stars brightness, Update Preview, then Apply or Keep starless. Selected star reduction is included in the preview.";
+   dialog.layers.visible = false;
+   dialog.layersLabel.visible = false;
+   dialog.strengthLabel.text = "Stars brightness (%):";
+   dialog.strength.value = self.starBrightness.value;
+   dialog.applyButton.text = "Apply recombination";
+   dialog.skipButton.text = "Keep starless";
+   dialog.keepComparison.text = "Keep enhanced starless comparison";
+   dialog.keepComparison.checked = true;
+   dialog.keepComparison.enabled = false;
+   dialog.updateButton.onClick = function()
+   {
+      dialog.enabled = false;
+      dialog.applyButton.enabled = false;
+      try
+      {
+         if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate = null; }
+         dialog.afterBitmap = null;
+         dialog.differenceBitmap = null;
+         dialog.candidate = buildRecombinedCandidate(nebula, stars, dialog.strength.value, self);
+         dialog.candidate.mainView.image.resetSelections();
+         dialog.afterBitmap = dialog.candidate.mainView.image.render(1, false);
+         dialog.displayMode.currentItem = 1;
+         dialog.previewStatus.text = "Stars brightness " + dialog.strength.value + "%. " +
+            previewChangeSummary(nebula.image, dialog.candidate.mainView.image);
+         dialog.applyButton.enabled = true;
+      }
+      catch (e)
+      {
+         if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate = null; }
+         dialog.displayMode.currentItem = 0;
+         dialog.previewStatus.text = "Preview failed; showing starless. " + errorMessage(e);
+      }
+      finally { dialog.enabled = true; dialog.preview.repaint(); dialog.previewStatus.repaint(); CoreApplication.processEvents(); }
+   };
+   var accepted = false;
+   try
+   {
+      if (!dialog.execute()) { checkAbortRequested(); return nebula; }
+      if (dialog.candidate === null || !dialog.applyButton.enabled)
+         throw new Error("Update the recombination preview before applying.");
+      self.starBrightness.value = dialog.strength.value;
+      dialog.candidate.show();
+      accepted = true;
+      return dialog.candidate.mainView;
+   }
+   finally
+   {
+      if (!accepted && dialog.candidate !== null && !dialog.candidate.isNull)
+         dialog.candidate.forceClose();
+   }
+}
+
 function enhanceStarlessAndRecombine(self, branches)
 {
    logLine("Enhancing starless branch before recombination; stars brightness=" + self.starBrightness.value + "%.");
@@ -3102,15 +3229,8 @@ function enhanceStarlessAndRecombine(self, branches)
       nebula = reviewFinishing(nebula, "Saturation");
    }
    checkAbortRequested();
-   var combined = cloneHDRView(nebula, "_Recombined").mainView;
-   clearDisplaySTF(branches.starsView);
-   applySelectedAutoHistogram(branches.starsView, 1, 0.08);
-   recombineScreen(combined, branches.starsView, true, self.starBrightness.value/100);
-   if (self.starReduction.checked)
-      applyBlanshanStarReduction(combined, nebula, self.starReductionIterations.value,
-         self.starReductionMethod.currentItem + 1);
-   checkAbortRequested();
-   return combined;
+   nebula.window.show();
+   return reviewStarRecombination(nebula, branches.controlledStarsView, self);
 }
 
 function executeWorkflow(self)
@@ -3148,10 +3268,21 @@ function executeWorkflow(self)
       }
 
       var branches = null;
+      var starsFullReference = null;
       if (separationRow.enabled.checked)
       {
          checkAbortRequested();
+         if (self.finishStarless.checked)
+            starsFullReference = cloneHDRView(view, "_LinearStarsReference");
          branches = executeStarSeparation(adapters[separationRow.adapterId()], view);
+         if (self.finishStarless.checked)
+         {
+            var controlledStars = buildControlledStars(starsFullReference.mainView, branches.starlessView);
+            branches.controlledStarsView = controlledStars.mainView;
+            controlledStars.show();
+            starsFullReference.forceClose();
+            starsFullReference = null;
+         }
          checkAbortRequested();
       }
 
@@ -3274,6 +3405,8 @@ function executeWorkflow(self)
    }
    finally
    {
+      if (starsFullReference !== null && typeof starsFullReference !== "undefined" && !starsFullReference.isNull)
+         starsFullReference.forceClose();
       Console.abortEnabled = false;
       self.enabled = true;
    }

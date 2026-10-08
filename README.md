@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.26
+# CCDASTRO PixInsight Workflow Manager v1.1.27
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.26 quick start
+## v1.1.27 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -28,34 +28,41 @@ manager for an integrated linear color master.
 
 The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
 
-## Stars halo reduction and direct comparison (v1.1.26)
+## Spatial stars halo reduction (v1.1.27)
 
-In **Stars recombination review**, Before now shows **untreated recombination**
-and After shows **halo-treated recombination** at the same stars brightness.
-**Difference x10** and the sampled-change status isolate the halo treatment,
-rather than measuring stars added to the starless image.
+The optional **Stars recombination review** now targets neighborhoods around
+bright stars instead of every pixel in a brightness interval. It operates on
+a temporary controlled-stars copy before recombination. Original stars and
+the enhanced starless image are preserved. Halo reduction defaults to **0%**.
 
-Start with **Stars brightness 50%**, **Halo reduction 30%**, mask lower **5**
-and upper **350**, and Bill Blanshan reduction off. Click **Update Preview**.
-The mask limits use 0-1000 units: 5 is 0.005 and 350 is 0.35.
+Start with **Stars brightness 50%**, **Halo reduction 30%**, **Bright-star
+threshold 350**, **Halo radius 40 px**, **Protect core 6 px**, and **Feather
+4 px**, with Bill Blanshan star reduction off. These are starting points,
+not a guaranteed match for every image.
 
-- Raise the lower limit to protect more faint stars/background; lower it to
-  include fainter wings.
-- Raise the upper limit to include brighter wings; lower it to protect more
-  bright-star pixels. Lower must remain below upper.
-- 0% halo reduction leaves stars unchanged. The amount is now the percentage
-  of light removed where the mask is fully white, with partial reduction through
-  gray mask pixels. Start gently; 100% can produce rings or damage star wings.
-- All changes require Update Preview before Apply. Keep starless remains available.
+1. Click **Show halo mask**. White regions receive treatment; black regions
+   are protected. The mask should surround the bright stars with problematic halos.
+2. Raise the threshold to select fewer bright stars, or lower it if the
+   problematic stars are absent. 350 means a maximum RGB value of 0.35 in
+   controlled stars, before the Stars brightness setting is applied.
+3. Adjust Halo radius to cover the surrounding halo. It expands outward from
+   selected bright-star pixels, so it is not an exact radius from a star center.
+   Protect core expands the central protected region; it must be below Halo radius.
+   Feather controls Gaussian boundary smoothing in pixels.
+4. Click **Update Preview** and compare Before/After at the same position.
+   Before is untreated recombination at the same Stars brightness; After is
+   the treated result. **Difference x10** and change metrics isolate treatment.
+5. Apply only if it improves the image without rings or unwanted dimming.
+   **Keep starless** remains available. The mask preview is shown inside the review with the same zoom and pan controls.
 
-The smooth mask uses mean RGB brightness, feather up to 0.03 and Gaussian sigma 2.
-Core protection is reapplied after smoothing. Treatment uses masked PixelMath
-attenuation on a temporary controlled-stars copy; the enhanced starless and
-original stars stay unchanged. It is an intensity selection, not a spatial
-halo detector, so small stars in the selected range may also be dimmed.
-Optional star reduction is included in both comparison images. v1.1.25's mild
-curve produced insufficient visible change; this revision replaces that curve.
-Native testing of the revised treatment remains pending.
+The mask combines expanded bright-star cores with a protected inner region
+and softly feathered edges. Bright seed pixels remain protected. Amount is
+percentage attenuation where the mask is white, with proportional treatment
+under gray mask pixels. Small stars outside selected neighborhoods are spared;
+nearby stars and overlapping halos can still be affected. This reduces stars-layer
+halo light; it cannot repair halos already retained in the starless image or
+correct their optical cause. Radius and threshold depend on image scale and stretch.
+Native PixInsight testing remains pending; do not assume every halo will improve.
 
 ## Enhance nebulosity before adding stars back (v1.1.24)
 
@@ -183,6 +190,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.27:** Replaces intensity-band treatment with a spatial bright-star halo mask, core protection, radius/feather controls, and a mask preview. Native testing pending.
 - **v1.1.26:** Stronger masked halo attenuation, adjustable limits, and untreated-versus-treated recombination comparison with treatment-specific change metrics. Native testing pending.
 - **v1.1.25:** Adds optional masked halo reduction amount inside stars recombination preview; original stars and starless layers preserved. Native testing pending.
 - **v1.1.24:** Replaces sparse stars-only automatic stretch with matched full/starless reference stretches; preserves linear stars and adds adjustable recombination preview with Apply or Keep starless. Native testing pending.

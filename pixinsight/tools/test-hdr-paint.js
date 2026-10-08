@@ -29,4 +29,6 @@ preview.onPaint();
 assert.equal(draws, 2);
 assert.equal(fills, 2);
 assert.equal(ended, 2);
+self.haloMaskBitmap={width:100,height:80};self.displayMode.currentItem=3;preview.onPaint();assert.equal(draws,3);
+
 console.log("HDR preview painting regression passed: Brush argument and same-position Before/After rendering.");

@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.26"
+#define VERSION "1.1.27"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2296,7 +2296,8 @@ constructor(view)
       {
          g.fillRect(this.boundsRect, new Brush(0xff202020));
          var bitmap = self.displayMode.currentItem === 0 ? self.beforeBitmap :
-            self.displayMode.currentItem === 2 ? self.differenceBitmap : self.afterBitmap;
+            self.displayMode.currentItem === 2 ? self.differenceBitmap :
+            self.displayMode.currentItem === 3 ? self.haloMaskBitmap : self.afterBitmap;
          if (bitmap !== null)
          {
             var scale = self.zoomMode.currentItem === 0 ?
@@ -3141,59 +3142,95 @@ function buildControlledStars(fullView, rawStarlessView)
    }
 }
 
-function buildHaloReducedStars(view, amount, low, high)
+// Expand a binary core mask with bounded native disk kernels.
+function dilateHaloMask(view, radius)
+{
+   while (radius > 0)
+   {
+      var step = Math.min(3, radius), size = 2*step+1, cells = [];
+      for (var y=-step; y<=step; ++y)
+         for (var x=-step; x<=step; ++x) cells.push(x*x+y*y <= step*step ? 1 : 0);
+      var process = new MorphologicalTransformation;
+      process.operator = MorphologicalTransformation.prototype.Dilation;
+      process.interlacingDistance = 1; process.lowThreshold = process.highThreshold = 0;
+      process.numberOfIterations = 1; process.amount = 1; process.selectionPoint = 0.5;
+      process.structureSize = size; process.structureWayTable = [[cells]];
+      if (!process.executeOn(view)) throw new Error("Halo mask expansion failed.");
+      radius -= step; checkAbortRequested();
+   }
+}
+
+function buildSpatialHaloMask(view, settings)
+{
+   var threshold = settings.threshold, radius = settings.radius, core = settings.core, feather = settings.feather;
+   if (!finiteNumber(threshold) || threshold <= 0 || threshold >= 1 ||
+       !finiteNumber(radius) || radius < 2 || radius > 120 || radius !== Math.round(radius) ||
+       !finiteNumber(core) || core < 0 || core >= radius || core !== Math.round(core) ||
+       !finiteNumber(feather) || feather < 1 || feather > 20)
+      throw new Error("Halo settings: threshold 0-1, radius 2-120 px, protected core smaller than radius, feather 1-20 px.");
+   var mask = null, inner = null;
+   try
+   {
+      mask = new ImageWindow(view.image.width, view.image.height, 1, 32, true, false,
+         uniqueMainViewId(view.id + "_SpatialHaloMask"));
+      var light = view.image.isColor ? "max("+view.fullId+"[0],max("+view.fullId+"[1],"+view.fullId+"[2]))" : view.fullId;
+      var process = new PixelMath;
+      process.useSingleExpression = true; process.createNewImage = false;
+      process.rescale = false; process.truncate = true; process.symbols = "";
+      process.expression = "iif("+light+">="+threshold+",1,0)";
+      if (!process.executeOn(mask.mainView)) throw new Error("Bright-star core selection failed.");
+      inner = cloneHDRView(mask.mainView, "_ProtectedCores");
+      dilateHaloMask(mask.mainView, radius);
+      dilateHaloMask(inner.mainView, core);
+      var blur = new Convolution;
+      blur.mode = Convolution.Parametric; blur.sigma = feather; blur.shape = 2;
+      blur.aspectRatio = 1; blur.rotationAngle = 0; blur.rescaleHighPass = false;
+      if (!blur.executeOn(mask.mainView) || !blur.executeOn(inner.mainView))
+         throw new Error("Spatial halo mask feathering failed.");
+      // Soft annulus around selected bright stars, with exact seed/core-light protection.
+      process.expression = "$T*(1-"+inner.mainView.fullId+")*iif("+light+">="+threshold+",0,1)";
+      if (!process.executeOn(mask.mainView)) throw new Error("Spatial halo mask assembly failed.");
+      clearDisplaySTF(mask.mainView); checkAbortRequested();
+      return mask;
+   }
+   catch (e) { if (mask !== null) mask.forceClose(); throw e; }
+   finally { if (inner !== null) inner.forceClose(); }
+}
+
+function buildHaloReducedStars(view, amount, settings)
 {
    if (!finiteNumber(amount) || amount < 0 || amount > 100)
       throw new Error("Halo reduction amount must be between 0 and 100.");
-   low = typeof low === "number" ? low : 0.005;
-   high = typeof high === "number" ? high : 0.35;
-   if (!finiteNumber(low) || !finiteNumber(high) || low < 0 || high > 1 || low >= high)
-      throw new Error("Halo mask lower limit must be below the upper limit (0-1).");
-   var candidate = cloneHDRView(view, "_HaloReduced");
-   var mask = null;
+   var candidate = cloneHDRView(view, "_HaloReduced"), mask = null;
    try
    {
       clearDisplaySTF(candidate.mainView);
       if (amount === 0) return candidate;
-      mask = new ImageWindow(view.image.width, view.image.height, 1, 32, true, false,
-         uniqueMainViewId(view.id + "_HaloMask"));
-      var l = view.image.isColor ? "(" + view.fullId + "[0]+" + view.fullId + "[1]+" + view.fullId + "[2])/3" : view.fullId;
+      mask = buildSpatialHaloMask(view, settings);
+      candidate.setMask(mask); candidate.maskEnabled = true;
+      candidate.maskInverted = false; candidate.maskVisible = false;
       var process = new PixelMath;
       process.useSingleExpression = true; process.createNewImage = false;
       process.rescale = false; process.truncate = true; process.symbols = "";
-      // Select faint wings, taper to protect background and bright cores.
-      var feather = Math.min(0.03, (high-low)/2);
-      var fall = "min(1,max(0,(" + high + "-(" + l + "))/" + feather + "))";
-      process.expression = "min(1,max(0,((" + l + ")-" + low + ")/" + feather + "))*" + fall;
-      if (!process.executeOn(mask.mainView)) throw new Error("Halo mask generation failed.");
-      var blur = new Convolution;
-      blur.mode = Convolution.Parametric; blur.sigma = 2; blur.shape = 2;
-      blur.aspectRatio = 1; blur.rotationAngle = 0; blur.rescaleHighPass = false;
-      if (!blur.executeOn(mask.mainView)) throw new Error("Halo mask smoothing failed.");
-      // Reapply core protection after smoothing so it cannot bleed into bright cores.
-      process.expression = "$T*" + fall;
-      if (!process.executeOn(mask.mainView)) throw new Error("Halo core protection failed.");
-      candidate.setMask(mask); candidate.maskEnabled = true;
-      candidate.maskInverted = false; candidate.maskVisible = false;
-      process.expression = "$T*" + (1-amount/100);
-      if (!process.executeOn(candidate.mainView)) throw new Error("Masked halo attenuation failed.");
-      candidate.removeMask();
-      checkAbortRequested();
-      logLine("Stars halo attenuation=" + amount + "%; mask range " + low + "-" + high + ", feather=" + feather + ", sigma=2; cores protected after smoothing.");
+      process.expression = "$T*"+(1-amount/100);
+      if (!process.executeOn(candidate.mainView)) throw new Error("Spatial halo attenuation failed.");
+      candidate.removeMask(); checkAbortRequested();
+      logLine("Spatial halo attenuation="+amount+"%; bright-star threshold="+settings.threshold+
+         "; expansion="+settings.radius+" px; core protection="+settings.core+" px; feather sigma="+settings.feather+" px.");
       return candidate;
    }
    catch (e) { try { candidate.removeMask(); } finally { candidate.forceClose(); } throw e; }
    finally { if (mask !== null) mask.forceClose(); }
 }
 
-function buildRecombinedCandidate(nebula, stars, amount, self, haloAmount, haloLow, haloHigh)
+function buildRecombinedCandidate(nebula, stars, amount, self, haloAmount, haloSettings)
 {
    var candidate = cloneHDRView(nebula, "_Recombined");
    var haloStars = null;
    try
    {
       if (typeof haloAmount === "number" && haloAmount > 0)
-         haloStars = buildHaloReducedStars(stars, haloAmount, haloLow, haloHigh);
+         haloStars = buildHaloReducedStars(stars, haloAmount, haloSettings);
       recombineScreen(candidate.mainView, haloStars === null ? stars : haloStars.mainView, true, amount/100);
       if (self.starReduction.checked)
          applyBlanshanStarReduction(candidate.mainView, nebula,
@@ -3212,7 +3249,7 @@ function reviewStarRecombination(nebula, stars, self)
    try { dialog = new HDRReviewDialog(baseline.mainView); }
    catch (e) { baseline.forceClose(); throw e; }
    dialog.windowTitle = "Stars recombination review";
-   dialog.instructions.text = "Before: untreated recombination. After: halo-treated recombination, at the SAME stars brightness.\nAdjust halo amount and mask limits, then Update Preview. Compare at 100% or Difference x10. Keep starless preserves the nebula. Selected star reduction affects both.";
+   dialog.instructions.text = "Before: untreated recombination. After: halo-treated recombination, at the SAME stars brightness.\nAdjust halo amount, radius and core protection, then Update Preview. Show halo mask to inspect coverage. Compare at 100% or Difference x10. Keep starless preserves the nebula. Selected star reduction affects both.";
    dialog.layersLabel.text = "Halo reduction (%):";
    dialog.layers.minValue = 0;
    dialog.layers.maxValue = 100;
@@ -3220,16 +3257,50 @@ function reviewStarRecombination(nebula, stars, self)
    dialog.layers.toolTip = "Percentage of stars light removed where the halo mask is fully white. 0 disables it. Start at 30%. Inspect small stars and dark rings before using strong amounts.";
    dialog.strengthLabel.text = "Stars brightness (%):";
    dialog.strength.value = self.starBrightness.value;
-   dialog.haloLow = new SpinBox(dialog); dialog.haloLow.minValue = 0; dialog.haloLow.maxValue = 999; dialog.haloLow.value = 5;
-   dialog.haloHigh = new SpinBox(dialog); dialog.haloHigh.minValue = 1; dialog.haloHigh.maxValue = 1000; dialog.haloHigh.value = 350;
-   var limitsLabel = new Label(dialog); limitsLabel.text = "Halo mask lower / upper (0-1000):";
-   var limits = new HorizontalSizer; limits.spacing = 8;
-   limits.add(limitsLabel); limits.add(dialog.haloLow); limits.add(dialog.haloHigh); limits.addStretch();
-   dialog.sizer.insert(4, limits);
-   dialog.haloLow.toolTip = "5 means 0.005. Lower this to include faint wings; raising it protects more faint stars/background.";
-   dialog.haloHigh.toolTip = "350 means 0.35. Raise to include brighter wings; lower to protect more bright-star pixels.";
-   var dirtyHalo = function() { dialog.applyButton.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview again."; };
-   dialog.haloLow.onValueUpdated = dirtyHalo; dialog.haloHigh.onValueUpdated = dirtyHalo;
+   dialog.haloThreshold = new SpinBox(dialog); dialog.haloThreshold.minValue = 1; dialog.haloThreshold.maxValue = 999; dialog.haloThreshold.value = 350;
+   dialog.haloRadius = new SpinBox(dialog); dialog.haloRadius.minValue = 2; dialog.haloRadius.maxValue = 120; dialog.haloRadius.value = 40;
+   dialog.haloCore = new SpinBox(dialog); dialog.haloCore.minValue = 0; dialog.haloCore.maxValue = 119; dialog.haloCore.value = 6;
+   dialog.haloFeather = new SpinBox(dialog); dialog.haloFeather.minValue = 1; dialog.haloFeather.maxValue = 20; dialog.haloFeather.value = 4;
+   var spatial = new HorizontalSizer; spatial.spacing = 8;
+   var coreRow = new HorizontalSizer; coreRow.spacing = 8;
+   var labels = ["Bright-star threshold (0-1000):", "Halo radius (px):", "Protect core (px):", "Feather (px):"];
+   var controls = [dialog.haloThreshold, dialog.haloRadius, dialog.haloCore, dialog.haloFeather];
+   var dirtyHalo = function() { dialog.applyButton.enabled = false; dialog.haloMaskBitmap = null; if (dialog.displayMode.currentItem === 3) dialog.displayMode.currentItem = 0; dialog.previewStatus.text = "Settings changed. Click Update Preview again."; dialog.preview.repaint(); };
+   for (var i=0; i<controls.length; ++i)
+   {
+      var label = new Label(dialog); label.text = labels[i]; var row = i < 2 ? spatial : coreRow; row.add(label); row.add(controls[i]);
+      controls[i].onValueUpdated = dirtyHalo;
+   }
+   dialog.haloThreshold.toolTip = "350 means 0.35 in the controlled stars image (before Stars brightness). Raise to select fewer, brighter stars.";
+   dialog.haloRadius.toolTip = "Mask expansion beyond selected bright-star pixels. Increase for broad halos; inspect the mask.";
+   dialog.haloCore.toolTip = "Expansion of the protected core region. Must be smaller than halo radius.";
+   dialog.haloFeather.toolTip = "Gaussian sigma in pixels at inner and outer boundaries. Increase for smoother transitions.";
+   dialog.haloSettings = function() { return {threshold:dialog.haloThreshold.value/1000, radius:dialog.haloRadius.value, core:dialog.haloCore.value, feather:dialog.haloFeather.value}; };
+   dialog.haloMaskBitmap = null;
+   dialog.displayMode.addItem("Halo mask");
+   var comparisonSelected = dialog.displayMode.onItemSelected;
+   dialog.displayMode.onItemSelected = function(index)
+   {
+      if (index === 3) { dialog.maskButton.onClick(); return; }
+      comparisonSelected(index);
+   };
+   dialog.maskButton = new PushButton(dialog); dialog.maskButton.text = "Show halo mask";
+   dialog.maskButton.onClick = function()
+   {
+      dialog.enabled = false;
+      try
+      {
+         var mask = buildSpatialHaloMask(stars, dialog.haloSettings());
+         try { mask.mainView.image.resetSelections(); dialog.haloMaskBitmap = mask.mainView.image.render(1, false); }
+         finally { mask.forceClose(); }
+         dialog.displayMode.currentItem = 3;
+         dialog.previewStatus.text = "Halo mask: white is treated; black is protected. Adjust coverage, then Update Preview.";
+      }
+      catch (e) { dialog.previewStatus.text = "Mask preview failed. " + errorMessage(e); }
+      finally { dialog.enabled = true; dialog.preview.repaint(); dialog.previewStatus.repaint(); CoreApplication.processEvents(); }
+   };
+   spatial.addStretch(); coreRow.add(dialog.maskButton); coreRow.addStretch();
+   dialog.sizer.insert(4, spatial); dialog.sizer.insert(5, coreRow);
    dialog.adjustToContents();
 
    dialog.applyButton.text = "Apply recombination";
@@ -3257,7 +3328,7 @@ function reviewStarRecombination(nebula, stars, self)
          baseline.mainView.image.resetSelections();
          dialog.beforeBitmap = baseline.mainView.image.render(1, false);
          dialog.candidate = buildRecombinedCandidate(nebula, stars, dialog.strength.value, self,
-            dialog.layers.value, dialog.haloLow.value/1000, dialog.haloHigh.value/1000);
+            dialog.layers.value, dialog.haloSettings());
          dialog.candidate.mainView.image.resetSelections();
          dialog.afterBitmap = dialog.candidate.mainView.image.render(1, false);
          dialog.displayMode.currentItem = 1;

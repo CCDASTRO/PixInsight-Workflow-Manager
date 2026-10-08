@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.27"
+#define VERSION "1.1.28"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -3151,7 +3151,7 @@ function dilateHaloMask(view, radius)
       for (var y=-step; y<=step; ++y)
          for (var x=-step; x<=step; ++x) cells.push(x*x+y*y <= step*step ? 1 : 0);
       var process = new MorphologicalTransformation;
-      process.operator = MorphologicalTransformation.prototype.Dilation;
+      process.operator = MorphologicalTransformation.Dilation;
       process.interlacingDistance = 1; process.lowThreshold = process.highThreshold = 0;
       process.numberOfIterations = 1; process.amount = 1; process.selectionPoint = 0.5;
       process.structureSize = size; process.structureWayTable = [[cells]];

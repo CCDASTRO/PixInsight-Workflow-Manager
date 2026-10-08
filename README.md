@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.27
+# CCDASTRO PixInsight Workflow Manager v1.1.28
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.27 quick start
+## v1.1.28 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -28,7 +28,7 @@ manager for an integrated linear color master.
 
 The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
 
-## Spatial stars halo reduction (v1.1.27)
+## Spatial stars halo reduction (v1.1.28)
 
 The optional **Stars recombination review** now targets neighborhoods around
 bright stars instead of every pixel in a brightness interval. It operates on
@@ -190,6 +190,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.28:** Fixes the native MorphologicalTransformation operator enum that prevented spatial halo mask generation and treatment. Regression tests now reject invalid operator types. Native testing pending.
 - **v1.1.27:** Replaces intensity-band treatment with a spatial bright-star halo mask, core protection, radius/feather controls, and a mask preview. Native testing pending.
 - **v1.1.26:** Stronger masked halo attenuation, adjustable limits, and untreated-versus-treated recombination comparison with treatment-specific change metrics. Native testing pending.
 - **v1.1.25:** Adds optional masked halo reduction amount inside stars recombination preview; original stars and starless layers preserved. Native testing pending.

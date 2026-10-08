@@ -5,8 +5,8 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.25.zip" sha1="8e9b980ad1acac016f09e5ceb3a9d5e80efad395" type="script" releaseDate="20261008145020">
-         <title>CCDASTRO Workflow Manager 1.1.25</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.26.zip" sha1="0c521bec04961d47b9eab799a09e2c51430cf5ec" type="script" releaseDate="20261008153615">
+         <title>CCDASTRO Workflow Manager 1.1.26</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
@@ -72,4 +72,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-08T14:50:41.462Z" encoding="Base64">aboP91f2QqCmB5/fW/MEL3+3Jrq/xD+l6h1Ekj4wMx6X+HxvZevV2UJKkgzwokPDZ+iI2IvQiEkazZGps+EyAQ==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-08T15:36:39.398Z" encoding="Base64">kTXeKGjE5EJxLQu7ummnbjxujZbE9MDy4R4VR4GKXKdLDBFb3TCkBuU0E/JeRZqFaxMaMu+YAWzYEqdlj0aEAw==</Signature>

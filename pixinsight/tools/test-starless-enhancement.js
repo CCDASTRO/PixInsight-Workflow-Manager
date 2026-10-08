@@ -15,12 +15,13 @@ for(const failure of [null,'histogram','pixelmath']) {
 // Derived screen stars reconstruct the matched full image at 100%, including zero/near-one limits.
 for(const n of [0,.01,.2,.75,.999999])for(const f of [n,(n+1)/2,1]) {const st=Math.min(1,Math.max(0,(f-n)/Math.max(.000001,1-n)));assert.ok(Math.abs(n+st-n*st-f)<1e-6);assert.equal(n+0-n*0,n);}
 for(const mode of ['apply','skip','failed']) {
- let closed=0, shown=0,blends=0;const nebula={fullId:'nebula',image:{},window:{show(){}}},stars={};
- const ctx=vm.createContext({HDRReviewDialog:function(){Object.assign(this,{instructions:{},layers:{},layersLabel:{},strengthLabel:{},strength:{},applyButton:{enabled:false},skipButton:{},keepComparison:{},updateButton:{},displayMode:{},previewStatus:{repaint(){}},preview:{repaint(){}},candidate:null,execute(){this.updateButton.onClick();return mode==='apply';}});},cloneHDRView:()=>({isNull:false,mainView:{image:{resetSelections(){},render(){return {};}}},forceClose(){closed++;},show(){shown++;}}),recombineScreen:()=>{blends++;if(mode==='failed')throw Error('blend failed');},checkAbortRequested:()=>{},previewChangeSummary:()=> 'changed',CoreApplication:{processEvents(){}},errorMessage:e=>e.message});
+ let shown=0,blends=0;const windows=[],nebula={fullId:'nebula',image:{},window:{show(){}}},stars={};
+ const ctx=vm.createContext({HDRReviewDialog:function(v){assert.notEqual(v,nebula);Object.assign(this,{instructions:{},layers:{},layersLabel:{},strengthLabel:{},strength:{},applyButton:{enabled:false},skipButton:{},keepComparison:{},updateButton:{},displayMode:{},previewStatus:{repaint(){}},preview:{repaint(){}},candidate:null,sizer:{insert(){}},adjustToContents(){},execute(){this.updateButton.onClick();return mode==='apply';}});},SpinBox:function(){},Label:function(){},HorizontalSizer:function(){this.add=()=>{};this.addStretch=()=>{};},cloneHDRView:()=>{const w={isNull:false,mainView:{beginProcess(){},endProcess(){},image:{assign(){},resetSelections(){},render(){return {};}}},forceClose(){this.isNull=true;},show(){shown++;}};windows.push(w);return w;},recombineScreen:()=>{blends++;if(mode==='failed'&&blends===3)throw Error('blend failed');},checkAbortRequested:()=>{},previewChangeSummary:(before)=>{assert.equal(before,windows[0].mainView.image);return 'changed';},UndoFlag:{NoSwapFile:0},logLine:()=>{},CoreApplication:{processEvents(){}},errorMessage:e=>e.message});
  vm.runInContext(code,ctx);
  const self={starBrightness:{value:70},starReduction:{checked:false}};
  const result=ctx.reviewStarRecombination(nebula,stars,self);
- assert.equal(blends,1);if(mode==='apply'){assert.notEqual(result,nebula);assert.equal(shown,1);assert.equal(closed,0);}else{assert.equal(result,nebula);assert.equal(closed,1);}
+ assert.equal(blends,3);assert.ok(windows[0].isNull&&windows[1].isNull);
+ if(mode==='apply'){assert.notEqual(result,nebula);assert.equal(shown,1);assert.equal(windows[2].isNull,false);}else{assert.equal(result,nebula);assert.ok(windows.every(w=>w.isNull));}
 }
 assert.doesNotMatch(src.slice(src.indexOf('function enhanceStarlessAndRecombine('),src.indexOf('function executeWorkflow(')),/applySelectedAutoHistogram\(branches\.starsView/);
 console.log('Matched reference stretch, screen reconstruction, no sparse statistics, temporary cleanup, recombination Apply/Skip/failure and syntax passed (mocked APIs).');

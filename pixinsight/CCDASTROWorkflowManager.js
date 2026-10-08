@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.25"
+#define VERSION "1.1.26"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -3141,10 +3141,14 @@ function buildControlledStars(fullView, rawStarlessView)
    }
 }
 
-function buildHaloReducedStars(view, amount)
+function buildHaloReducedStars(view, amount, low, high)
 {
    if (!finiteNumber(amount) || amount < 0 || amount > 100)
       throw new Error("Halo reduction amount must be between 0 and 100.");
+   low = typeof low === "number" ? low : 0.005;
+   high = typeof high === "number" ? high : 0.35;
+   if (!finiteNumber(low) || !finiteNumber(high) || low < 0 || high > 1 || low >= high)
+      throw new Error("Halo mask lower limit must be below the upper limit (0-1).");
    var candidate = cloneHDRView(view, "_HaloReduced");
    var mask = null;
    try
@@ -3158,40 +3162,38 @@ function buildHaloReducedStars(view, amount)
       process.useSingleExpression = true; process.createNewImage = false;
       process.rescale = false; process.truncate = true; process.symbols = "";
       // Select faint wings, taper to protect background and bright cores.
-      process.expression = "min(1,max(0,((" + l + ")-0.03)/0.02))*min(1,max(0,(0.25-(" + l + "))/0.02))";
+      var feather = Math.min(0.03, (high-low)/2);
+      var fall = "min(1,max(0,(" + high + "-(" + l + "))/" + feather + "))";
+      process.expression = "min(1,max(0,((" + l + ")-" + low + ")/" + feather + "))*" + fall;
       if (!process.executeOn(mask.mainView)) throw new Error("Halo mask generation failed.");
       var blur = new Convolution;
       blur.mode = Convolution.Parametric; blur.sigma = 2; blur.shape = 2;
       blur.aspectRatio = 1; blur.rotationAngle = 0; blur.rescaleHighPass = false;
       if (!blur.executeOn(mask.mainView)) throw new Error("Halo mask smoothing failed.");
+      // Reapply core protection after smoothing so it cannot bleed into bright cores.
+      process.expression = "$T*" + fall;
+      if (!process.executeOn(mask.mainView)) throw new Error("Halo core protection failed.");
       candidate.setMask(mask); candidate.maskEnabled = true;
       candidate.maskInverted = false; candidate.maskVisible = false;
-      var curves = new CurvesTransformation;
-      var channels = ["R","G","B","K","A","L","a","b","c","H","S"];
-      for (var i = 0; i < channels.length; ++i)
-      {
-         curves[channels[i]] = [[0,0],[1,1]];
-         curves[channels[i]+"t"] = CurvesTransformation.AkimaSubsplines;
-      }
-      curves.K = [[0,0],[0.05,0.05-0.015*amount/100],[0.4,0.4],[1,1]];
-      if (!curves.executeOn(candidate.mainView)) throw new Error("Masked halo reduction failed.");
+      process.expression = "$T*" + (1-amount/100);
+      if (!process.executeOn(candidate.mainView)) throw new Error("Masked halo attenuation failed.");
       candidate.removeMask();
       checkAbortRequested();
-      logLine("Stars halo reduction=" + amount + "%; smooth brightness mask 0.03-0.25, feather 0.02, sigma 2; RGB/K curve protects bright cores.");
+      logLine("Stars halo attenuation=" + amount + "%; mask range " + low + "-" + high + ", feather=" + feather + ", sigma=2; cores protected after smoothing.");
       return candidate;
    }
    catch (e) { try { candidate.removeMask(); } finally { candidate.forceClose(); } throw e; }
    finally { if (mask !== null) mask.forceClose(); }
 }
 
-function buildRecombinedCandidate(nebula, stars, amount, self, haloAmount)
+function buildRecombinedCandidate(nebula, stars, amount, self, haloAmount, haloLow, haloHigh)
 {
    var candidate = cloneHDRView(nebula, "_Recombined");
    var haloStars = null;
    try
    {
       if (typeof haloAmount === "number" && haloAmount > 0)
-         haloStars = buildHaloReducedStars(stars, haloAmount);
+         haloStars = buildHaloReducedStars(stars, haloAmount, haloLow, haloHigh);
       recombineScreen(candidate.mainView, haloStars === null ? stars : haloStars.mainView, true, amount/100);
       if (self.starReduction.checked)
          applyBlanshanStarReduction(candidate.mainView, nebula,
@@ -3205,16 +3207,31 @@ function buildRecombinedCandidate(nebula, stars, amount, self, haloAmount)
 
 function reviewStarRecombination(nebula, stars, self)
 {
-   var dialog = new HDRReviewDialog(nebula);
+   var baseline = buildRecombinedCandidate(nebula, stars, self.starBrightness.value, self, 0);
+   var dialog;
+   try { dialog = new HDRReviewDialog(baseline.mainView); }
+   catch (e) { baseline.forceClose(); throw e; }
    dialog.windowTitle = "Stars recombination review";
-   dialog.instructions.text = "Before: enhanced starless image. After: stars added back. Compare at 100%; drag to pan.\nAdjust stars brightness, Update Preview, then Apply or Keep starless. Halo reduction treats only a copy of the stars; 0 disables it. Start at 30-50%. Selected star reduction is included.";
+   dialog.instructions.text = "Before: untreated recombination. After: halo-treated recombination, at the SAME stars brightness.\nAdjust halo amount and mask limits, then Update Preview. Compare at 100% or Difference x10. Keep starless preserves the nebula. Selected star reduction affects both.";
    dialog.layersLabel.text = "Halo reduction (%):";
    dialog.layers.minValue = 0;
    dialog.layers.maxValue = 100;
    dialog.layers.value = 0;
-   dialog.layers.toolTip = "0 disables halo treatment. Start at 30-50%, then Update Preview. Faint wings are dimmed through a smooth mask; bright cores are protected. Inspect small stars and check for dark rings.";
+   dialog.layers.toolTip = "Percentage of stars light removed where the halo mask is fully white. 0 disables it. Start at 30%. Inspect small stars and dark rings before using strong amounts.";
    dialog.strengthLabel.text = "Stars brightness (%):";
    dialog.strength.value = self.starBrightness.value;
+   dialog.haloLow = new SpinBox(dialog); dialog.haloLow.minValue = 0; dialog.haloLow.maxValue = 999; dialog.haloLow.value = 5;
+   dialog.haloHigh = new SpinBox(dialog); dialog.haloHigh.minValue = 1; dialog.haloHigh.maxValue = 1000; dialog.haloHigh.value = 350;
+   var limitsLabel = new Label(dialog); limitsLabel.text = "Halo mask lower / upper (0-1000):";
+   var limits = new HorizontalSizer; limits.spacing = 8;
+   limits.add(limitsLabel); limits.add(dialog.haloLow); limits.add(dialog.haloHigh); limits.addStretch();
+   dialog.sizer.insert(4, limits);
+   dialog.haloLow.toolTip = "5 means 0.005. Lower this to include faint wings; raising it protects more faint stars/background.";
+   dialog.haloHigh.toolTip = "350 means 0.35. Raise to include brighter wings; lower to protect more bright-star pixels.";
+   var dirtyHalo = function() { dialog.applyButton.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   dialog.haloLow.onValueUpdated = dirtyHalo; dialog.haloHigh.onValueUpdated = dirtyHalo;
+   dialog.adjustToContents();
+
    dialog.applyButton.text = "Apply recombination";
    dialog.skipButton.text = "Keep starless";
    dialog.keepComparison.text = "Keep enhanced starless comparison";
@@ -3229,19 +3246,31 @@ function reviewStarRecombination(nebula, stars, self)
          if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate = null; }
          dialog.afterBitmap = null;
          dialog.differenceBitmap = null;
-         dialog.candidate = buildRecombinedCandidate(nebula, stars, dialog.strength.value, self, dialog.layers.value);
+         var untreated = buildRecombinedCandidate(nebula, stars, dialog.strength.value, self, 0);
+         try
+         {
+            baseline.mainView.beginProcess(UndoFlag.NoSwapFile);
+            try { baseline.mainView.image.assign(untreated.mainView.image); }
+            finally { baseline.mainView.endProcess(); }
+         }
+         finally { untreated.forceClose(); }
+         baseline.mainView.image.resetSelections();
+         dialog.beforeBitmap = baseline.mainView.image.render(1, false);
+         dialog.candidate = buildRecombinedCandidate(nebula, stars, dialog.strength.value, self,
+            dialog.layers.value, dialog.haloLow.value/1000, dialog.haloHigh.value/1000);
          dialog.candidate.mainView.image.resetSelections();
          dialog.afterBitmap = dialog.candidate.mainView.image.render(1, false);
          dialog.displayMode.currentItem = 1;
          dialog.previewStatus.text = "Stars brightness " + dialog.strength.value + "%; halo reduction " + dialog.layers.value + "%. " +
-            previewChangeSummary(nebula.image, dialog.candidate.mainView.image);
+            previewChangeSummary(baseline.mainView.image, dialog.candidate.mainView.image);
+         logLine("Halo treatment compared with untreated recombination: " + dialog.previewStatus.text);
          dialog.applyButton.enabled = true;
       }
       catch (e)
       {
          if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate = null; }
          dialog.displayMode.currentItem = 0;
-         dialog.previewStatus.text = "Preview failed; showing starless. " + errorMessage(e);
+         dialog.previewStatus.text = "Preview failed; showing untreated recombination. " + errorMessage(e);
       }
       finally { dialog.enabled = true; dialog.preview.repaint(); dialog.previewStatus.repaint(); CoreApplication.processEvents(); }
    };
@@ -3260,6 +3289,7 @@ function reviewStarRecombination(nebula, stars, self)
    {
       if (!accepted && dialog.candidate !== null && !dialog.candidate.isNull)
          dialog.candidate.forceClose();
+      baseline.forceClose();
    }
 }
 

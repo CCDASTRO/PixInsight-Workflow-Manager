@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.24"
+#define VERSION "1.1.25"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -3141,12 +3141,58 @@ function buildControlledStars(fullView, rawStarlessView)
    }
 }
 
-function buildRecombinedCandidate(nebula, stars, amount, self)
+function buildHaloReducedStars(view, amount)
 {
-   var candidate = cloneHDRView(nebula, "_Recombined");
+   if (!finiteNumber(amount) || amount < 0 || amount > 100)
+      throw new Error("Halo reduction amount must be between 0 and 100.");
+   var candidate = cloneHDRView(view, "_HaloReduced");
+   var mask = null;
    try
    {
-      recombineScreen(candidate.mainView, stars, true, amount/100);
+      clearDisplaySTF(candidate.mainView);
+      if (amount === 0) return candidate;
+      mask = new ImageWindow(view.image.width, view.image.height, 1, 32, true, false,
+         uniqueMainViewId(view.id + "_HaloMask"));
+      var l = view.image.isColor ? "(" + view.fullId + "[0]+" + view.fullId + "[1]+" + view.fullId + "[2])/3" : view.fullId;
+      var process = new PixelMath;
+      process.useSingleExpression = true; process.createNewImage = false;
+      process.rescale = false; process.truncate = true; process.symbols = "";
+      // Select faint wings, taper to protect background and bright cores.
+      process.expression = "min(1,max(0,((" + l + ")-0.03)/0.02))*min(1,max(0,(0.25-(" + l + "))/0.02))";
+      if (!process.executeOn(mask.mainView)) throw new Error("Halo mask generation failed.");
+      var blur = new Convolution;
+      blur.mode = Convolution.Parametric; blur.sigma = 2; blur.shape = 2;
+      blur.aspectRatio = 1; blur.rotationAngle = 0; blur.rescaleHighPass = false;
+      if (!blur.executeOn(mask.mainView)) throw new Error("Halo mask smoothing failed.");
+      candidate.setMask(mask); candidate.maskEnabled = true;
+      candidate.maskInverted = false; candidate.maskVisible = false;
+      var curves = new CurvesTransformation;
+      var channels = ["R","G","B","K","A","L","a","b","c","H","S"];
+      for (var i = 0; i < channels.length; ++i)
+      {
+         curves[channels[i]] = [[0,0],[1,1]];
+         curves[channels[i]+"t"] = CurvesTransformation.AkimaSubsplines;
+      }
+      curves.K = [[0,0],[0.05,0.05-0.015*amount/100],[0.4,0.4],[1,1]];
+      if (!curves.executeOn(candidate.mainView)) throw new Error("Masked halo reduction failed.");
+      candidate.removeMask();
+      checkAbortRequested();
+      logLine("Stars halo reduction=" + amount + "%; smooth brightness mask 0.03-0.25, feather 0.02, sigma 2; RGB/K curve protects bright cores.");
+      return candidate;
+   }
+   catch (e) { try { candidate.removeMask(); } finally { candidate.forceClose(); } throw e; }
+   finally { if (mask !== null) mask.forceClose(); }
+}
+
+function buildRecombinedCandidate(nebula, stars, amount, self, haloAmount)
+{
+   var candidate = cloneHDRView(nebula, "_Recombined");
+   var haloStars = null;
+   try
+   {
+      if (typeof haloAmount === "number" && haloAmount > 0)
+         haloStars = buildHaloReducedStars(stars, haloAmount);
+      recombineScreen(candidate.mainView, haloStars === null ? stars : haloStars.mainView, true, amount/100);
       if (self.starReduction.checked)
          applyBlanshanStarReduction(candidate.mainView, nebula,
             self.starReductionIterations.value, self.starReductionMethod.currentItem + 1);
@@ -3154,15 +3200,19 @@ function buildRecombinedCandidate(nebula, stars, amount, self)
       return candidate;
    }
    catch (e) { candidate.forceClose(); throw e; }
+   finally { if (haloStars !== null) haloStars.forceClose(); }
 }
 
 function reviewStarRecombination(nebula, stars, self)
 {
    var dialog = new HDRReviewDialog(nebula);
    dialog.windowTitle = "Stars recombination review";
-   dialog.instructions.text = "Before: enhanced starless image. After: stars added back. Compare at 100%; drag to pan.\nAdjust stars brightness, Update Preview, then Apply or Keep starless. Selected star reduction is included in the preview.";
-   dialog.layers.visible = false;
-   dialog.layersLabel.visible = false;
+   dialog.instructions.text = "Before: enhanced starless image. After: stars added back. Compare at 100%; drag to pan.\nAdjust stars brightness, Update Preview, then Apply or Keep starless. Halo reduction treats only a copy of the stars; 0 disables it. Start at 30-50%. Selected star reduction is included.";
+   dialog.layersLabel.text = "Halo reduction (%):";
+   dialog.layers.minValue = 0;
+   dialog.layers.maxValue = 100;
+   dialog.layers.value = 0;
+   dialog.layers.toolTip = "0 disables halo treatment. Start at 30-50%, then Update Preview. Faint wings are dimmed through a smooth mask; bright cores are protected. Inspect small stars and check for dark rings.";
    dialog.strengthLabel.text = "Stars brightness (%):";
    dialog.strength.value = self.starBrightness.value;
    dialog.applyButton.text = "Apply recombination";
@@ -3179,11 +3229,11 @@ function reviewStarRecombination(nebula, stars, self)
          if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate = null; }
          dialog.afterBitmap = null;
          dialog.differenceBitmap = null;
-         dialog.candidate = buildRecombinedCandidate(nebula, stars, dialog.strength.value, self);
+         dialog.candidate = buildRecombinedCandidate(nebula, stars, dialog.strength.value, self, dialog.layers.value);
          dialog.candidate.mainView.image.resetSelections();
          dialog.afterBitmap = dialog.candidate.mainView.image.render(1, false);
          dialog.displayMode.currentItem = 1;
-         dialog.previewStatus.text = "Stars brightness " + dialog.strength.value + "%. " +
+         dialog.previewStatus.text = "Stars brightness " + dialog.strength.value + "%; halo reduction " + dialog.layers.value + "%. " +
             previewChangeSummary(nebula.image, dialog.candidate.mainView.image);
          dialog.applyButton.enabled = true;
       }

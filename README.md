@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.24
+# CCDASTRO PixInsight Workflow Manager v1.1.25
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.24 quick start
+## v1.1.25 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -27,6 +27,29 @@ manager for an integrated linear color master.
    images are not enlarged. Cancelling either save leaves the processed image open.
 
 The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
+
+## Easy stars halo reduction (v1.1.25)
+
+In **Stars recombination review**, **Halo reduction (%)** automatically creates
+and applies a smooth mask to a temporary copy of ControlledStars. No manual mask
+or Curves setup is needed. Original controlled stars and enhanced starless pixels
+remain unchanged.
+
+1. Keep **Stars brightness** at your chosen setting (50% for our current test).
+2. Leave **Halo reduction** at **0** and **Update Preview** for the untreated baseline.
+3. Try **30-50% halo reduction**, then **Update Preview** again. Compare at 100%,
+   especially bright-star wings and nearby small stars. Apply only if improved.
+4. If dark rings or weakened small stars appear, reduce the amount or return to 0.
+   **Keep starless** remains available. Keep Bill Blanshan reduction off for this test.
+
+The mask uses mean RGB brightness (grayscale brightness for mono), limits 0.03
+and 0.25, feather 0.02 and Gaussian smoothing sigma 2. Native RGB/K Curves lowers
+0.05 toward 0.035 as amount increases to 100%, with anchors at 0, 0.4 and 1.
+This approximates the manual mask test; it is not the identical CIE Lightness
+RangeSelection mask. Bright cores and very dark background are protected, but
+small star wings can also be affected. This reduces halo prominence; it does not
+identify or repair the optical cause. The preview includes the accepted stars
+brightness and any separately selected star reduction. Native testing is pending.
 
 ## Enhance nebulosity before adding stars back (v1.1.24)
 
@@ -154,6 +177,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.25:** Adds optional masked halo reduction amount inside stars recombination preview; original stars and starless layers preserved. Native testing pending.
 - **v1.1.24:** Replaces sparse stars-only automatic stretch with matched full/starless reference stretches; preserves linear stars and adds adjustable recombination preview with Apply or Keep starless. Native testing pending.
 - **v1.1.23:** Optional starless stretch and enhancement before controlled-brightness star recombination; retains the enhanced starless view. Native testing pending.
 - **v1.1.22:** Adds PCC as an alternative to default SPCC using the configured CCDASTRO_PCC icon; shared plate-solving preflight and preserved calibration settings. Native PCC testing pending.

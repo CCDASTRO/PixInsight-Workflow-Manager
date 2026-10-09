@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.28"
+#define VERSION "1.1.29"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -31,6 +31,7 @@ var SYQON_STARLESS_ICON = "CCDASTRO_Starless";
 var adapterHelp = {
    interactiveCrop: "Review a rectangular crop on a separate linear copy and return to workflow settings.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
+   autoDBE: "Runs installed Seti Astro Automatic DBE 1.6. Uses vendor defaults or an optional CCDASTRO_AutoDBE Script icon; corrects only the working copy. Setup explains configuration.",
    graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
    mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Requires CCDASTRO_SPFC and CCDASTRO_MGC process icons and suitable MARS data. SPCC remains separate.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
@@ -610,6 +611,65 @@ function executeSyQonEngine(id, process, view)
    logLine("SyQon " + definition.name + " completed on " + view.fullId);
 }
 
+// Seti Astro AutoDBE is loaded from the user's installation, never bundled.
+function compileAutoDBEEngine(source)
+{
+   var directive = new RegExp('^#define\\s+'+'VER'+'SION'+'\\s+"([^"\\r\\n]+)"[^\\r\\n]*','m');
+   var version = source.match(directive);
+   if (!version || version[1] !== "1.6")
+      throw new Error("Seti Astro AutoDBE integration supports version 1.6. Update or review the installed script before using this adapter.");
+   source = source.replace(/^#(?:engine|feature-id|feature-icon|feature-info)\b[^\r\n]*/gm, "").replace(directive, "");
+   if (/^\s*#/m.test(source) || !/\bmain\(\);\s*$/.test(source))
+      throw new Error("Unsupported AutoDBE script layout.");
+   source = source.replace(/\bmain\(\);\s*$/, "");
+   var start = source.indexOf("function executeDBEWithEndPoints(");
+   var call = start < 0 ? -1 : source.indexOf("P.executeOn( targetView );", start);
+   if (call < 0) throw new Error("AutoDBE correction completion guard could not be installed.");
+   source = source.substring(0,call) +
+      "if (!P.executeOn(targetView)) throw new Error('AutoDBE correction failed.'); ccAutoDBECorrected = true;" +
+      source.substring(call+"P.executeOn( targetView );".length);
+   return new Function("Parameters", "VERSION", source +
+      "\nvar ccAutoDBECorrected = false; return function(view) {"+
+      "GradientDescentParameters.load(); GradientDescentParameters.targetView=view;"+
+      "GradientDescentParameters.replaceTarget=true; GradientDescentParameters.discardModel=true;"+
+      "executeGradientDescent(view, []); if (!ccAutoDBECorrected) throw new Error('AutoDBE did not complete correction.'); };"
+   );
+}
+
+function AutoDBEAdapter()
+{
+   this.id = "autoDBE"; this.label = "Seti Astro Automatic DBE";
+   this.iconId = "CCDASTRO_AutoDBE";
+}
+AutoDBEAdapter.prototype.scriptPath = function() { return CoreApplication.srcDirPath + "/scripts/AutoDBE.js"; };
+AutoDBEAdapter.prototype.available = function() { return File.exists(this.scriptPath()); };
+AutoDBEAdapter.prototype.requirement = function() { return "Install Seti Astro Automatic DBE 1.6 (AutoDBE.js). Optional custom Script icon: CCDASTRO_AutoDBE."; };
+AutoDBEAdapter.prototype.prepare = function(view)
+{
+   if (!this.available()) throw new Error(this.requirement());
+   if (!view.isMainView) throw new Error("Automatic DBE requires a main image view.");
+   var rows = [];
+   if (ProcessInstance.icons().indexOf(this.iconId) >= 0)
+   {
+      var process = ProcessInstance.fromIcon(this.iconId);
+      if (!process || process.processId() !== "Script" || !/AutoDBE\.js$/i.test(String(process.filePath)))
+         throw new Error("CCDASTRO_AutoDBE must be a Script icon created from Seti Astro Automatic DBE.");
+      rows = process.parameters;
+   }
+   var factory = compileAutoDBEEngine(File.readTextFile(this.scriptPath()));
+   var parameters = syqonParameterBridge(rows, view);
+   parameters.get = parameters.getString;
+   return function() { factory(parameters, "1.6")(view); };
+};
+AutoDBEAdapter.prototype.validateSetup = function(view) { this.prepare(view); };
+AutoDBEAdapter.prototype.execute = function(view)
+{
+   var run = this.prepare(view);
+   logLine("Running Seti Astro Automatic DBE on " + view.fullId + "; replacing workflow working copy, discarding gradient model.");
+   run(); checkAbortRequested();
+   logLine("Seti Astro Automatic DBE completed on " + view.fullId);
+};
+
 // A composite gradient adapter: never apply MGC without fresh flux calibration.
 function MGCAdapter()
 {
@@ -836,6 +896,7 @@ var plateSolveSettings = new PlateSolveSettings;
 
 var adapters = {
    mgc: new MGCAdapter,
+   autoDBE: new AutoDBEAdapter,
    interactiveCrop: new InteractiveCropAdapter,
 
    gradientCorrection: new ProcessAdapter(
@@ -914,7 +975,7 @@ function defaultWorkflow()
          ["interactiveCrop"], "interactiveCrop",
          "Optional: rectangular crop preview; Apply or Skip returns to workflow settings.", false),
       new WorkflowStep("gradient", "1. Gradient correction",
-         ["gradientCorrection", "graxpert", "mgc"], "gradientCorrection",
+         ["gradientCorrection", "graxpert", "mgc", "autoDBE"], "gradientCorrection",
          "Runs before color calibration. MGC includes an earlier plate solve and SPFC prerequisite."),
       new WorkflowStep("plateSolve", "2. Plate solve if needed",
          ["plateSolve"], "plateSolve",
@@ -1578,7 +1639,7 @@ function WorkflowRow(parent, step)
    {
       this.setup = new PushButton(parent);
       this.setup.text = "Setup...";
-      this.setup.toolTip = step.id === "gradient" ? "MGC setup instructions and plate-solving seed values." : "Review metadata-derived ImageSolver seed values.";
+      this.setup.toolTip = step.id === "gradient" ? "Setup instructions for the selected gradient tool." : "Review metadata-derived ImageSolver seed values.";
    }
    this.adapterId = function() { return this.step.adapterIds[this.choice.currentItem]; };
    this.setVisible = function(visible)
@@ -1596,7 +1657,7 @@ function WorkflowRow(parent, step)
    this.refreshStatus = function()
    {
       if (this.step.id === "gradient")
-         this.setup.enabled = this.enabled.checked && this.adapterId() === "mgc";
+         this.setup.enabled = this.enabled.checked && (this.adapterId() === "mgc" || this.adapterId() === "autoDBE");
       if (!this.enabled.checked)
       {
          this.status.text = this.step.id === "crop" ? "Optional" : "Skipped";
@@ -1641,6 +1702,11 @@ function WorkflowRow(parent, step)
       {
          try
          {
+            if (self.step.id === "gradient" && self.adapterId() === "autoDBE")
+            {
+               (new MessageBox("Seti Astro Automatic DBE setup:\n\nInstall Automatic DBE 1.6 from Seti Astro. No icon is needed for vendor defaults.\n\nFor custom settings, open Automatic DBE, configure it, and drag its new-instance triangle to the workspace. Rename the Script icon CCDASTRO_AutoDBE. Keep the icon in the workspace.\n\nThe workflow always replaces only its working copy and discards the gradient model. Automatic execution does not use manually drawn exclusion regions. For crowded nebulosity, inspect a manual result before choosing these settings.", "Automatic DBE Setup", StdIcon.Information, StdButton.Ok)).execute();
+               self.refreshStatus(); return;
+            }
             if (self.step.id === "gradient")
                (new MessageBox("MGC setup:\n\n1. Configure SpectrophotometricFluxCalibration for your camera/QE, filters, and Gaia catalog; save its process icon as CCDASTRO_SPFC.\n\n" +
                   "2. Configure MultiscaleGradientCorrection with installed MARS data and matching filters; save its process icon as CCDASTRO_MGC.\n\n" +

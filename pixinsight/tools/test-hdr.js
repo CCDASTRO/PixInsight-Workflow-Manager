@@ -34,6 +34,11 @@ assert.equal(result, f.windows[0]);
 assert.deepEqual(f.calls, ["hdr", "blend"]);
 assert.equal(f.processes[0].numberOfLayers, 6);
 assert.equal(f.processes[0].toLightness, true);
+assert.equal(f.processes[0].luminanceMask, true);
+assert.equal(f.processes[0].deringing, true);
+assert.equal(f.processes[0].smallScaleDeringing, 0);
+assert.equal(f.processes[0].largeScaleDeringing, .25);
+assert.equal(f.processes[0].outputDeringingMaps, false);
 assert.equal(f.processes[1].expression, "(0.7)*original + (0.3)*$T");
 assert.equal(result.closed, undefined);
 for (const failure of ["hdr", "blend", "abort"]) {

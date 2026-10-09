@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.29
+# CCDASTRO PixInsight Workflow Manager v1.1.30
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.29 quick start
+## v1.1.30 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -27,6 +27,22 @@ manager for an integrated linear color master.
    images are not enlarged. Cancelling either save leaves the processed image open.
 
 The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
+
+## HDR ringing protection (v1.1.30)
+
+The optional HDR review now explicitly enables native HDRMultiscaleTransform
+**Deringing**, with **Small-scale 0.00**, **Large-scale 0.25**, and the existing
+lightness mask. Deringing maps are not generated. Layers and blend remain
+adjustable, starting at 6 layers and 30% blend; each preview starts from the
+untreated image rather than stacking HDR applications.
+
+This applies to HDR on the enhanced starless branch and to HDR on the combined
+image. Compare Before/After at 100% around bright edges. Deringing aims to limit
+new processing rings; it does not repair pre-existing halos or recover clipped
+detail. Skip HDR or reduce blend if it introduces unwanted edges or flattens
+structure. Native workflow testing of these explicit settings remains pending.
+The full linear workflow still requires an unstretched master; do not feed it
+an LRGB image made from previously stretched channels.
 
 ## Seti Astro Automatic DBE (v1.1.29)
 
@@ -211,6 +227,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.30:** Explicitly enables conservative HDR deringing in both HDR paths and logs its settings. Pre-existing halos remain a separate issue.
 - **v1.1.29:** Adds Seti Astro Automatic DBE 1.6 as a gradient-removal choice, with vendor defaults, an optional configured icon and setup instructions. Native integration testing pending.
 - **v1.1.28:** Fixes the native MorphologicalTransformation operator enum that prevented spatial halo mask generation and treatment. Regression tests now reject invalid operator types. Native testing pending.
 - **v1.1.27:** Replaces intensity-band treatment with a spatial bright-star halo mask, core protection, radius/feather controls, and a mask preview. Native testing pending.

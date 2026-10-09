@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.29"
+#define VERSION "1.1.30"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2213,6 +2213,11 @@ function buildHDRCandidate(view, layers, strength)
       hdr.toLightness = view.image.isColor;
       hdr.preserveHue = view.image.isColor;
       hdr.luminanceMask = true;
+      hdr.deringing = true;
+      hdr.smallScaleDeringing = 0.00;
+      hdr.largeScaleDeringing = 0.25;
+      hdr.outputDeringingMaps = false;
+      logLine("HDR ringing protection: deringing enabled; small-scale=0.00, large-scale=0.25; lightness mask enabled.");
       if (!hdr.executeOn(window.mainView))
          throw new Error("HDRMultiscaleTransform failed.");
       checkAbortRequested();

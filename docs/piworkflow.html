@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.29",
+    "softwareVersion": "1.1.30",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,11 +160,11 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.29">CCDASTRO PixInsight Workflow Manager v1.1.29</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.30">CCDASTRO PixInsight Workflow Manager v1.1.30</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
-<h2 id="v1.1.29-quick-start">v1.1.29 quick start</h2>
+<h2 id="v1.1.30-quick-start">v1.1.30 quick start</h2>
 <ol>
 <li>Select your original integrated, unstretched color master. For BlurXTerminator, load your configured <strong>CCDASTRO_BlurX</strong> workspace icon; its Correct Only and sharpening settings control the run. Run <strong>Validate</strong>,
 then <strong>Run Workflow</strong>. Processing uses a separate working copy; the original
@@ -186,6 +186,19 @@ Your chosen default is <strong>JPEG quality 95, longest edge 2048 pixels</strong
 images are not enlarged. Cancelling either save leaves the processed image open.</li>
 </ol>
 <p>The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.</p>
+<h2 id="hdr-ringing-protection-v1.1.30">HDR ringing protection (v1.1.30)</h2>
+<p>The optional HDR review now explicitly enables native HDRMultiscaleTransform
+<strong>Deringing</strong>, with <strong>Small-scale 0.00</strong>, <strong>Large-scale 0.25</strong>, and the existing
+lightness mask. Deringing maps are not generated. Layers and blend remain
+adjustable, starting at 6 layers and 30% blend; each preview starts from the
+untreated image rather than stacking HDR applications.</p>
+<p>This applies to HDR on the enhanced starless branch and to HDR on the combined
+image. Compare Before/After at 100% around bright edges. Deringing aims to limit
+new processing rings; it does not repair pre-existing halos or recover clipped
+detail. Skip HDR or reduce blend if it introduces unwanted edges or flattens
+structure. Native workflow testing of these explicit settings remains pending.
+The full linear workflow still requires an unstretched master; do not feed it
+an LRGB image made from previously stretched channels.</p>
 <h2 id="seti-astro-automatic-dbe-v1.1.29">Seti Astro Automatic DBE (v1.1.29)</h2>
 <p><strong>Gradient correction</strong> now offers <strong>Seti Astro Automatic DBE</strong> alongside
 GradientCorrection, GraXpert and MGC. Install <strong>Automatic DBE 1.6</strong> from
@@ -348,6 +361,8 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.30:</strong> Explicitly enables conservative HDR deringing in both HDR paths and logs its settings. Pre-existing halos remain a separate issue.</p>
+</li>
 <li><p><strong>v1.1.29:</strong> Adds Seti Astro Automatic DBE 1.6 as a gradient-removal choice, with vendor defaults, an optional configured icon and setup instructions. Native integration testing pending.</p>
 </li>
 <li><p><strong>v1.1.28:</strong> Fixes the native MorphologicalTransformation operator enum that prevented spatial halo mask generation and treatment. Regression tests now reject invalid operator types. Native testing pending.</p>

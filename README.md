@@ -51,6 +51,21 @@ Native workflow testing of this new review position remains pending.
 
 ## HDR ringing protection (v1.1.30)
 
+The workflow sets these native HDR process controls automatically for both
+starless HDR and HDR after recombination:
+
+- **To lightness:** enabled for color images.
+- **Preserve hue:** enabled for color images.
+- **Lightness mask:** enabled.
+- **Deringing:** enabled.
+- **Small-scale deringing:** 0.00.
+- **Large-scale deringing:** 0.25.
+- **Iterations:** 1.
+
+The workflow HDR review exposes **Layers** and **Blend (%)**. Changing settings
+in the standalone HDRMultiscaleTransform process window does not change these
+workflow settings.
+
 The optional HDR review now explicitly enables native HDRMultiscaleTransform
 **Deringing**, with **Small-scale 0.00**, **Large-scale 0.25**, and the existing
 lightness mask. Deringing maps are not generated. Layers and blend remain

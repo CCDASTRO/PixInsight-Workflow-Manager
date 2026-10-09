@@ -204,6 +204,20 @@ recombined image. Deringing remains enabled with small-scale 0.00 / large-scale
 0.25 and the lightness mask. Existing halos and clipped detail are not repaired.
 Native workflow testing of this new review position remains pending.</p>
 <h2 id="hdr-ringing-protection-v1.1.30">HDR ringing protection (v1.1.30)</h2>
+<p>The workflow sets these native HDR process controls automatically for both
+starless HDR and HDR after recombination:</p>
+<ul>
+<li><strong>To lightness:</strong> enabled for color images.</li>
+<li><strong>Preserve hue:</strong> enabled for color images.</li>
+<li><strong>Lightness mask:</strong> enabled.</li>
+<li><strong>Deringing:</strong> enabled.</li>
+<li><strong>Small-scale deringing:</strong> 0.00.</li>
+<li><strong>Large-scale deringing:</strong> 0.25.</li>
+<li><strong>Iterations:</strong> 1.</li>
+</ul>
+<p>The workflow HDR review exposes <strong>Layers</strong> and <strong>Blend (%)</strong>. Changing settings
+in the standalone HDRMultiscaleTransform process window does not change these
+workflow settings.</p>
 <p>The optional HDR review now explicitly enables native HDRMultiscaleTransform
 <strong>Deringing</strong>, with <strong>Small-scale 0.00</strong>, <strong>Large-scale 0.25</strong>, and the existing
 lightness mask. Deringing maps are not generated. Layers and blend remain

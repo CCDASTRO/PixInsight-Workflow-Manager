@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.30
+# CCDASTRO PixInsight Workflow Manager v1.1.31
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.30 quick start
+## v1.1.31 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -27,6 +27,27 @@ manager for an integrated linear color master.
    images are not enlarged. Cancelling either save leaves the processed image open.
 
 The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
+
+## Optional HDR after stars recombination (v1.1.31)
+
+Enable **Optional HDR after stars recombination: review combined core and stars**
+for a separate HDR review after stars are added back. This is useful for inspecting
+bright nebula cores and embedded stars, such as M42's Trapezium, together.
+The option defaults off, is remembered, and requires star separation plus automatic
+recombination. It does not perform another histogram stretch.
+
+With **Enhance starless image before adding stars back** checked, the existing
+Optional HDR selection still reviews the starless branch. The new checkbox adds
+a combined-image review afterward. For a first M42 test, enable only the new HDR
+checkbox to isolate its effect; leave the original HDR checkbox off. If Enhance
+starless is off and both HDR boxes are checked, only one final HDR review runs.
+Choosing **Keep starless** skips the combined-image HDR review.
+
+Start with **6 layers, 30% blend** and compare at 100% around the core. Raise the
+blend only if useful; Apply retains a separate result, while Skip keeps the
+recombined image. Deringing remains enabled with small-scale 0.00 / large-scale
+0.25 and the lightness mask. Existing halos and clipped detail are not repaired.
+Native workflow testing of this new review position remains pending.
 
 ## HDR ringing protection (v1.1.30)
 
@@ -227,6 +248,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.31:** Adds an optional post-recombination HDR review, including with starless enhancement enabled; remembers the selection and skips it when stars are not added back.
 - **v1.1.30:** Explicitly enables conservative HDR deringing in both HDR paths and logs its settings. Pre-existing halos remain a separate issue.
 - **v1.1.29:** Adds Seti Astro Automatic DBE 1.6 as a gradient-removal choice, with vendor defaults, an optional configured icon and setup instructions. Native integration testing pending.
 - **v1.1.28:** Fixes the native MorphologicalTransformation operator enum that prevented spatial halo mask generation and treatment. Regression tests now reject invalid operator types. Native testing pending.

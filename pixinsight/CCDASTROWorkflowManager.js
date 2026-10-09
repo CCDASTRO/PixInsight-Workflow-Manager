@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.30"
+#define VERSION "1.1.31"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -135,7 +135,7 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 7,
+      schemaVersion: 8,
       finishStarless: dialog.finishStarless.checked,
       starBrightness: dialog.starBrightness.value,
       resumeAfterCrop: resumeAfterCrop === true,
@@ -146,6 +146,7 @@ function captureWorkflowState(dialog, resumeAfterCrop)
       starsStretch: dialog.starsStretch.currentItem,
       finalStretch: dialog.finalStretch.currentItem,
       hdrEnabled: dialog.hdrEnabled.checked,
+      combinedHDREnabled: dialog.combinedHDREnabled.checked,
       adaptiveEnabled: dialog.adaptiveEnabled.checked,
       finishingEnabled: dialog.finishingEnabled.checked,
       recombine: dialog.recombine.checked,
@@ -199,7 +200,7 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || (state.schemaVersion !== 4 && state.schemaVersion !== 5 && state.schemaVersion !== 6) || !state.steps)
+      if (!state || ([4,5,6,7,8].indexOf(state.schemaVersion) < 0) || !state.steps)
          return false;
       if (state.schemaVersion >= 5 && state.imageType >= 0 &&
           state.imageType < WORKFLOW_PROFILES.length)
@@ -239,6 +240,7 @@ function restoreWorkflowState(dialog)
       if (finiteNumber(state.starBrightness) && state.starBrightness >= 0 && state.starBrightness <= 100)
          dialog.starBrightness.value = state.starBrightness;
       dialog.hdrEnabled.checked = state.hdrEnabled === true;
+      dialog.combinedHDREnabled.checked = state.combinedHDREnabled === true;
       dialog.adaptiveEnabled.checked = state.adaptiveEnabled === true;
       dialog.finishingEnabled.checked = state.finishingEnabled !== false;
       dialog.starReduction.checked = state.starReduction === true;
@@ -304,6 +306,7 @@ function resetWorkflowControls(dialog)
    dialog.finalStretch.currentItem = 1;
    dialog.recombine.checked = true;
    dialog.hdrEnabled.checked = false;
+   dialog.combinedHDREnabled.checked = false;
    dialog.adaptiveEnabled.checked = false;
    dialog.finishingEnabled.checked = true;
    dialog.starReduction.checked = false;
@@ -1420,7 +1423,8 @@ PreflightValidator.prototype.validate = function()
       result.errors.push("Use either the final recombined stretch or the advanced branch stretches, not both.");
    if (this.dialog.starReduction.checked && !this.dialog.recombine.checked)
       result.errors.push("Bill Blanshan star reduction requires automatic branch recombination.");
-   if (this.dialog.hdrEnabled && this.dialog.hdrEnabled.checked)
+   if ((this.dialog.hdrEnabled && this.dialog.hdrEnabled.checked) ||
+       (this.dialog.combinedHDREnabled && this.dialog.combinedHDREnabled.checked))
    {
       if (resolveProcessClass(["HDRMultiscaleTransform"]) === null)
          result.errors.push("HDRMultiscaleTransform is unavailable.");
@@ -1430,6 +1434,9 @@ PreflightValidator.prototype.validate = function()
           this.dialog.starlessStretch.currentItem === 0)
          result.errors.push("HDR review requires an image stretch in this workflow.");
    }
+   if (this.dialog.combinedHDREnabled && this.dialog.combinedHDREnabled.checked &&
+       (!separationEnabled || !this.dialog.recombine.checked))
+      result.errors.push("HDR after stars recombination requires star separation and automatic recombination.");
    if (this.dialog.adaptiveEnabled && this.dialog.adaptiveEnabled.checked)
    {
       if (resolveProcessClass(["CurvesTransformation"]) === null)
@@ -1949,6 +1956,11 @@ constructor()
    this.hdrEnabled.checked = false;
    this.hdrEnabled.toolTip = "After stretching and star reduction, review native HDRMultiscaleTransform on a copy. Adjust layers and blend strength, then Apply or Skip. Requires a nonlinear final image.";
    this.branchesBox.sizer.add(this.hdrEnabled);
+   this.combinedHDREnabled = new CheckBox(this.content);
+   this.combinedHDREnabled.text = "Optional HDR after stars recombination: review combined core and stars";
+   this.combinedHDREnabled.checked = false;
+   this.combinedHDREnabled.toolTip = "Additional HDR review after adding stars back, including when Enhance starless is checked. Uses deringing. Requires separation and recombination. Skipped if Keep starless is chosen. With Enhance starless off, overlapping HDR selections produce one final review.";
+   this.branchesBox.sizer.add(this.combinedHDREnabled);
    this.adaptiveEnabled = new CheckBox(this.content);
    this.adaptiveEnabled.text = "Optional CurvesTransformation: preview before saving";
    this.adaptiveEnabled.checked = false;
@@ -3315,6 +3327,7 @@ function buildRecombinedCandidate(nebula, stars, amount, self, haloAmount, haloS
 
 function reviewStarRecombination(nebula, stars, self)
 {
+   self.recombinedStarsApplied = false;
    var baseline = buildRecombinedCandidate(nebula, stars, self.starBrightness.value, self, 0);
    var dialog;
    try { dialog = new HDRReviewDialog(baseline.mainView); }
@@ -3423,6 +3436,7 @@ function reviewStarRecombination(nebula, stars, self)
       if (dialog.candidate === null || !dialog.applyButton.enabled)
          throw new Error("Update the recombination preview before applying.");
       self.starBrightness.value = dialog.strength.value;
+      self.recombinedStarsApplied = true;
       dialog.candidate.show();
       accepted = true;
       return dialog.candidate.mainView;
@@ -3453,6 +3467,23 @@ function enhanceStarlessAndRecombine(self, branches)
    checkAbortRequested();
    nebula.window.show();
    return reviewStarRecombination(nebula, branches.controlledStarsView, self);
+}
+
+function reviewFinalHDR(view, self, branches)
+{
+   var existingFinalHDR = !self.finishStarless.checked && self.hdrEnabled.checked;
+   var combinedHDR = self.combinedHDREnabled.checked && branches !== null;
+   if (combinedHDR && self.finishStarless.checked && !self.recombinedStarsApplied)
+   {
+      logLine("HDR after recombination skipped: Keep starless was chosen.");
+      combinedHDR = false;
+   }
+   if (existingFinalHDR || combinedHDR)
+   {
+      logLine(combinedHDR ? "Reviewing HDR after stars recombination (combined image)." : "Reviewing final-image HDR.");
+      return reviewHDR(view);
+   }
+   return view;
 }
 
 function executeWorkflow(self)
@@ -3591,8 +3622,7 @@ function executeWorkflow(self)
       if (branches === null || self.recombine.checked)
       {
          var finalView = branches === null ? view : branches.starlessView;
-         if (!self.finishStarless.checked && self.hdrEnabled.checked)
-            finalView = reviewHDR(finalView);
+         finalView = reviewFinalHDR(finalView, self, branches);
          if (!self.finishStarless.checked && self.adaptiveEnabled.checked)
             finalView = reviewAdaptive(finalView);
          checkAbortRequested();

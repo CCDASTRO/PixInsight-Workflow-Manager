@@ -58,5 +58,5 @@ for (const apply of [false, true]) {
   assert.equal(candidate.closed, apply ? undefined : true);
   if (apply) { assert.equal(candidate.shown, true); assert.equal(f.windows[0].shown, true); }
 }
-assert.ok(source.indexOf("finalView = reviewHDR(finalView)") < source.indexOf("saveFinalImage(finalView"));
+assert.ok(source.indexOf("finalView = reviewFinalHDR(finalView, self, branches)") < source.indexOf("saveFinalImage(finalView"));
 console.log("HDR processing, blend, failure cleanup, skip and comparison tests passed (mocked APIs).");

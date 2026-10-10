@@ -32,7 +32,7 @@ for (const name of ['HDRReviewDialog', 'AdaptiveReviewDialog']) {
   assert.equal(self.applyButton.enabled, true);
   assert.equal(calls.filter(x => x === 'paint').length, 2);
   assert.equal(calls.filter(x => x === 'close').length, 1);
-  assert.deepEqual(settings, name === 'HDRReviewDialog' ? [[6, 15], [8, 30]] : [[15, [[0,0],[1,1]], "K"], [30, [[0,0],[1,1]], "K"]]);
+  assert.deepEqual(settings, name === 'HDRReviewDialog' ? [[6, 15, null], [8, 30, null]] : [[15, [[0,0],[1,1]], "K"], [30, [[0,0],[1,1]], "K"]]);
 }
 const helper = source.slice(source.indexOf('function previewChangeSummary('), source.indexOf('class HDRReviewDialog'));
 const context = vm.createContext({ Math }); vm.runInContext(helper, context);

@@ -1,11 +1,11 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.31
+# CCDASTRO PixInsight Workflow Manager v1.1.32
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.31 quick start
+## v1.1.32 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -27,6 +27,25 @@ manager for an integrated linear color master.
    images are not enlarged. Cancelling either save leaves the processed image open.
 
 The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
+
+## Restrict HDR to a bright core (v1.1.32)
+
+In either HDR review, enable **Restrict HDR to bright core** to protect the darker
+outer nebula from the HDR blend. Start with **6 layers, 30% blend**, brightness
+threshold **550**, transition **150**, and feather **8 px**.
+
+Click **Show core mask**: white allows HDR, black protects the image, and gray
+partially blends it. Lower the threshold to cover more of the nebula; raise it to
+isolate brighter areas. Transition controls the brightness range over which the
+mask fades in; feather softens its spatial edges. The mask uses average RGB
+brightness in the current stretched image. Values 550 and 150 mean 0.55 and 0.15;
+the transition ends at the threshold plus its width, capped at 1.0.
+
+Click **Update Preview**, compare Before / After at 100%, then **Apply HDR** or
+**Skip HDR**. Mask preview alone does not enable restriction. The option starts
+off in each review, preserving the previous full-image blend. It uses no workspace
+icon and affects the HDR blend only; bright stars may also enter the mask.
+Native PixInsight testing of core restriction is pending.
 
 ## Optional HDR after stars recombination (v1.1.31)
 
@@ -263,6 +282,7 @@ visible. It returns automatically when the run ends.**
 
 ## Revision history
 
+- **v1.1.32:** Adds optional bright-core HDR restriction, adjustable threshold, transition and feathering, with inline mask inspection.
 - **v1.1.31:** Adds an optional post-recombination HDR review, including with starless enhancement enabled; remembers the selection and skips it when stars are not added back.
 - **v1.1.30:** Explicitly enables conservative HDR deringing in both HDR paths and logs its settings. Pre-existing halos remain a separate issue.
 - **v1.1.29:** Adds Seti Astro Automatic DBE 1.6 as a gradient-removal choice, with vendor defaults, an optional configured icon and setup instructions. Native integration testing pending.

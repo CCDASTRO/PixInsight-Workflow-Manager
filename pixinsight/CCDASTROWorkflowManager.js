@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.31"
+#define VERSION "1.1.32"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2213,12 +2213,115 @@ function cloneHDRView(view, suffix)
    catch (e) { window.forceClose(); throw e; }
 }
 
-function buildHDRCandidate(view, layers, strength)
+function buildHDRCoreMask(view, settings)
 {
-   var window = cloneHDRView(view, "_HDR");
+   var low = settings.threshold, width = settings.transition, feather = settings.feather;
+   if (!finiteNumber(low) || low < 0 || low >= 1 || !finiteNumber(width) || width <= 0 || width > 1 ||
+       !finiteNumber(feather) || feather < 0 || feather > 50)
+      throw new Error("HDR core mask requires threshold 0-0.999, transition above zero, and feather 0-50 px.");
+   var mask = new ImageWindow(view.image.width, view.image.height, 1, 32, true, false,
+      uniqueMainViewId(view.id + "_HDRCoreMask"));
    try
    {
       checkAbortRequested();
+      var light = view.image.isColor ? "("+view.fullId+"[0]+"+view.fullId+"[1]+"+view.fullId+"[2])/3" : view.fullId;
+      var ramp = "min(1,max(0,(("+light+")-"+low+")/"+Math.min(width,1-low)+"))";
+      var pm = new PixelMath;
+      pm.useSingleExpression = true; pm.createNewImage = false;
+      pm.rescale = false; pm.truncate = true; pm.symbols = "";
+      pm.expression = "("+ramp+")^2*(3-2*("+ramp+"))";
+      if (!pm.executeOn(mask.mainView)) throw new Error("HDR core selection failed.");
+      if (feather > 0)
+      {
+         var blur = new Convolution;
+         blur.mode = Convolution.Parametric; blur.sigma = feather; blur.shape = 2;
+         blur.aspectRatio = 1; blur.rotationAngle = 0; blur.rescaleHighPass = false;
+         if (!blur.executeOn(mask.mainView)) throw new Error("HDR core feathering failed.");
+      }
+      checkAbortRequested();
+      return mask;
+   }
+   catch (e) { mask.forceClose(); throw e; }
+}
+
+function installHDRCoreControls(dialog, view)
+{
+   dialog.coreOnly = new CheckBox(dialog);
+   dialog.coreOnly.text = "Restrict HDR to bright core";
+   dialog.coreOnly.checked = false;
+   var row = new HorizontalSizer;
+   row.spacing = 8;
+   row.add(dialog.coreOnly);
+   function spin(label, value, minimum, maximum)
+   {
+      var caption = new Label(dialog); caption.text = label; row.add(caption);
+      var control = new SpinBox(dialog);
+      control.minValue = minimum; control.maxValue = maximum; control.value = value;
+      row.add(control); return control;
+   }
+   dialog.coreThreshold = spin("Brightness threshold (0-1000):", 550, 0, 999);
+   dialog.coreTransition = spin("Transition (0-1000):", 150, 1, 1000);
+   dialog.coreFeather = spin("Feather (px):", 8, 0, 50);
+   dialog.hdrCoreSettings = function()
+   {
+      return dialog.coreOnly.checked ? { threshold: dialog.coreThreshold.value/1000,
+         transition: dialog.coreTransition.value/1000, feather: dialog.coreFeather.value } : null;
+   };
+   var dirty = function()
+   {
+      dialog.applyButton.enabled = false; dialog.coreMaskBitmap = null;
+      if (dialog.displayMode.currentItem === 3) dialog.displayMode.currentItem = 0;
+      dialog.previewStatus.text = "Core settings changed. Click Update Preview before applying HDR.";
+      dialog.preview.repaint();
+   };
+   dialog.coreOnly.onCheck = dirty;
+   dialog.coreThreshold.onValueUpdated = dirty;
+   dialog.coreTransition.onValueUpdated = dirty;
+   dialog.coreFeather.onValueUpdated = dirty;
+   dialog.coreMaskBitmap = null;
+   dialog.displayMode.addItem("Core mask");
+   var button = new PushButton(dialog); button.text = "Show core mask";
+   button.onClick = function()
+   {
+      var mask = null;
+      try
+      {
+         mask = buildHDRCoreMask(view, { threshold: dialog.coreThreshold.value/1000,
+            transition: dialog.coreTransition.value/1000, feather: dialog.coreFeather.value });
+         mask.mainView.image.resetSelections();
+         dialog.coreMaskBitmap = mask.mainView.image.render(1, false);
+         dialog.displayMode.currentItem = 3;
+         dialog.previewStatus.text = "White allows HDR; black protects the image. " +
+            (dialog.coreOnly.checked ? "Restriction enabled." : "Enable Restrict HDR to use this mask.");
+      }
+      catch (e)
+      {
+         dialog.displayMode.currentItem = 0;
+         dialog.previewStatus.text = "Core mask failed: " + errorMessage(e);
+         if (Console.abortRequested) dialog.cancel();
+      }
+      finally { if (mask !== null) mask.forceClose(); dialog.preview.repaint(); }
+   };
+   var previous = dialog.displayMode.onItemSelected;
+   dialog.displayMode.onItemSelected = function(index)
+   {
+      if (index === 3) button.onClick(); else previous(index);
+   };
+   var actions = new HorizontalSizer;
+   actions.add(button); actions.addStretch();
+   row.addStretch();
+   dialog.sizer.insert(4, row); dialog.sizer.insert(5, actions);
+   dialog.adjustToContents();
+}
+
+function buildHDRCandidate(view, layers, strength, coreSettings)
+{
+   var window = cloneHDRView(view, "_HDR");
+   var coreMask = null;
+   try
+   {
+      checkAbortRequested();
+      if (coreSettings !== null && coreSettings !== undefined) coreMask = buildHDRCoreMask(view, coreSettings);
       var hdr = new HDRMultiscaleTransform;
       hdr.numberOfLayers = layers;
       hdr.numberOfIterations = 1;
@@ -2241,12 +2344,20 @@ function buildHDRCandidate(view, layers, strength)
       blend.symbols = "";
       var amount = strength / 100;
       blend.expression = "(" + (1 - amount) + ")*" + view.fullId + " + (" + amount + ")*$T";
+      if (coreMask !== null)
+      {
+         var weight = "("+amount+"*"+coreMask.mainView.fullId+")";
+         blend.expression = "(1-"+weight+")*"+view.fullId+" + "+weight+"*$T";
+         logLine("HDR restricted to bright core: threshold="+coreSettings.threshold+", transition="+
+            coreSettings.transition+", feather="+coreSettings.feather+" px.");
+      }
       if (!blend.executeOn(window.mainView))
          throw new Error("HDR blend failed.");
       checkAbortRequested();
       return window;
    }
    catch (e) { window.forceClose(); throw e; }
+   finally { if (coreMask !== null) coreMask.forceClose(); }
 }
 
 function previewChangeSummary(before, after)
@@ -2380,7 +2491,7 @@ constructor(view)
          g.fillRect(this.boundsRect, new Brush(0xff202020));
          var bitmap = self.displayMode.currentItem === 0 ? self.beforeBitmap :
             self.displayMode.currentItem === 2 ? self.differenceBitmap :
-            self.displayMode.currentItem === 3 ? self.haloMaskBitmap : self.afterBitmap;
+            self.displayMode.currentItem === 3 ? (self.coreMaskBitmap || self.haloMaskBitmap) : self.afterBitmap;
          if (bitmap !== null)
          {
             var scale = self.zoomMode.currentItem === 0 ?
@@ -2422,7 +2533,8 @@ constructor(view)
          self.differenceBitmap = null;
          self.displayMode.currentItem = 1;
          logLine("HDR preview settings: " + self.layers.value + " layers, " + self.strength.value + "% blend.");
-         self.candidate = buildHDRCandidate(view, self.layers.value, self.strength.value);
+         self.candidate = buildHDRCandidate(view, self.layers.value, self.strength.value,
+            self.hdrCoreSettings ? self.hdrCoreSettings() : null);
          self.candidate.mainView.image.resetSelections();
          self.afterBitmap = self.candidate.mainView.image.render(1, false);
          ++self.previewRevision;
@@ -2470,6 +2582,7 @@ constructor(view)
 function reviewHDR(view)
 {
    var dialog = new HDRReviewDialog(view);
+   installHDRCoreControls(dialog, view);
    var accepted = false;
    try
    {

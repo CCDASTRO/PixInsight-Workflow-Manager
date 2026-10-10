@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.31",
+    "softwareVersion": "1.1.32",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,11 +160,11 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.31">CCDASTRO PixInsight Workflow Manager v1.1.31</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.32">CCDASTRO PixInsight Workflow Manager v1.1.32</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
-<h2 id="v1.1.31-quick-start">v1.1.31 quick start</h2>
+<h2 id="v1.1.32-quick-start">v1.1.32 quick start</h2>
 <ol>
 <li>Select your original integrated, unstretched color master. For BlurXTerminator, load your configured <strong>CCDASTRO_BlurX</strong> workspace icon; its Correct Only and sharpening settings control the run. Run <strong>Validate</strong>,
 then <strong>Run Workflow</strong>. Processing uses a separate working copy; the original
@@ -186,6 +186,21 @@ Your chosen default is <strong>JPEG quality 95, longest edge 2048 pixels</strong
 images are not enlarged. Cancelling either save leaves the processed image open.</li>
 </ol>
 <p>The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.</p>
+<h2 id="restrict-hdr-to-a-bright-core-v1.1.32">Restrict HDR to a bright core (v1.1.32)</h2>
+<p>In either HDR review, enable <strong>Restrict HDR to bright core</strong> to protect the darker
+outer nebula from the HDR blend. Start with <strong>6 layers, 30% blend</strong>, brightness
+threshold <strong>550</strong>, transition <strong>150</strong>, and feather <strong>8 px</strong>.</p>
+<p>Click <strong>Show core mask</strong>: white allows HDR, black protects the image, and gray
+partially blends it. Lower the threshold to cover more of the nebula; raise it to
+isolate brighter areas. Transition controls the brightness range over which the
+mask fades in; feather softens its spatial edges. The mask uses average RGB
+brightness in the current stretched image. Values 550 and 150 mean 0.55 and 0.15;
+the transition ends at the threshold plus its width, capped at 1.0.</p>
+<p>Click <strong>Update Preview</strong>, compare Before / After at 100%, then <strong>Apply HDR</strong> or
+<strong>Skip HDR</strong>. Mask preview alone does not enable restriction. The option starts
+off in each review, preserving the previous full-image blend. It uses no workspace
+icon and affects the HDR blend only; bright stars may also enter the mask.
+Native PixInsight testing of core restriction is pending.</p>
 <h2 id="optional-hdr-after-stars-recombination-v1.1.31">Optional HDR after stars recombination (v1.1.31)</h2>
 <p>Enable <strong>Optional HDR after stars recombination: review combined core and stars</strong>
 for a separate HDR review after stars are added back. This is useful for inspecting
@@ -392,6 +407,8 @@ visible. It returns automatically when the run ends.</strong></p>
 <h2 id="short-video"><a href="https://youtu.be/0G-PI8F51rE">short video</a></h2>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.32:</strong> Adds optional bright-core HDR restriction, adjustable threshold, transition and feathering, with inline mask inspection.</p>
+</li>
 <li><p><strong>v1.1.31:</strong> Adds an optional post-recombination HDR review, including with starless enhancement enabled; remembers the selection and skips it when stars are not added back.</p>
 </li>
 <li><p><strong>v1.1.30:</strong> Explicitly enables conservative HDR deringing in both HDR paths and logs its settings. Pre-existing halos remain a separate issue.</p>

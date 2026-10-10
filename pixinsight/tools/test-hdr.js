@@ -53,6 +53,7 @@ for (const apply of [false, true]) {
     this.execute = () => apply; this.candidate = candidate; this.applyButton = { enabled: true };
     this.keepComparison = { checked: true }; this.layers = { value: 6 }; this.strength = { value: 30 };
   };
+  f.context.installHDRCoreControls = () => {};
   vm.runInContext(review, f.context);
   assert.equal(f.context.reviewHDR(f.view), apply ? candidate.mainView : f.view);
   assert.equal(candidate.closed, apply ? undefined : true);

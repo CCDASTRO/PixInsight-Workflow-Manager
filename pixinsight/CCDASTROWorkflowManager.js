@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.34"
+#define VERSION "1.1.35"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -3251,22 +3251,37 @@ function buildFinishingCandidate(view, kind, amount, radius, low, high)
 
 function reviewFinishing(view, kind)
 {
-   var dialog = new FinishingReviewDialog(view, kind);
-   var accepted = false;
-   try
+   var current = view, settings = null, pass = 1;
+   for (;;)
    {
-      if (!dialog.execute()) { checkAbortRequested(); return view; }
-      if (dialog.candidate === null || !dialog.applyButton.enabled)
-         throw new Error("Update the " + kind + " preview before applying.");
-      if (dialog.keepComparison.checked)
+      var dialog = new FinishingReviewDialog(current, kind, pass);
+      if (settings !== null)
       {
-         var before = cloneHDRView(view, "_Before" + kind.replace(/ /g, "")); before.show();
+         dialog.layers.value = settings.radius; dialog.strength.value = settings.amount;
+         dialog.maskLow.value = settings.low; dialog.maskHigh.value = settings.high;
+         dialog.keepComparison.checked = settings.keep;
       }
-      dialog.candidate.show(); accepted = true;
-      logLine(kind + " applied: " + dialog.strength.value + "%. Original view retained.");
-      return dialog.candidate.mainView;
+      var accepted = false;
+      try
+      {
+         if (!dialog.execute()) { checkAbortRequested(); return current; }
+         if (dialog.candidate === null || !dialog.applyButton.enabled)
+            throw new Error("Update the " + kind + " preview before applying.");
+         if (dialog.keepComparison.checked)
+         {
+            var before = cloneHDRView(current, "_Before" + kind.replace(/ /g, "")); before.show();
+         }
+         dialog.candidate.show(); accepted = true;
+         logLine(kind + " pass " + pass + " applied: " + dialog.strength.value +
+            "% amount, radius=" + dialog.layers.value + "; original view retained.");
+         current = dialog.candidate.mainView;
+         if (kind !== "Local contrast" || !dialog.anotherPassRequested) return current;
+         settings = {radius:dialog.layers.value, amount:dialog.strength.value,
+            low:dialog.maskLow.value, high:dialog.maskHigh.value, keep:dialog.keepComparison.checked};
+         ++pass;
+      }
+      finally { if (!accepted && dialog.candidate !== null) dialog.candidate.forceClose(); }
    }
-   finally { if (!accepted && dialog.candidate !== null) dialog.candidate.forceClose(); }
 }
 
 function inspectFinalImage(view)
@@ -3349,17 +3364,19 @@ function exportSharingImage(view, sourcePath, sourceId)
 
 class FinishingReviewDialog extends Dialog
 {
-constructor(view, kind)
+constructor(view, kind, pass)
 {
    super();
    var self = this;
-   this.windowTitle = kind + " review";
+   this.windowTitle = kind + " review" + (kind === "Local contrast" ? " - pass " + (pass || 1) : "");
+   this.anotherPassRequested = false;
    this.candidate = null;
    this.previewRevision = 0;
    this.previewStatus = new Label(this);
    this.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
    this.instructions = new Label(this);
    this.instructions.text = kind === "Inspection" ? "Inspect at 100%: background noise, star halos, clipped highlights and faint detail. Drag to pan." : "Preview " + kind + ". Compare Before / After at 100%; drag to pan. Apply keeps a separate result.\nLocal contrast and saturation protect dark background and bright highlights with a smooth brightness mask.";
+   if (kind === "Local contrast") this.instructions.text += "\nAdd another pass accepts this preview and starts the next pass from it. Update Preview never stacks passes. Skip keeps earlier accepted passes.";
    this.layersLabel = new Label(this);
    this.layersLabel.text = "Radius (pixels):";
    this.layers = new SpinBox(this);
@@ -3411,11 +3428,19 @@ constructor(view, kind)
    this.applyButton = new PushButton(this);
    this.applyButton.text = "Apply " + kind;
    this.applyButton.enabled = false;
+   this.anotherPassButton = new PushButton(this);
+   this.anotherPassButton.text = "Add another local contrast pass";
+   this.anotherPassButton.enabled = false;
+   this.anotherPassButton.visible = kind === "Local contrast";
+   this.anotherPassButton.onClick = function() {
+      if (!self.applyButton.enabled || self.candidate === null) return;
+      self.anotherPassRequested = true; self.ok();
+   };
    this.skipButton = new PushButton(this);
-   this.skipButton.text = "Skip " + kind;
+   this.skipButton.text = kind === "Local contrast" && (pass || 1) > 1 ? "Finish without this pass" : "Skip " + kind;
    this.skipButton.onClick = function() { self.cancel(); };
-   this.applyButton.onClick = function() { self.ok(); };
-   var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   this.applyButton.onClick = function() { self.anotherPassRequested = false; self.ok(); };
+   var dirty = function() { self.anotherPassButton.enabled = false; self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.maskLow = new SpinBox(this); this.maskLow.minValue = 0; this.maskLow.maxValue = 999; this.maskLow.value = 50;
    this.maskHigh = new SpinBox(this); this.maskHigh.minValue = 1; this.maskHigh.maxValue = 1000; this.maskHigh.value = 850;
    this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0-1000):";
@@ -3430,6 +3455,7 @@ constructor(view, kind)
    {
       self.enabled = false;
       self.applyButton.enabled = false;
+      self.anotherPassButton.enabled = false;
       self.previewStatus.text = "Calculating new preview...";
       self.previewStatus.repaint();
       try
@@ -3447,6 +3473,7 @@ constructor(view, kind)
             previewChangeSummary(view.image, self.candidate.mainView.image);
          logLine(self.windowTitle + " - " + self.previewStatus.text);
          self.applyButton.enabled = true;
+         self.anotherPassButton.enabled = kind === "Local contrast";
       }
       catch (e)
       {
@@ -3468,6 +3495,7 @@ constructor(view, kind)
    this.buttons = new HorizontalSizer;
    this.buttons.spacing = 8;
    this.buttons.addStretch();
+   if (kind === "Local contrast") this.buttons.add(this.anotherPassButton);
    this.buttons.add(this.applyButton);
    if (kind !== "Inspection") this.buttons.add(this.skipButton);
    this.sizer = new VerticalSizer;

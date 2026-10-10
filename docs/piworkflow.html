@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.34",
+    "softwareVersion": "1.1.35",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.34">CCDASTRO PixInsight Workflow Manager v1.1.34</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.35">CCDASTRO PixInsight Workflow Manager v1.1.35</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
@@ -928,6 +928,26 @@ Aspect ratio is preserved; smaller images are never enlarged. Resize and
 integer sample conversion affect only the temporary sharing copy. Source and
 final-image filenames are protected, and existing outputs require confirmation.</li>
 </ol>
+<h3 id="repeat-local-contrast-at-different-scales">Repeat local contrast at different scales</h3>
+<p>In <strong>Local contrast review</strong>, click <strong>Update Preview</strong>, inspect Before/After at
+100%, then choose <strong>Add another local contrast pass</strong> to accept that preview
+and open the next pass. Its Before image is the last accepted result. Settings
+carry forward; change the radius, amount or protection limits for the next pass.
+Each Update Preview recalculates only the current pass from its Before image;
+it does not accumulate repeated applications.</p>
+<p>Click <strong>Apply Local contrast</strong> to accept the current preview and continue the
+workflow. <strong>Finish without this pass</strong> (or closing the review) discards the
+current preview and keeps earlier accepted passes. Skipping the first pass
+leaves the incoming image unchanged. Earlier accepted images remain open;
+the optional Before comparison applies separately to each accepted pass.
+Changing settings disables both acceptance buttons until Update Preview succeeds.</p>
+<p>For wispy nebula structure, try radius 150-250 px at 15-25%, then optionally
+radius 64 px at 10-15%. These are starting points, not guaranteed improvement.
+Protect the dark background and bright core, and check grain, halos and edge
+rings at 100%. The mask is brightness-based, not star-specific. Repeated passes
+can amplify noise and flatten or exaggerate structure; use only passes that help.
+This works in the starless finishing path and the combined-image finishing path.
+Native interactive testing remains pending.</p>
 <h3 id="final-denoise-icon-what-it-stores-and-how-to-create-it">Final denoise icon: what it stores and how to create it</h3>
 <p><strong>CCDASTRO_FinalDenoise is a saved set of settings for a denoise process</strong>,
 for example MLDenoise or NoiseXTerminator. It does not point to an image and
@@ -1064,6 +1084,8 @@ configured SyQon icons, and branch dependencies.</li>
 </code></pre>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.35:</strong> Adds repeatable local contrast review with explicit acceptance between passes, fresh previews and preservation of earlier accepted results.</p>
+</li>
 <li><p><strong>v1.1.34:</strong> Adds configured HistogramTransformation and MultiscaleAdaptiveStretch final choices, workspace-icon setup and preflight checks.</p>
 </li>
 <li><p><strong>v1.1.33:</strong> Adds separate R/G/B/L or RGB + L inputs, automatic luminance stretch matching and adjustable LRGB review before final HDR. Fixes garbled range labels.</p>

@@ -1,10 +1,10 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),path=require('path');
 const source=fs.readFileSync(process.argv[2] || path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
 new vm.Script(source.replace(/^#.*$/gm,''));
-let windows=[],processes=[],fail='',icon=null;
+let windows=[],processes=[],fail='',icon=null,finishingActions=[];
 function window(){const w={isNull:false,mainView:{image:{resetSelections(){},render(){return {};}}},removeMask(){this.removed=true;},setMask(m){this.mask=m;},forceClose(){this.closed=true;},show(){this.shown=true;},setSampleFormat(bits,float){this.format=[bits,float];}};windows.push(w);return w;}
 function proc(id){return function(){this.executeOn=()=>{processes.push({id,p:this});return fail!==id;};};}
-function control(){this.enabled=true;this.repaint=()=>{};this.setMinSize=()=>{};this.addItem=()=>{};this.adjustToContents=()=>{};this.execute=()=>true;this.ok=()=>{};this.cancel=()=>{};}
+function control(){this.enabled=true;this.repaint=()=>{};this.setMinSize=()=>{};this.addItem=()=>{};this.adjustToContents=()=>{};this.execute=()=>finishingActions.length?finishingActions.shift()(this):true;this.ok=()=>{};this.cancel=()=>{};}
 function sizer(){this.add=()=>{};this.addStretch=()=>{};}
 const PixelMath=proc('PixelMath'),Convolution=proc('Convolution'),Curves=proc('CurvesTransformation');Convolution.Parametric=0;Curves.AkimaSubsplines=2;
 const Resample=proc('Resample');Resample.AbsolutePixels=1;Resample.ForceWidthAndHeight=0;Resample.Auto=0;
@@ -80,3 +80,39 @@ const workflow={finishStarless:{checked:false},enabled:true,statusText:{},rowsBy
 ctx.executeWorkflow(workflow);assert.match(workflow.statusText.text,/completed successfully/);assert.equal(working.image.value,.8);assert.equal(view.image.value,undefined);assert.equal(view.stf,undefined);
 processingFailure=true;ctx.executeWorkflow(workflow);assert.match(workflow.statusText.text,/stopped/);assert.equal(view.image.value,undefined);assert.equal(view.stf,undefined);
 console.log('Finishing masks, failure cleanup, optional denoise blend, controls, inspection, sharing export, dimensions, metadata and input preservation passed (mocked APIs).');
+
+// Repeated local contrast explicitly commits a pass; recalculating previews never stacks.
+let bases=[];const originalBuilder=ctx.buildFinishingCandidate;
+ctx.buildFinishingCandidate=(base,...args)=>{bases.push(base);return originalBuilder(base,...args);};
+let firstAccepted,secondAccepted;
+finishingActions=[d=>{
+ assert.equal(d.anotherPassButton.enabled,false);
+ d.layers.value=150;d.strength.value=20;d.keepComparison.checked=false;
+ d.updateButton.onClick();const replaced=d.candidate;
+ d.updateButton.onClick();assert.equal(replaced.closed,true);
+ assert.equal(bases.at(-1),color);assert.equal(bases.at(-2),color);
+ d.strength.onValueUpdated();assert.equal(d.anotherPassButton.enabled,false);
+ d.updateButton.onClick();firstAccepted=d.candidate;
+ d.anotherPassButton.onClick();return true;
+},d=>{
+ assert.match(d.windowTitle,/pass 2/);assert.equal(d.layers.value,150);assert.equal(d.strength.value,20);
+ assert.equal(d.skipButton.text,'Finish without this pass');
+ d.layers.value=64;d.strength.value=10;d.updateButton.onClick();
+ assert.equal(bases.at(-1),firstAccepted.mainView);secondAccepted=d.candidate;
+ d.applyButton.onClick();return true;
+}];
+const multiResult=ctx.reviewFinishing(color,'Local contrast');assert.equal(multiResult,secondAccepted.mainView);
+assert.equal(firstAccepted.shown,true);assert.equal(firstAccepted.closed,undefined);
+// Cancel the next pass: discard only its preview, retaining the earlier accepted result.
+let retained,discarded;
+finishingActions=[d=>{d.keepComparison.checked=false;d.updateButton.onClick();retained=d.candidate;d.anotherPassButton.onClick();return true;},
+ d=>{d.updateButton.onClick();discarded=d.candidate;return false;}];
+const keptResult=ctx.reviewFinishing(color,'Local contrast');assert.equal(keptResult,retained.mainView);
+assert.equal(discarded.closed,true);assert.equal(retained.closed,undefined);
+finishingActions=[d=>false];assert.equal(ctx.reviewFinishing(color,'Local contrast'),color);
+// Failure and changed settings cannot accept a stale preview.
+d=vm.runInContext('new FinishingReviewDialog(testView,"Local contrast")',ctx);
+d.updateButton.onClick();assert.equal(d.anotherPassButton.enabled,true);
+d.maskHigh.onValueUpdated();assert.equal(d.anotherPassButton.enabled,false);
+fail='LocalHistogramEqualization';d.updateButton.onClick();assert.equal(d.anotherPassButton.enabled,false);assert.equal(d.applyButton.enabled,false);fail='';
+console.log('Repeated local contrast tests passed');

@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.34
+# CCDASTRO PixInsight Workflow Manager v1.1.35
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -802,6 +802,30 @@ it; cancelling the final save or sharing export leaves the images open.
    integer sample conversion affect only the temporary sharing copy. Source and
    final-image filenames are protected, and existing outputs require confirmation.
 
+### Repeat local contrast at different scales
+
+In **Local contrast review**, click **Update Preview**, inspect Before/After at
+100%, then choose **Add another local contrast pass** to accept that preview
+and open the next pass. Its Before image is the last accepted result. Settings
+carry forward; change the radius, amount or protection limits for the next pass.
+Each Update Preview recalculates only the current pass from its Before image;
+it does not accumulate repeated applications.
+
+Click **Apply Local contrast** to accept the current preview and continue the
+workflow. **Finish without this pass** (or closing the review) discards the
+current preview and keeps earlier accepted passes. Skipping the first pass
+leaves the incoming image unchanged. Earlier accepted images remain open;
+the optional Before comparison applies separately to each accepted pass.
+Changing settings disables both acceptance buttons until Update Preview succeeds.
+
+For wispy nebula structure, try radius 150-250 px at 15-25%, then optionally
+radius 64 px at 10-15%. These are starting points, not guaranteed improvement.
+Protect the dark background and bright core, and check grain, halos and edge
+rings at 100%. The mask is brightness-based, not star-specific. Repeated passes
+can amplify noise and flatten or exaggerate structure; use only passes that help.
+This works in the starless finishing path and the combined-image finishing path.
+Native interactive testing remains pending.
+
 ### Final denoise icon: what it stores and how to create it
 
 **CCDASTRO_FinalDenoise is a saved set of settings for a denoise process**,
@@ -958,6 +982,8 @@ node pixinsight/tools/validate-workflow.js
 ```
 
 ## Revision history
+
+- **v1.1.35:** Adds repeatable local contrast review with explicit acceptance between passes, fresh previews and preservation of earlier accepted results.
 
 - **v1.1.34:** Adds configured HistogramTransformation and MultiscaleAdaptiveStretch final choices, workspace-icon setup and preflight checks.
 

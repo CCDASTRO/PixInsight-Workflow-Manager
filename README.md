@@ -1,274 +1,9 @@
 # CCDASTRO PixInsight Workflow Manager v1.1.33
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
-manager for an integrated linear color master.
+manager for an integrated linear color master or separate registered LRGB masters.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
-
-## Separate LRGB masters (v1.1.33)
-
-WBPP normally provides integrated filter masters. This optional mode handles RGB
-combination and adds separately stretched luminance after RGB finishing, before
-the final HDR review. The existing active-color-master mode is unchanged.
-
-1. Open registered, **linear** L, R, G and B masters before launching the workflow.
-   Select **Separate linear R, G, B + L** and assign each master. Alternatively,
-   select your linear RGB master and choose **Active linear RGB + separate L**.
-2. Confirm matching registration and crop. Dimensions and grayscale/color types
-   are checked; identical dimensions alone do not prove registration. The workflow
-   does not align masters. Crop identically beforehand or crop the final afterward;
-   leave the workflow crop checkbox off in this mode. Input selections and this
-   confirmation are session-only and are not remembered.
-3. Select the desired RGB processing stages and a final stretch. If separating
-   stars, enable recombination. Color calibration is applied to RGB before L is
-   added. Finish the RGB/starless reviews as usual.
-4. In **Luminance combination review**, start with **L weight 50%**. Click
-   **Update Preview**; compare Before/After at 100% and inspect star wings and the
-   bright core. Change the weight and update again before **Apply LRGB**, or choose
-   **Keep RGB**. Zero weight leaves RGB pixels unchanged. Optional comparison
-   images retain the processed RGB and stretched luminance.
-   Choosing Keep starless in the stars review also skips luminance addition.
-5. Enable **Optional HDR after stars / luminance combination** for the final core
-   review, then save. For M42, 6 layers, 50% blend and bright-core restriction
-   550 / 150 / 8 px gave the preferred balance among the tested settings.
-
-L is cloned and stretched once with a zero-shadow HistogramTransformation to
-match its median to the processed RGB's mean of channel medians. This brightness
-match is not registration, PSF matching or a guarantee of optimal contrast. LRGB
-uses L only, neutral Lightness/Saturation transfer settings (0.5), and chrominance
-noise reduction off. No gradient correction, sharpening or denoising is applied
-automatically to L; prepare its linear master beforehand if needed. Original
-masters remain unchanged. Intrinsic star halos can remain or become more visible
-when luminance is added; use the preview to reduce its weight or keep RGB.
-
-This release also replaces garbled range-label punctuation with plain ASCII
-hyphens, including Protect below / above (0-1000).
-
-## v1.1.33 quick start
-
-1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
-   then **Run Workflow**. Processing uses a separate working copy; the original
-   pixels and input file remain unchanged. Save an unsaved original separately
-   if you need a permanent backup.
-2. Enable **Optional CurvesTransformation** for native curve adjustment after
-   HDR. Select a preset or edit the curve points, then **Update Preview**.
-3. Leave **Final inspection, local contrast, noise cleanup, saturation and sharing
-   export** enabled to review all five finishing steps. Inspect at 100% and drag
-   to pan. Each adjustment can be applied or skipped.
-4. For final noise cleanup, save your denoiser settings in a workspace icon named
-   **CCDASTRO_FinalDenoise**. The icon stores a process and its settings; it does
-   not point to an image. Use gentle settings for the already-stretched image,
-   or **Skip Noise cleanup**. At the default 15% blend, the result combines
-   85% of the pre-cleanup image with 15% of the denoised image.
-   See [Final denoise icon: what it stores and how to create it](#final-denoise-icon-what-it-stores-and-how-to-create-it).
-5. Save the full-resolution XISF, then optionally export a separate sharing copy.
-   Your chosen default is **JPEG quality 95, longest edge 2048 pixels**. Smaller
-   images are not enlarged. Cancelling either save leaves the processed image open.
-
-The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
-
-## Restrict HDR to a bright core (v1.1.32)
-
-In either HDR review, enable **Restrict HDR to bright core** to protect the darker
-outer nebula from the HDR blend. Start with **6 layers, 30% blend**, brightness
-threshold **550**, transition **150**, and feather **8 px**.
-
-Click **Show core mask**: white allows HDR, black protects the image, and gray
-partially blends it. Lower the threshold to cover more of the nebula; raise it to
-isolate brighter areas. Transition controls the brightness range over which the
-mask fades in; feather softens its spatial edges. The mask uses average RGB
-brightness in the current stretched image. Values 550 and 150 mean 0.55 and 0.15;
-the transition ends at the threshold plus its width, capped at 1.0.
-
-Click **Update Preview**, compare Before / After at 100%, then **Apply HDR** or
-**Skip HDR**. Mask preview alone does not enable restriction. The option starts
-off in each review, preserving the previous full-image blend. It uses no workspace
-icon and affects the HDR blend only; bright stars may also enter the mask.
-Core restriction was exercised in native PixInsight M42 comparison runs.
-
-## Optional HDR after stars recombination (v1.1.31)
-
-Enable **Optional HDR after stars recombination: review combined core and stars**
-for a separate HDR review after stars are added back. This is useful for inspecting
-bright nebula cores and embedded stars, such as M42's Trapezium, together.
-The option defaults off, is remembered, and requires star separation plus automatic
-recombination. It does not perform another histogram stretch.
-
-With **Enhance starless image before adding stars back** checked, the existing
-Optional HDR selection still reviews the starless branch. The new checkbox adds
-a combined-image review afterward. For a first M42 test, enable only the new HDR
-checkbox to isolate its effect; leave the original HDR checkbox off. If Enhance
-starless is off and both HDR boxes are checked, only one final HDR review runs.
-Choosing **Keep starless** skips the combined-image HDR review.
-
-Start with **6 layers, 30% blend** and compare at 100% around the core. Raise the
-blend only if useful; Apply retains a separate result, while Skip keeps the
-recombined image. Deringing remains enabled with small-scale 0.00 / large-scale
-0.25 and the lightness mask. Existing halos and clipped detail are not repaired.
-Native workflow testing of this new review position remains pending.
-
-## HDR ringing protection (v1.1.30)
-
-The workflow sets these native HDR process controls automatically for both
-starless HDR and HDR after recombination:
-
-- **To lightness:** enabled for color images.
-- **Preserve hue:** enabled for color images.
-- **Lightness mask:** enabled.
-- **Deringing:** enabled.
-- **Small-scale deringing:** 0.00.
-- **Large-scale deringing:** 0.25.
-- **Iterations:** 1.
-
-The workflow HDR review exposes **Layers** and **Blend (%)**. Changing settings
-in the standalone HDRMultiscaleTransform process window does not change these
-workflow settings.
-
-The optional HDR review now explicitly enables native HDRMultiscaleTransform
-**Deringing**, with **Small-scale 0.00**, **Large-scale 0.25**, and the existing
-lightness mask. Deringing maps are not generated. Layers and blend remain
-adjustable, starting at 6 layers and 30% blend; each preview starts from the
-untreated image rather than stacking HDR applications.
-
-This applies to HDR on the enhanced starless branch and to HDR on the combined
-image. Compare Before/After at 100% around bright edges. Deringing aims to limit
-new processing rings; it does not repair pre-existing halos or recover clipped
-detail. Skip HDR or reduce blend if it introduces unwanted edges or flattens
-structure. Native workflow testing of these explicit settings remains pending.
-The full linear workflow still requires an unstretched master; do not feed it
-an LRGB image made from previously stretched channels.
-
-## Seti Astro Automatic DBE (v1.1.29)
-
-**Gradient correction** now offers **Seti Astro Automatic DBE** alongside
-GradientCorrection, GraXpert and MGC. Install **Automatic DBE 1.6** from
-[Seti Astro's PixInsight scripts](https://www.setiastro.com/pjsr-scripts).
-The workflow uses the installed AutoDBE.js; no vendor code is redistributed.
-
-No icon is required for vendor defaults. For custom settings, open Automatic DBE,
-configure it, drag its new-instance triangle to the workspace, and rename the
-Script icon **CCDASTRO_AutoDBE**. Keep that icon available when running the workflow.
-The gradient **Setup...** button provides these instructions. The selected tool
-runs before the normal plate-solving and color-calibration stages.
-
-The adapter runs on the preserved master's working copy, forces **Replace target**
-on that copy and **Discard model**, and uses the icon's other saved parameters.
-Automatic execution uses no manually drawn exclusion regions. AutoDBE also performs
-its own background-neutralization/modeling operations. Inspect a manual trial for
-fields dominated by nebulosity before choosing it. Unsupported script versions,
-wrong icons, and correction failures stop preflight or processing rather than
-silently continuing. Native workflow testing of this new adapter remains pending.
-
-## Spatial stars halo reduction (v1.1.28)
-
-The optional **Stars recombination review** now targets neighborhoods around
-bright stars instead of every pixel in a brightness interval. It operates on
-a temporary controlled-stars copy before recombination. Original stars and
-the enhanced starless image are preserved. Halo reduction defaults to **0%**.
-
-Start with **Stars brightness 50%**, **Halo reduction 30%**, **Bright-star
-threshold 350**, **Halo radius 40 px**, **Protect core 6 px**, and **Feather
-4 px**, with Bill Blanshan star reduction off. These are starting points,
-not a guaranteed match for every image.
-
-1. Click **Show halo mask**. White regions receive treatment; black regions
-   are protected. The mask should surround the bright stars with problematic halos.
-2. Raise the threshold to select fewer bright stars, or lower it if the
-   problematic stars are absent. 350 means a maximum RGB value of 0.35 in
-   controlled stars, before the Stars brightness setting is applied.
-3. Adjust Halo radius to cover the surrounding halo. It expands outward from
-   selected bright-star pixels, so it is not an exact radius from a star center.
-   Protect core expands the central protected region; it must be below Halo radius.
-   Feather controls Gaussian boundary smoothing in pixels.
-4. Click **Update Preview** and compare Before/After at the same position.
-   Before is untreated recombination at the same Stars brightness; After is
-   the treated result. **Difference x10** and change metrics isolate treatment.
-5. Apply only if it improves the image without rings or unwanted dimming.
-   **Keep starless** remains available. The mask preview is shown inside the review with the same zoom and pan controls.
-
-The mask combines expanded bright-star cores with a protected inner region
-and softly feathered edges. Bright seed pixels remain protected. Amount is
-percentage attenuation where the mask is white, with proportional treatment
-under gray mask pixels. Small stars outside selected neighborhoods are spared;
-nearby stars and overlapping halos can still be affected. This reduces stars-layer
-halo light; it cannot repair halos already retained in the starless image or
-correct their optical cause. Radius and threshold depend on image scale and stretch.
-Native PixInsight testing remains pending; do not assume every halo will improve.
-
-## Enhance nebulosity before adding stars back (v1.1.24)
-
-For a dense star field with subdued faint structure, enable **Enhance starless
-image before adding stars back** in **Stretch and star branches**. This optional
-path preserves the original linear master and changes the order of stretching
-and finishing, rather than adding stronger sharpening.
-
-1. Enable star separation and automatic branch recombination. Choose your normal
-   linear color calibration, deblur and denoise settings.
-2. Keep **Starless stretch** and **Stars stretch** at **Keep linear**. Select
-   **Linked Auto Histogram** under **Final image stretch**. In this mode that
-   selection stretches the starless branch, before recombination.
-3. Start **Stars brightness (%)** at **70**. This scales the controlled stars layer
-   before screen blending; it is separate from star reduction.
-4. Selected HDR, Curves, local contrast, noise cleanup and saturation reviews
-   operate on the starless image. Each can still be skipped. Inspect noise and
-   star-removal residuals before accepting stronger contrast.
-5. The workflow derives a controlled stars layer using the same linked stretch
-   on the full linear image and its matching starless image, before starless
-   denoise or enhancement. It preserves the original linear stars layer. It never
-   calculates an automatic stretch from sparse stars-only statistics in this mode.
-6. In **Stars recombination review**, adjust brightness and **Update Preview**.
-   Compare Before (enhanced starless) and After at 100%, then **Apply recombination**
-   or **Keep starless**. Any selected Bill Blanshan reduction is included in the
-   preview; leave it off for the first test. Changes require a fresh preview.
-   The enhanced starless view remains open. Final inspection, XISF save and sharing
-   export use the accepted result. Enhancements are not repeated after recombination.
-
-For an initial test, leave star reduction off, use conservative denoise and BlurX
-Correct Only, and begin with Curves alone before enabling other enhancements.
-Compare identical regions at 100%. Removing stars can improve visibility and
-permit a different stretch, but this does not guarantee recovery of missing
-signal. Old saved configurations retain the previous combined-image processing
-path until this option is enabled. Native testing of the revised stars path is pending. v1.1.23 could over-stretch the stars layer and amplify halos; update before using this mode.
-
-## Color calibration: SPCC or PCC
-
-**SPCC remains the default.** In **3. Color calibration**, choose
-**PhotometricColorCalibration (PCC)** to use catalog-based photometric color
-calibration instead. Only the selected method runs. Both methods require an
-astrometric solution; leave **Plate Solve if needed** enabled for unsolved images.
-
-For PCC:
-
-1. Open PixInsight's **PhotometricColorCalibration** process and select the
-   appropriate catalog, white reference, and background-neutralization settings.
-   Enable **Apply color calibration**.
-2. Drag its **New Instance** triangle to the workspace and rename the process
-   icon **CCDASTRO_PCC**. This icon stores the process settings, not an image.
-3. Select PCC in the workflow, then **Validate** and **Run Workflow**. The
-   configured icon is applied to the current linear working copy after gradient
-   correction and plate solving, before deblur, denoise, and stretching.
-
-The workflow preserves the icon's settings. A missing icon, wrong process type,
-or disabled calibration blocks preflight with an explanation. Update the icon
-when changing PCC settings. PixInsight checks catalog access and photometry
-requirements during execution. Native PCC execution in this workflow is pending
-user testing; automated checks cover the adapter and its failure cases.
-
-For comparison, process separate copies of the original linear master with SPCC
-and PCC, using identical **Linked Auto Histogram** settings. Do not apply one
-calibration on top of the other. Calibration establishes color balance; stretching,
-curves, and saturation still determine the final appearance. PCC does not reproduce
-Photoshop Auto Color or HDR Toning automatically.
-## Important: the workflow window hides while processing
-
-> **After you confirm Run Workflow, the Workflow Manager window disappears temporarily. This is normal.**
->
-> The window is hidden so it does not cover PixInsight's **Process Console** or
-> the processing tools' progress windows. **Follow processing in the Process Console.**
-> The workflow is still running; you do not need to reopen or start it again.
->
-> **The Workflow Manager window returns automatically after the run finishes or stops with an error.**
-> Dismiss any completion or error message to return to the workflow settings.
 
 ## Install with PixInsight Update Manager
 
@@ -306,6 +41,55 @@ If the `CCDASTRO` menu is missing after the first installation, open
 `src/scripts` directory. This forces PixInsight to scan and register newly
 installed script folders. Restart PixInsight after the scan.
 
+## Install manually as a Feature Script (advanced alternative)
+
+Most users should use **Install with PixInsight Update Manager** at the top of
+this page. Manual installation is an alternative, not an additional required step.
+
+1. Download or clone this repository.
+2. Locate PixInsight's installed `src/scripts` directory.
+3. Create `src/scripts/CCDASTRO` and copy `CCDASTROWorkflowManager.js` and
+   its matching `CCDASTROWorkflowManager.xsgn` signature into it.
+   This sibling location is required because the workflow uses PixInsight's installed
+   `src/scripts/ImageSolver` library.
+4. Start PixInsight and choose **Script > Feature Scripts**.
+5. Click **Add** and select the new `src/scripts/CCDASTRO` directory.
+6. Enable recursive search if available and allow the feature scan to finish.
+7. Open **Script > CCDASTRO > Workflow Manager**.
+
+The GitHub `tree/main/pixinsight` webpage is not an update URL. Use the raw
+`updates/` URL above for Update Manager or use the installed scripts directory
+for a manual Feature Scripts installation.
+
+## Requirements
+
+- PixInsight 1.9.4, including the standard ImageSolver script. PixInsight 1.9.5
+  release preparation is documented in [the compatibility checklist](docs/PIXINSIGHT-1.9.5.md);
+  astrometry, SPFC/MGC, and SPCC passed tests on 1.9.5 build 1702;
+  full workflow and third-party module verification remain pending.
+- An integrated, unstretched color master, preferably 32-bit floating-point
+  XISF.
+- For SPCC, either an existing astrometric solution or approximate coordinates
+  and image-scale metadata for the Plate Solve adapter.
+- The selected third-party processes, applications, models, and licenses.
+
+### Linear-master quality
+
+The workflow starts with the integrated linear color master you provide and is
+independent of the calibration and integration method used to create it. Use
+WBPP, another preprocessing script, process icons, or a manual process according
+to your needs.
+
+The quality of that master sets the limit for the workflow's results. Accurate
+calibration, registration, integration, pixel rejection, and color combination
+are essential. Inspect the master for gradients, clipping, registration errors,
+satellite trails, residual hot pixels, walking noise, and integration borders
+before continuing. Later processing can enhance good data, but it cannot recover
+detail or reliably remove defects lost or introduced during preprocessing.
+
+The preflight validator reports unavailable process classes and missing SyQon
+process icons before execution.
+
 ## Workflow Manager interface
 
 Select the processing steps with the checkboxes, choose the desired tool for
@@ -319,109 +103,78 @@ visible. It returns automatically when the run ends.**
 
 ## [short video](https://youtu.be/0G-PI8F51rE)
 
-## Revision history
+## Quick start
 
-- **v1.1.32:** Adds optional bright-core HDR restriction, adjustable threshold, transition and feathering, with inline mask inspection.
-- **v1.1.31:** Adds an optional post-recombination HDR review, including with starless enhancement enabled; remembers the selection and skips it when stars are not added back.
-- **v1.1.30:** Explicitly enables conservative HDR deringing in both HDR paths and logs its settings. Pre-existing halos remain a separate issue.
-- **v1.1.29:** Adds Seti Astro Automatic DBE 1.6 as a gradient-removal choice, with vendor defaults, an optional configured icon and setup instructions. Native integration testing pending.
-- **v1.1.28:** Fixes the native MorphologicalTransformation operator enum that prevented spatial halo mask generation and treatment. Regression tests now reject invalid operator types. Native testing pending.
-- **v1.1.27:** Replaces intensity-band treatment with a spatial bright-star halo mask, core protection, radius/feather controls, and a mask preview. Native testing pending.
-- **v1.1.26:** Stronger masked halo attenuation, adjustable limits, and untreated-versus-treated recombination comparison with treatment-specific change metrics. Native testing pending.
-- **v1.1.25:** Adds optional masked halo reduction amount inside stars recombination preview; original stars and starless layers preserved. Native testing pending.
-- **v1.1.24:** Replaces sparse stars-only automatic stretch with matched full/starless reference stretches; preserves linear stars and adds adjustable recombination preview with Apply or Keep starless. Native testing pending.
-- **v1.1.23:** Optional starless stretch and enhancement before controlled-brightness star recombination; retains the enhanced starless view. Native testing pending.
-- **v1.1.22:** Adds PCC as an alternative to default SPCC using the configured CCDASTRO_PCC icon; shared plate-solving preflight and preserved calibration settings. Native PCC testing pending.
-- **v1.1.21:** Integrated rectangular crop preview executes native DynamicCrop and returns automatically to the same workflow settings. Original linear input is preserved; Crop is unchecked on return. Rotation remains a manual operation.
-- **v1.1.18–v1.1.20:** Intermediate crop handoff changes, superseded by v1.1.21.
-- **v1.1.17:** BlurXTerminator uses the configured **CCDASTRO_BlurX** workspace icon and logs Correct Only and sharpening settings, avoiding reliance on fresh-instance defaults.
+1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
+   then **Run Workflow**. Processing uses a separate working copy; the original
+   pixels and input file remain unchanged. Save an unsaved original separately
+   if you need a permanent backup.
+2. Enable **Optional CurvesTransformation** for native curve adjustment in
+   the RGB/starless finishing reviews. Select a preset or edit the curve points, then **Update Preview**.
+3. Leave **Final inspection, local contrast, noise cleanup, saturation and sharing
+   export** enabled to review all five finishing steps. Inspect at 100% and drag
+   to pan. Each adjustment can be applied or skipped.
+4. For final noise cleanup, save your denoiser settings in a workspace icon named
+   **CCDASTRO_FinalDenoise**. The icon stores a process and its settings; it does
+   not point to an image. Use gentle settings for the already-stretched image,
+   or **Skip Noise cleanup**. At the default 15% blend, the result combines
+   85% of the pre-cleanup image with 15% of the denoised image.
+   See [Final denoise icon: what it stores and how to create it](#final-denoise-icon-what-it-stores-and-how-to-create-it).
+5. Save the full-resolution XISF, then optionally export a separate sharing copy.
+   Your chosen default is **JPEG quality 95, longest edge 2048 pixels**. Smaller
+   images are not enlarged. Cancelling either save leaves the processed image open.
 
-- **v1.1.16:** Checks for the optional final denoise icon before loading it and provides setup/Skip instructions instead of the native missing-icon exception.
-- **v1.1.15:** Replaces duplicate inspection Continue buttons with a single Continue to finishing button; inspection makes no pixel changes. All reviews open on Before, switch to After after successful calculation, and return to Before on preview failure. Zoomed panning is bounded to keep the image visible.
-- **v1.1.14:** Preserves the original input and metadata by processing a separate copy, including before DynamicCrop. Adds 100% inspection with panning, optional masked local contrast, configured final denoise with blend, masked saturation, full-resolution XISF save and separate resized JPEG/PNG export. Finishing-stage and export runtime verification is pending.
-- **v1.1.13:** Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values. User confirmed successful PixInsight testing on 2026-10-02 after installing this fix.
-- **v1.1.12:** Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. Successful PixInsight testing was confirmed with the v1.1.13 enum fix.
-- **v1.1.11:** HDR and adaptive previews use same-position Before/After switching, Fit/100%/200% centered zoom, and an inspection-only 10x absolute difference view. PixInsight runtime verification is pending.
-- **v1.1.10:** Forces immediate HDR/adaptive preview repaint, resets rendered image selections, and shows preview revision and sampled pixel-change statistics. Console logs record each preview settings selection.
-- **v1.1.9:** Uses a configured CCDASTRO_MLDenoise process icon so the neural network model path and denoise settings are retained. Preflight rejects missing models before processing.
-- **v1.1.8:** Adds optional image-adaptive brightness/contrast finishing after
-  HDR and before Save As, with Mild/Medium/Custom strength, protected background
-  and highlights, side-by-side preview, Apply/Skip, and comparison copies.
-- **v1.1.7:** Fixes the HDR preview background painting error by passing the required Brush object to Graphics.fillRect.
-- **v1.1.6:** Adds optional native HDRMultiscaleTransform with a side-by-side
-  preview, adjustable layers and blend strength, Apply/Skip controls, and a
-  retained before-HDR comparison image. HDR runs after the stretch and star
-  reduction, before final Save As. Disabled by default.
-- **v1.1.5:** Offers Save As after a completed final image, using the original
-  input filename plus `_CCDASTROWorkflow_Final.xisf`. The name and folder remain
-  editable, existing outputs require overwrite confirmation, and the original
-  input file cannot be overwritten. Cancel leaves the processed image open.
-  Workflows without recombination leave their separate branches open.
-- **v1.1.4:** Refreshes signing dependencies for the ImageSolver engine shipped
-  with PixInsight 1.9.5 build 1705. Script and update manifest signed with the CCDASTRO identity; runtime verification pending.
-- **v1.1.3:** Adds MLDenoise to noise reduction with the selected denoise placement.
+The integrated crop preview and automatic return were confirmed working in PixInsight v1.1.21. Configured BlurX icon execution and finishing stages were also exercised in native runs. Results depend on input data and tool settings; inspect grain and mottling at 100% before applying enhancements.
 
-- **v1.1.2:** Adds PixInsight 1.9.5 release compatibility, strict package-content checks,
-  and documented passing astrometry, SPFC/MGC, and SPCC runtime tests.
-  RC Astro integration testing remains pending; its modules were unavailable.
+## Preserve the original input
 
-- **v1.1.1:** Fixes recursive SyQon script execution while preserving configured
-  process-icon settings. Runs processing outside the workflow setup dialog so
-  the Process Console remains accessible. Documents the manual Starless step:
-  click **Generate Starless**, monitor the **Process Console** for completion,
-  then close the Starless window so the workflow can import the result and continue.
-- **v1.1.0:** Adds MGC as an optional gradient method, with automatic prerequisite
-  plate solving and configured SPFC/MGC process icons, setup guidance, and preflight checks.
-- **v1.0.0:** First stable public release. Promotes the fully tested,
-  profile-driven color-master workflow, executable adapters, preflight checks,
-  branch processing, recombination, and Update Manager distribution.
-- **v0.6.3:** Prevents section toggles from shrinking the dialog and raises the
-  adaptive minimum height while retaining scrolling on smaller displays.
-- **v0.6.2:** Makes the dialog resizable and adds collapsible, vertically
-  scrollable workflow sections for smaller displays and high display scaling.
-- **v0.6.1:** Adds prominent guidance about linear-master quality and documents
-  that users may choose their preferred calibration and integration method.
-- **v0.6.0:** Adds object/image-type profiles with tailored workflows for color
-  masters, emission nebulae, mapped narrowband images, galaxies, and star clusters.
+The workflow processes a separate pixel copy from its first processing step.
+The original unstretched image remains unchanged and open, including its screen
+stretch; its existing file is never overwritten. FITS keywords, RGB working
+space, storable nonreserved properties and any astrometric solution are copied
+to the working image. An unsaved original remains in memory: save it separately
+as XISF if you need a permanent backup before closing PixInsight.
 
-## Capabilities
+DynamicCrop also opens on a separate working copy. After cropping, restart the
+workflow with that copy active. The original source filename is retained for
+final output naming and overwrite protection. Processing history is not copied.
 
-- An **Object / image type** dropdown that presents only the recommended stages
-  for General Color Image, Broadband Color Emission Nebula, Mapped Narrowband
-  Color Emission Nebula, Galaxy, Star Cluster, or Custom Workflow.
-- Profile-specific defaults while accepting any integrated linear color master,
-  regardless of whether it originated with a one-shot-color or mono camera.
-- Direct final-image stretching for profiles such as Star Cluster that do not
-  use star separation and recombination.
-- Interactive DynamicCrop handoff and preflight detection of likely
-  integration borders.
-- Persistent last-used workflow selections with a Reset to Defaults control.
-- Safe cancellation from the PixInsight Process Console between workflow stages.
-- Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
-  separation.
-- Optional **Plate Solve if needed** step before SPCC, with a dedicated setup
-  dialog and automatic seed-value extraction from FITS/XISF metadata (approximate information ImageSolver needs to begin matching the image against a star catalog).
-- GradientCorrection, GraXpert, or MultiscaleGradientCorrection with SPFC.
-- BlurXTerminator or SyQon Parallax.
-- NoiseXTerminator, MLDenoise (installed process defaults), or SyQon Prism/DeepPrism.
-  MLDenoise requires the process to be installed and available to scripts. It uses
-  the same full-image or starless-branch placement as the other noise tools.
-  The workflow reports it as unavailable if the process is missing.
-- StarXTerminator, StarNet2, or SyQon Starless.
-- Automatic `<target>_stars` naming for the retained stars-only branch.
-- Main denoise placement before star separation or on the starless branch.
-- Recommended linear starless and stars branches, followed by linear-add
-  recombination and one conservative linked automatic histogram stretch.
-- Independent branch stretches remain available as advanced alternatives,
-  but cannot be combined with the final recombined stretch.
-- Optional Bill Blanshan Star Method V2 PixelMath reduction after branch
-  recombination, with Strong, Moderate, or Soft modes and 1–3 iterations.
-- Linear-add or nonlinear screen-blend PixelMath recombination.
-- Preflight validation for input state, astrometry, installed process classes,
-  configured SyQon icons, and branch dependencies.
-- Version 3 profile-aware workflow schema with `main`, `starless`, and `stars` lanes.
-- Contextual mouse-over help for processing choices and branch controls.
-- Certified PixInsight code-signing support for trusted Update Manager packages.
+## Choose the input: color master or separate LRGB masters
+
+WBPP normally provides integrated filter masters. This optional mode handles RGB
+combination and adds separately stretched luminance after RGB finishing, before
+the final HDR review. The existing active-color-master mode is unchanged.
+
+1. Open registered, **linear** L, R, G and B masters before launching the workflow.
+   Select **Separate linear R, G, B + L** and assign each master. Alternatively,
+   select your linear RGB master and choose **Active linear RGB + separate L**.
+2. Confirm matching registration and crop. Dimensions and grayscale/color types
+   are checked; identical dimensions alone do not prove registration. The workflow
+   does not align masters. Crop identically beforehand or crop the final afterward;
+   leave the workflow crop checkbox off in this mode. Input selections and this
+   confirmation are session-only and are not remembered.
+3. Select the desired RGB processing stages and a final stretch. If separating
+   stars, enable recombination. Color calibration is applied to RGB before L is
+   added. Finish the RGB/starless reviews as usual.
+4. In **Luminance combination review**, start with **L weight 50%**. Click
+   **Update Preview**; compare Before/After at 100% and inspect star wings and the
+   bright core. Change the weight and update again before **Apply LRGB**, or choose
+   **Keep RGB**. Zero weight leaves RGB pixels unchanged. Optional comparison
+   images retain the processed RGB and stretched luminance.
+   Choosing Keep starless in the stars review also skips luminance addition.
+5. Enable **Optional HDR after stars / luminance combination** for the final core
+   review, then save. For M42, 6 layers, 50% blend and bright-core restriction
+   550 / 150 / 8 px gave the preferred balance among the tested settings.
+
+L is cloned and stretched once with a zero-shadow HistogramTransformation to
+match its median to the processed RGB's mean of channel medians. This brightness
+match is not registration, PSF matching or a guarantee of optimal contrast. LRGB
+uses L only, neutral Lightness/Saturation transfer settings (0.5), and chrominance
+noise reduction off. No gradient correction, sharpening or denoising is applied
+automatically to L; prepare its linear master beforehand if needed. Original
+masters remain unchanged. Intrinsic star halos can remain or become more visible
+when luminance is added; use the preview to reduce its weight or keep RGB.
+
 
 ## Select an object or image type
 
@@ -453,6 +206,42 @@ The default General Color Image order is:
 7. NoiseXTerminator, MLDenoise, or SyQon Prism on the starless branch
 8. Linear-add PixelMath recombination
 9. One linked automatic histogram stretch on the recombined image
+
+## Configure optional cropping
+
+The validator warns when it detects high-confidence zero or nonfinite pixels
+along the image borders. Crop integration and registration borders before
+GradientCorrection.
+
+To crop the current image, enable **Review crop before workflow** and click **Run Workflow**. A separate linear working copy opens in the integrated crop preview. Drag a rectangle and choose **Apply Crop**, or choose **Skip Crop**. The same workflow window returns automatically with the working copy selected and Crop unchecked. Review and Validate before continuing.
+
+The display stretch is applied only to a temporary preview copy; the original and cropped working pixels remain linear. This preview supports rectangular trimming without rotation. For rotation or other advanced crop operations, use native DynamicCrop manually before starting the workflow.
+
+With **Remember workflow settings** enabled, choices also persist across normal restarts. The linear-image confirmation is not restored on restart. Click **Reset Defaults** to clear saved choices.
+
+Deblur runs before the main denoise pass. Gradient correction precedes SPCC,
+and SPCC requires a plate-solved image.
+
+## Gradient correction: Seti Astro Automatic DBE
+
+**Gradient correction** now offers **Seti Astro Automatic DBE** alongside
+GradientCorrection, GraXpert and MGC. Install **Automatic DBE 1.6** from
+[Seti Astro's PixInsight scripts](https://www.setiastro.com/pjsr-scripts).
+The workflow uses the installed AutoDBE.js; no vendor code is redistributed.
+
+No icon is required for vendor defaults. For custom settings, open Automatic DBE,
+configure it, drag its new-instance triangle to the workspace, and rename the
+Script icon **CCDASTRO_AutoDBE**. Keep that icon available when running the workflow.
+The gradient **Setup...** button provides these instructions. The selected tool
+runs before the normal plate-solving and color-calibration stages.
+
+The adapter runs on the preserved master's working copy, forces **Replace target**
+on that copy and **Discard model**, and uses the icon's other saved parameters.
+Automatic execution uses no manually drawn exclusion regions. AutoDBE also performs
+its own background-neutralization/modeling operations. Inspect a manual trial for
+fields dominated by nebulosity before choosing it. Unsupported script versions,
+wrong icons, and correction failures stop preflight or processing rather than
+silently continuing. Native workflow testing of this new adapter remains pending.
 
 ## MultiscaleGradientCorrection (MGC)
 
@@ -511,64 +300,6 @@ image physically suitable for MGC.
 correct native processes. If the image is unsolved, review the gradient
 **Setup...** dialog for coordinates and image scale.
 
-
-## Preserve the original input
-
-The workflow processes a separate pixel copy from its first processing step.
-The original unstretched image remains unchanged and open, including its screen
-stretch; its existing file is never overwritten. FITS keywords, RGB working
-space, storable nonreserved properties and any astrometric solution are copied
-to the working image. An unsaved original remains in memory: save it separately
-as XISF if you need a permanent backup before closing PixInsight.
-
-DynamicCrop also opens on a separate working copy. After cropping, restart the
-workflow with that copy active. The original source filename is retained for
-final output naming and overwrite protection. Processing history is not copied.
-
-## Configure optional cropping
-
-The validator warns when it detects high-confidence zero or nonfinite pixels
-along the image borders. Crop integration and registration borders before
-GradientCorrection.
-
-To crop the current image, enable **Review crop before workflow** and click **Run Workflow**. A separate linear working copy opens in the integrated crop preview. Drag a rectangle and choose **Apply Crop**, or choose **Skip Crop**. The same workflow window returns automatically with the working copy selected and Crop unchecked. Review and Validate before continuing.
-
-The display stretch is applied only to a temporary preview copy; the original and cropped working pixels remain linear. This preview supports rectangular trimming without rotation. For rotation or other advanced crop operations, use native DynamicCrop manually before starting the workflow.
-
-With **Remember workflow settings** enabled, choices also persist across normal restarts. The linear-image confirmation is not restored on restart. Click **Reset Defaults** to clear saved choices.
-
-Deblur runs before the main denoise pass. Gradient correction precedes SPCC,
-and SPCC requires a plate-solved image.
-
-## Requirements
-
-- PixInsight 1.9.4, including the standard ImageSolver script. PixInsight 1.9.5
-  release preparation is documented in [the compatibility checklist](docs/PIXINSIGHT-1.9.5.md);
-  astrometry, SPFC/MGC, and SPCC passed tests on 1.9.5 build 1702;
-  full workflow and third-party module verification remain pending.
-- An integrated, unstretched color master, preferably 32-bit floating-point
-  XISF.
-- For SPCC, either an existing astrometric solution or approximate coordinates
-  and image-scale metadata for the Plate Solve adapter.
-- The selected third-party processes, applications, models, and licenses.
-
-### Linear-master quality
-
-The workflow starts with the integrated linear color master you provide and is
-independent of the calibration and integration method used to create it. Use
-WBPP, another preprocessing script, process icons, or a manual process according
-to your needs.
-
-The quality of that master sets the limit for the workflow's results. Accurate
-calibration, registration, integration, pixel rejection, and color combination
-are essential. Inspect the master for gradients, clipping, registration errors,
-satellite trails, residual hot pixels, walking noise, and integration borders
-before continuing. Later processing can enhance good data, but it cannot recover
-detail or reliably remove defects lost or introduced during preprocessing.
-
-The preflight validator reports unavailable process classes and missing SyQon
-process icons before execution.
-
 ## Configure Plate Solve if needed
 
 The workflow enables **Plate Solve if needed** by default. When the active image
@@ -595,24 +326,35 @@ must create a valid astrometric solution before SPCC can run. Approximate
 coordinates must be reasonably close to the image center; the setup dialog is
 not a blind-solve service.
 
-## Install manually as a Feature Script (advanced alternative)
+## Color calibration: SPCC or PCC
 
-Most users should use **Install with PixInsight Update Manager** at the top of
-this page. Manual installation is an alternative, not an additional required step.
+**SPCC remains the default.** In **3. Color calibration**, choose
+**PhotometricColorCalibration (PCC)** to use catalog-based photometric color
+calibration instead. Only the selected method runs. Both methods require an
+astrometric solution; leave **Plate Solve if needed** enabled for unsolved images.
 
-1. Download or clone this repository.
-2. Locate PixInsight's installed `src/scripts` directory.
-3. Create `src/scripts/CCDASTRO` and copy `CCDASTROWorkflowManager.js` into it.
-   This sibling location is required because the workflow uses PixInsight's installed
-   `src/scripts/ImageSolver` library.
-4. Start PixInsight and choose **Script > Feature Scripts**.
-5. Click **Add** and select the new `src/scripts/CCDASTRO` directory.
-6. Enable recursive search if available and allow the feature scan to finish.
-7. Open **Script > CCDASTRO > Workflow Manager**.
+For PCC:
 
-The GitHub `tree/main/pixinsight` webpage is not an update URL. Use the raw
-`updates/` URL above for Update Manager or use the installed scripts directory
-for a manual Feature Scripts installation.
+1. Open PixInsight's **PhotometricColorCalibration** process and select the
+   appropriate catalog, white reference, and background-neutralization settings.
+   Enable **Apply color calibration**.
+2. Drag its **New Instance** triangle to the workspace and rename the process
+   icon **CCDASTRO_PCC**. This icon stores the process settings, not an image.
+3. Select PCC in the workflow, then **Validate** and **Run Workflow**. The
+   configured icon is applied to the current linear working copy after gradient
+   correction and plate solving, before deblur, denoise, and stretching.
+
+The workflow preserves the icon's settings. A missing icon, wrong process type,
+or disabled calibration blocks preflight with an explanation. Update the icon
+when changing PCC settings. PixInsight checks catalog access and photometry
+requirements during execution. Native PCC execution in this workflow is pending
+user testing; automated checks cover the adapter and its failure cases.
+
+For comparison, process separate copies of the original linear master with SPCC
+and PCC, using identical **Linked Auto Histogram** settings. Do not apply one
+calibration on top of the other. Calibration establishes color balance; stretching,
+curves, and saturation still determine the final appearance. PCC does not reproduce
+Photoshop Auto Color or HDR Toning automatically.
 
 ## Configure SyQon choices
 
@@ -680,6 +422,17 @@ The configuration dialog returns after completion or failure.
 
 Progress is written to the PixInsight Process Console. Execution stops at the
 first failed stage.
+
+## What happens while processing
+
+> **After you confirm Run Workflow, the Workflow Manager window disappears temporarily. This is normal.**
+>
+> The window is hidden so it does not cover PixInsight's **Process Console** or
+> the processing tools' progress windows. **Follow processing in the Process Console.**
+> The workflow is still running; you do not need to reopen or start it again.
+>
+> **The Workflow Manager window returns automatically after the run finishes or stops with an error.**
+> Dismiss any completion or error message to return to the workflow settings.
 
 ## Final stretch and color balance
 
@@ -779,7 +532,171 @@ comparison images at full resolution. Zero strength intentionally leaves pixels
 unchanged. The Process Console records settings and measured change for each
 recalculation. Runtime verification of the repaint changes is pending.
 
-### Optional CurvesTransformation
+## Enhance the starless image before recombination
+
+For a dense star field with subdued faint structure, enable **Enhance starless
+image before adding stars back** in **Stretch and star branches**. This optional
+path preserves the original linear master and changes the order of stretching
+and finishing, rather than adding stronger sharpening.
+
+1. Enable star separation and automatic branch recombination. Choose your normal
+   linear color calibration, deblur and denoise settings.
+2. Keep **Starless stretch** and **Stars stretch** at **Keep linear**. Select
+   **Linked Auto Histogram** under **Final image stretch**. In this mode that
+   selection stretches the starless branch, before recombination.
+3. Start **Stars brightness (%)** at **70**. This scales the controlled stars layer
+   before screen blending; it is separate from star reduction.
+4. Selected HDR, Curves, local contrast, noise cleanup and saturation reviews
+   operate on the starless image. Each can still be skipped. Inspect noise and
+   star-removal residuals before accepting stronger contrast.
+5. The workflow derives a controlled stars layer using the same linked stretch
+   on the full linear image and its matching starless image, before starless
+   denoise or enhancement. It preserves the original linear stars layer. It never
+   calculates an automatic stretch from sparse stars-only statistics in this mode.
+6. In **Stars recombination review**, adjust brightness and **Update Preview**.
+   Compare Before (untreated recombination) and After (halo-treated recombination) at 100%, then **Apply recombination**
+   or **Keep starless**. Any selected Bill Blanshan reduction is included in the
+   preview; leave it off for the first test. Changes require a fresh preview.
+   The enhanced starless view remains open. Final inspection, XISF save and sharing
+   export use the accepted result. Enhancements are not repeated after recombination.
+
+For an initial test, leave star reduction off, use conservative denoise and BlurX
+Correct Only, and begin with Curves alone before enabling other enhancements.
+Compare identical regions at 100%. Removing stars can improve visibility and
+permit a different stretch, but this does not guarantee recovery of missing
+signal. Old saved configurations retain the previous combined-image processing
+path until this option is enabled. The controlled-stars path was exercised in native M42 processing runs. v1.1.23 could over-stretch the stars layer and amplify halos; update before using this mode.
+
+## Stars recombination and optional halo reduction
+
+The optional **Stars recombination review** now targets neighborhoods around
+bright stars instead of every pixel in a brightness interval. It operates on
+a temporary controlled-stars copy before recombination. Original stars and
+the enhanced starless image are preserved. Halo reduction defaults to **0%**.
+
+Start with **Stars brightness 50%**, **Halo reduction 30%**, **Bright-star
+threshold 350**, **Halo radius 40 px**, **Protect core 6 px**, and **Feather
+4 px**, with Bill Blanshan star reduction off. These are starting points,
+not a guaranteed match for every image.
+
+1. Click **Show halo mask**. White regions receive treatment; black regions
+   are protected. The mask should surround the bright stars with problematic halos.
+2. Raise the threshold to select fewer bright stars, or lower it if the
+   problematic stars are absent. 350 means a maximum RGB value of 0.35 in
+   controlled stars, before the Stars brightness setting is applied.
+3. Adjust Halo radius to cover the surrounding halo. It expands outward from
+   selected bright-star pixels, so it is not an exact radius from a star center.
+   Protect core expands the central protected region; it must be below Halo radius.
+   Feather controls Gaussian boundary smoothing in pixels.
+4. Click **Update Preview** and compare Before/After at the same position.
+   Before is untreated recombination at the same Stars brightness; After is
+   the treated result. **Difference x10** and change metrics isolate treatment.
+5. Apply only if it improves the image without rings or unwanted dimming.
+   **Keep starless** remains available. The mask preview is shown inside the review with the same zoom and pan controls.
+
+The mask combines expanded bright-star cores with a protected inner region
+and softly feathered edges. Bright seed pixels remain protected. Amount is
+percentage attenuation where the mask is white, with proportional treatment
+under gray mask pixels. Small stars outside selected neighborhoods are spared;
+nearby stars and overlapping halos can still be affected. This reduces stars-layer
+halo light; it cannot repair halos already retained in the starless image or
+correct their optical cause. Radius and threshold depend on image scale and stretch.
+Native PixInsight testing remains pending; do not assume every halo will improve.
+
+### What an `<image>_stars` window is showing
+
+An `<image>_stars` window is the **stars-only branch** created by the selected
+star-separation process. It is not intended to look like a finished astronomical
+image. Its purpose is to retain the stellar signal removed from the source image
+so the workflow can process the starless image independently and then add the
+stars back at the recombination stage. If the preferred name already exists,
+PixInsight assigns the next available numbered name automatically. For example,
+`Image01_stars_2` means that `Image01_stars` was already in use; additional name
+conflicts can produce `Image01_stars_3`, `Image01_stars_4`, and so on.
+
+The stars can appear greatly enlarged, white, or “blown out,” and the background
+can look extremely noisy when this sparse, mostly black image is displayed with
+an aggressive automatic ScreenTransferFunction (STF). PixInsight calculates a
+display stretch from the small amount of signal in the stars-only layer, which
+strongly magnifies star cores, subtraction remnants, color speckles, and
+background noise. An STF changes only the screen display; it does not clip or
+permanently stretch the underlying linear pixels. Use **STF Reset** or disable
+the STF to inspect the actual linear branch.
+
+If **Stars stretch** was selected in the workflow, however, a real histogram
+stretch has been applied. Independent branch stretching is an advanced option
+and can genuinely overexpand or clip stars when pushed too far. For the safest
+default, leave both branches linear, allow the workflow to add them together,
+and apply the final stretch to the recombined image. Judge the result in that
+recombined image—not by the intentionally harsh appearance of the isolated
+stars-only diagnostic view.
+
+## Optional HDR: placement, preview and core protection
+
+HDR uses native HDRMultiscaleTransform to compress bright structures. It defaults
+off; remembered workflow settings retain your selection. A real workflow stretch
+is required. HDR cannot reconstruct clipped core detail or repair existing halos.
+
+### Choose where HDR runs
+
+- With **Enhance starless image before adding stars back** enabled, the original
+  **Optional HDR** checkbox reviews the stretched starless branch before Curves
+  and finishing. The second checkbox adds a final combined-image review.
+- Enable **Optional HDR after stars / luminance combination: review core and
+  stars** to inspect the nebula core and embedded stars together. In separate
+  LRGB mode, this review follows RGB finishing and the luminance combination
+  review. Without separate L, it follows star recombination.
+- In the ordinary color-master path with starless enhancement off, the original
+  HDR checkbox reviews the final stretched image. Selecting both HDR boxes does
+  not repeat that final HDR review.
+- Star separation requires recombination for final HDR. Separate LRGB mode can
+  use final HDR without star separation. **Keep starless** skips both luminance
+  addition and the combined-image HDR review.
+
+For an M42 comparison, leave starless HDR off and enable only final combined HDR.
+Start with **6 layers, 30% blend**; our selected M42 result used **50% blend** with
+the bright-core mask below. Adjust for your image rather than assuming a universal
+setting. The full workflow still requires linear inputs.
+
+### Calculate and compare the HDR preview
+
+1. **Before** displays the untreated input. Click **Update Preview** to calculate
+   **After**. Every calculation starts from that input rather than stacking HDR.
+2. Compare Before / After at 100% or 200%; drag to pan. **Difference x10** is an
+   inspection display and does not alter the applied result.
+3. Adjust **Layers** (3-10, default 6) and **Blend (%)** (0-100, default 30), then
+   update again. Apply remains disabled until the current settings are calculated.
+4. **Apply HDR** retains a separate result; **Skip HDR** or closing the review
+   keeps its input. Enable **Keep a before-HDR comparison image** if desired.
+   Comparison images stay open and are not automatically saved.
+
+### Restrict HDR to a bright core
+
+In either HDR review, enable **Restrict HDR to bright core** to protect darker
+outer nebulosity. Start with threshold **550**, transition **150**, feather
+**8 px**. The mask uses average RGB brightness in the current stretched image:
+550 means 0.55, and transition 150 means a 0.15 brightness range, capped at 1.0.
+
+Click **Show core mask**: white permits HDR, black protects, gray blends partially.
+Lower the threshold for broader coverage or raise it to isolate the core.
+Transition controls the brightness fade; feather softens spatial boundaries.
+Mask preview alone does not enable restriction. Click **Update Preview** after
+changing controls, then Apply or Skip. Restriction defaults off and affects the
+final HDR blend; bright stars can also enter the mask. No workspace icon is needed.
+
+### Native HDR settings supplied by the workflow
+
+- To lightness and Preserve hue: enabled for color images.
+- Lightness mask and Deringing: enabled.
+- Small-scale deringing: **0.00**; Large-scale: **0.25**.
+- Iterations: **1**; deringing maps: off.
+
+Changing the standalone HDR process window does not change these settings. Inspect
+bright edges at 100%; reduce the blend or skip if HDR creates rings or flattens
+structure. Masked HDR was exercised in native PixInsight M42 comparison runs.
+Final save uses the original input name, and canceling save leaves the result open.
+
+## Optional CurvesTransformation
 
 Enable **Optional CurvesTransformation: preview before saving** to review a
 native CurvesTransformation adjustment after stretching, star reduction, and
@@ -817,7 +734,7 @@ cleanup, comparison retention, and Apply/Skip.
 The final filename remains &lt;original_name&gt;_CCDASTROWorkflow_Final.xisf.
 Enabling HDR and CurvesTransformation adds two separate interactive reviews.
 
-### Final inspection and optional finishing
+## Final inspection and optional finishing
 
 Enable **Final inspection, local contrast, noise cleanup, saturation and sharing
 export** for the sequence below. It is enabled by default and remembered with
@@ -905,85 +822,10 @@ Runtime verification of the new finishing stages and exports is pending.
 Automated checks use mocked APIs to cover masks, input preservation and metadata,
 failure cleanup, denoise blending, preview controls, resize geometry and saving.
 
-### Optional HDR preview and comparison
-
-Enable **Optional HDR: review preview and compare before saving** for targets
-with bright cores or structures whose detail benefits from dynamic-range
-compression. It uses PixInsight's native HDRMultiscaleTransform, so no additional
-script installation is required. HDR is disabled by default for every fresh
-workflow; remembered settings retain your selection.
-
-The stage runs on the final stretched image after any star reduction. When star
-separation is enabled, automatic recombination is required. Preflight also
-requires a final or starless stretch in this workflow; HDR is not applied to a
-linear master.
-
-When the HDR review opens, **Before** immediately displays the input. Click
-**Update Preview** to calculate the result and switch to **After**. **Apply HDR**
-stays disabled until a fresh HDR preview has been calculated.
-
-1. Click **Update Preview** and wait for processing to finish. The calculated
-   HDR blend appears in **After**, and **Apply HDR** becomes available.
-2. Switch **Before / After** in the same display area. Use Fit or 100%/200%
-   zoom; drag to pan when zoomed. **Difference x10** reveals subtle changes
-   for inspection and does not alter the applied result.
-3. Adjust **Layers** (3–10, initially 6) and **Blend (%)** (0–100, initially 30),
-   then click **Update Preview** again. Apply stays disabled until the updated
-   settings have been calculated. More layers target larger structures;
-   blending controls the contribution of the HDR result.
-4. Click **Apply HDR** to retain the separate `<image>_HDR` result and continue
-   to Curves and finishing reviews when enabled, or **Skip HDR** to continue
-   with the pre-HDR image. Closing the
-   review dialog also skips HDR. Preview calculation does not modify the source.
-5. With **Keep a before-HDR comparison image** checked, an additional
-   `<image>_BeforeHDR` image remains open after Apply for full-resolution
-   inspection alongside the HDR result. The original processed view also stays
-   open. Comparison images are not automatically saved.
-
-The final filename continues to use the original input name plus
-`_CCDASTROWorkflow_Final.xisf`, rather than a temporary HDR view name. Canceling
-Save As leaves the result open. Preview and comparison are interactive; enabling
-HDR adds a review step to the workflow.
-
-Start with a modest blend and inspect bright boundaries and stars at full
-resolution before accepting. HDR can change local contrast and brightness; it
-cannot reconstruct clipped core detail. Combining short and long exposures is
-a separate earlier operation. The comparison copies need additional memory for
-large images. PixInsight 1.9.5 runtime verification of this new stage is pending;
-automated tests use mocked PixInsight APIs.
-
-### What an `<image>_stars` window is showing
-
-An `<image>_stars` window is the **stars-only branch** created by the selected
-star-separation process. It is not intended to look like a finished astronomical
-image. Its purpose is to retain the stellar signal removed from the source image
-so the workflow can process the starless image independently and then add the
-stars back at the recombination stage. If the preferred name already exists,
-PixInsight assigns the next available numbered name automatically. For example,
-`Image01_stars_2` means that `Image01_stars` was already in use; additional name
-conflicts can produce `Image01_stars_3`, `Image01_stars_4`, and so on.
-
-The stars can appear greatly enlarged, white, or “blown out,” and the background
-can look extremely noisy when this sparse, mostly black image is displayed with
-an aggressive automatic ScreenTransferFunction (STF). PixInsight calculates a
-display stretch from the small amount of signal in the stars-only layer, which
-strongly magnifies star cores, subtraction remnants, color speckles, and
-background noise. An STF changes only the screen display; it does not clip or
-permanently stretch the underlying linear pixels. Use **STF Reset** or disable
-the STF to inspect the actual linear branch.
-
-If **Stars stretch** was selected in the workflow, however, a real histogram
-stretch has been applied. Independent branch stretching is an advanced option
-and can genuinely overexpand or clip stars when pushed too far. For the safest
-default, leave both branches linear, allow the workflow to add them together,
-and apply the final stretch to the recombined image. Judge the result in that
-recombined image—not by the intentionally harsh appearance of the isolated
-stars-only diagnostic view.
-
 ## Safety and current limitations
 
-- Processing modifies the active view and does not automatically save or clone
-  the input.
+- Processing uses separate working copies and preserves original inputs. Final
+  XISF save and sharing export are offered; canceling leaves the result open.
 - Linear state cannot be proven reliably from pixels alone, so explicit user
   confirmation is required.
 - The automatic histogram stretch is a starting point, not an aesthetic final
@@ -997,20 +839,6 @@ stars-only diagnostic view.
   ambiguous names, the manager stops rather than guessing which is stars-only.
 - Exportable user presets, GHS adapters, checkpoints, and target-specific JSON imports
   remain future work.
-
-## Files
-
-- `CCDASTROWorkflowManager.js` - installable PJSR script.
-- `CCDASTROWorkflowManager.xsgn` - certified signature generated for the final release script.
-- `workflows/color-master-v1.1.0.json` - version 3 profile-aware workflow definition.
-- `workflows/color-master-v1.1.0.schema.json` - JSON Schema.
-- `tools/validate-workflow.js` - dependency-free structure/order validator.
-
-Developers with Node.js can validate the supplied workflow with:
-
-```powershell
-node pixinsight/tools/validate-workflow.js
-```
 
 ## Troubleshooting
 
@@ -1039,3 +867,124 @@ Preflight requires the icon to contain BlurXTerminator. No fresh-instance fallba
 
 ### Crop preview and automatic return (v1.1.21)
 The Crop stage opens an internal preview on a separate linear working copy. Drag a rectangle, then Apply Crop. The script executes the native DynamicCrop process and automatically returns to the same workflow settings with the working copy selected and Crop unchecked. Skip Crop also returns. The preview uses a temporary stretched display copy; input pixels remain linear. This supports rectangular trimming without rotation. For advanced rotation, use native DynamicCrop manually before starting the workflow. The crop preview and automatic return were confirmed working in PixInsight v1.1.21.
+
+## Capabilities
+
+- An **Object / image type** dropdown that presents only the recommended stages
+  for General Color Image, Broadband Color Emission Nebula, Mapped Narrowband
+  Color Emission Nebula, Galaxy, Star Cluster, or Custom Workflow.
+- Profile-specific defaults while accepting any integrated linear color master,
+  regardless of whether it originated with a one-shot-color or mono camera.
+- Direct final-image stretching for profiles such as Star Cluster that do not
+  use star separation and recombination.
+- Interactive DynamicCrop handoff and preflight detection of likely
+  integration borders.
+- Persistent last-used workflow selections with a Reset to Defaults control.
+- Safe cancellation from the PixInsight Process Console between workflow stages.
+- Ordered checkboxes for gradient correction, SPCC, deblur, denoise, and star
+  separation.
+- Optional **Plate Solve if needed** step before SPCC, with a dedicated setup
+  dialog and automatic seed-value extraction from FITS/XISF metadata (approximate information ImageSolver needs to begin matching the image against a star catalog).
+- GradientCorrection, GraXpert, Seti Astro Automatic DBE, or MultiscaleGradientCorrection with SPFC.
+- Optional separate registered LRGB masters, matched luminance stretch and L-weight review.
+- BlurXTerminator or SyQon Parallax.
+- NoiseXTerminator, MLDenoise (installed process defaults), or SyQon Prism/DeepPrism.
+  MLDenoise requires the process to be installed and available to scripts. It uses
+  the same full-image or starless-branch placement as the other noise tools.
+  The workflow reports it as unavailable if the process is missing.
+- StarXTerminator, StarNet2, or SyQon Starless.
+- Automatic `<target>_stars` naming for the retained stars-only branch.
+- Main denoise placement before star separation or on the starless branch.
+- Recommended linear starless and stars branches, followed by linear-add
+  recombination and one conservative linked automatic histogram stretch.
+- Independent branch stretches remain available as advanced alternatives,
+  but cannot be combined with the final recombined stretch.
+- Optional Bill Blanshan Star Method V2 PixelMath reduction after branch
+  recombination, with Strong, Moderate, or Soft modes and 1–3 iterations.
+- Linear-add or nonlinear screen-blend PixelMath recombination.
+- Preflight validation for input state, astrometry, installed process classes,
+  configured SyQon icons, and branch dependencies.
+- Version 3 profile-aware workflow schema with `main`, `starless`, and `stars` lanes.
+- Contextual mouse-over help for processing choices and branch controls.
+- Certified PixInsight code-signing support for trusted Update Manager packages.
+
+## Files
+
+- `CCDASTROWorkflowManager.js` - installable PJSR script.
+- `CCDASTROWorkflowManager.xsgn` - certified signature generated for the final release script.
+- `workflows/color-master-v1.1.0.json` - version 3 profile-aware workflow definition.
+- `workflows/color-master-v1.1.0.schema.json` - JSON Schema.
+- `tools/validate-workflow.js` - dependency-free structure/order validator.
+
+Developers with Node.js can validate the supplied workflow with:
+
+```powershell
+node pixinsight/tools/validate-workflow.js
+```
+
+## Revision history
+
+- **v1.1.33:** Adds separate R/G/B/L or RGB + L inputs, automatic luminance stretch matching and adjustable LRGB review before final HDR. Fixes garbled range labels.
+
+- **v1.1.32:** Adds optional bright-core HDR restriction, adjustable threshold, transition and feathering, with inline mask inspection.
+- **v1.1.31:** Adds an optional post-recombination HDR review, including with starless enhancement enabled; remembers the selection and skips it when stars are not added back.
+- **v1.1.30:** Explicitly enables conservative HDR deringing in both HDR paths and logs its settings. Pre-existing halos remain a separate issue.
+- **v1.1.29:** Adds Seti Astro Automatic DBE 1.6 as a gradient-removal choice, with vendor defaults, an optional configured icon and setup instructions. Native integration testing pending.
+- **v1.1.28:** Fixes the native MorphologicalTransformation operator enum that prevented spatial halo mask generation and treatment. Regression tests now reject invalid operator types. Native testing pending.
+- **v1.1.27:** Replaces intensity-band treatment with a spatial bright-star halo mask, core protection, radius/feather controls, and a mask preview. Native testing pending.
+- **v1.1.26:** Stronger masked halo attenuation, adjustable limits, and untreated-versus-treated recombination comparison with treatment-specific change metrics. Native testing pending.
+- **v1.1.25:** Adds optional masked halo reduction amount inside stars recombination preview; original stars and starless layers preserved. Native testing pending.
+- **v1.1.24:** Replaces sparse stars-only automatic stretch with matched full/starless reference stretches; preserves linear stars and adds adjustable recombination preview with Apply or Keep starless. Native testing pending.
+- **v1.1.23:** Optional starless stretch and enhancement before controlled-brightness star recombination; retains the enhanced starless view. Native testing pending.
+- **v1.1.22:** Adds PCC as an alternative to default SPCC using the configured CCDASTRO_PCC icon; shared plate-solving preflight and preserved calibration settings. Native PCC testing pending.
+- **v1.1.21:** Integrated rectangular crop preview executes native DynamicCrop and returns automatically to the same workflow settings. Original linear input is preserved; Crop is unchecked on return. Rotation remains a manual operation.
+- **v1.1.18–v1.1.20:** Intermediate crop handoff changes, superseded by v1.1.21.
+- **v1.1.17:** BlurXTerminator uses the configured **CCDASTRO_BlurX** workspace icon and logs Correct Only and sharpening settings, avoiding reliance on fresh-instance defaults.
+
+- **v1.1.16:** Checks for the optional final denoise icon before loading it and provides setup/Skip instructions instead of the native missing-icon exception.
+- **v1.1.15:** Replaces duplicate inspection Continue buttons with a single Continue to finishing button; inspection makes no pixel changes. All reviews open on Before, switch to After after successful calculation, and return to Before on preview failure. Zoomed panning is bounded to keep the image visible.
+- **v1.1.14:** Preserves the original input and metadata by processing a separate copy, including before DynamicCrop. Adds 100% inspection with panning, optional masked local contrast, configured final denoise with blend, masked saturation, full-resolution XISF save and separate resized JPEG/PNG export. Finishing-stage and export runtime verification is pending.
+- **v1.1.13:** Fixes native CurvesTransformation interpolation enum access for the V8 runtime; regression checks require integer interpolation values. User confirmed successful PixInsight testing on 2026-10-02 after installing this fix.
+- **v1.1.12:** Replaces adaptive PixelMath finishing with native CurvesTransformation: RGB/K, Lightness or Saturation; Brighten/Contrast/Identity presets; editable input/output points and 0–100% curve amount. Fixes retained before-Curves comparison creation. Successful PixInsight testing was confirmed with the v1.1.13 enum fix.
+- **v1.1.11:** HDR and adaptive previews use same-position Before/After switching, Fit/100%/200% centered zoom, and an inspection-only 10x absolute difference view. PixInsight runtime verification is pending.
+- **v1.1.10:** Forces immediate HDR/adaptive preview repaint, resets rendered image selections, and shows preview revision and sampled pixel-change statistics. Console logs record each preview settings selection.
+- **v1.1.9:** Uses a configured CCDASTRO_MLDenoise process icon so the neural network model path and denoise settings are retained. Preflight rejects missing models before processing.
+- **v1.1.8:** Adds optional image-adaptive brightness/contrast finishing after
+  HDR and before Save As, with Mild/Medium/Custom strength, protected background
+  and highlights, side-by-side preview, Apply/Skip, and comparison copies.
+- **v1.1.7:** Fixes the HDR preview background painting error by passing the required Brush object to Graphics.fillRect.
+- **v1.1.6:** Adds optional native HDRMultiscaleTransform with a side-by-side
+  preview, adjustable layers and blend strength, Apply/Skip controls, and a
+  retained before-HDR comparison image. HDR runs after the stretch and star
+  reduction, before final Save As. Disabled by default.
+- **v1.1.5:** Offers Save As after a completed final image, using the original
+  input filename plus `_CCDASTROWorkflow_Final.xisf`. The name and folder remain
+  editable, existing outputs require overwrite confirmation, and the original
+  input file cannot be overwritten. Cancel leaves the processed image open.
+  Workflows without recombination leave their separate branches open.
+- **v1.1.4:** Refreshes signing dependencies for the ImageSolver engine shipped
+  with PixInsight 1.9.5 build 1705. Script and update manifest signed with the CCDASTRO identity; runtime verification pending.
+- **v1.1.3:** Adds MLDenoise to noise reduction with the selected denoise placement.
+
+- **v1.1.2:** Adds PixInsight 1.9.5 release compatibility, strict package-content checks,
+  and documented passing astrometry, SPFC/MGC, and SPCC runtime tests.
+  RC Astro integration testing remains pending; its modules were unavailable.
+
+- **v1.1.1:** Fixes recursive SyQon script execution while preserving configured
+  process-icon settings. Runs processing outside the workflow setup dialog so
+  the Process Console remains accessible. Documents the manual Starless step:
+  click **Generate Starless**, monitor the **Process Console** for completion,
+  then close the Starless window so the workflow can import the result and continue.
+- **v1.1.0:** Adds MGC as an optional gradient method, with automatic prerequisite
+  plate solving and configured SPFC/MGC process icons, setup guidance, and preflight checks.
+- **v1.0.0:** First stable public release. Promotes the fully tested,
+  profile-driven color-master workflow, executable adapters, preflight checks,
+  branch processing, recombination, and Update Manager distribution.
+- **v0.6.3:** Prevents section toggles from shrinking the dialog and raises the
+  adaptive minimum height while retaining scrolling on smaller displays.
+- **v0.6.2:** Makes the dialog resizable and adds collapsible, vertically
+  scrollable workflow sections for smaller displays and high display scaling.
+- **v0.6.1:** Adds prominent guidance about linear-master quality and documents
+  that users may choose their preferred calibration and integration method.
+- **v0.6.0:** Adds object/image-type profiles with tailored workflows for color
+  masters, emission nebulae, mapped narrowband images, galaxies, and star clusters.

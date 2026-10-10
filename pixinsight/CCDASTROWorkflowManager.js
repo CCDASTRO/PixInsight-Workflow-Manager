@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.32"
+#define VERSION "1.1.33"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1346,9 +1346,13 @@ PreflightValidator.prototype.validate = function()
       result.errors.push("Select the main image view, not a preview.");
    if (!this.dialog.linearConfirmation.checked)
       result.errors.push("Confirm that the input is an unstretched linear integrated master.");
-   if (!window.mainView.image.isColor)
-      result.errors.push("This workflow expects an integrated color master.");
+   var lrgbViews = null;
+   try { if (this.dialog.lrgbMode && this.dialog.lrgbMode.currentItem > 0) lrgbViews = lrgbInputViews(this.dialog); }
+   catch(e) { result.errors.push(errorMessage(e)); }
+   if (!window.mainView.image.isColor && (!this.dialog.lrgbMode || this.dialog.lrgbMode.currentItem !== 2))
+      result.errors.push("This workflow expects an integrated color master, or separate R/G/B/L mode.");
 
+   if (lrgbViews !== null && lrgbViews.R) { window = lrgbViews.R.window; view = lrgbViews.R; }
    var cropRow = this.dialog.rowsById.crop;
    if (!cropRow.enabled.checked)
       try
@@ -1435,6 +1439,7 @@ PreflightValidator.prototype.validate = function()
          result.errors.push("HDR review requires an image stretch in this workflow.");
    }
    if (this.dialog.combinedHDREnabled && this.dialog.combinedHDREnabled.checked &&
+       (!this.dialog.lrgbMode || this.dialog.lrgbMode.currentItem === 0) &&
        (!separationEnabled || !this.dialog.recombine.checked))
       result.errors.push("HDR after stars recombination requires star separation and automatic recombination.");
    if (this.dialog.adaptiveEnabled && this.dialog.adaptiveEnabled.checked)
@@ -1752,6 +1757,178 @@ function labeledCombo(parent, label, items, selected, toolTip)
    return control;
 }
 
+// LRGB inputs are session-only: never restore stale image identifiers.
+function installLRGBInputs(dialog)
+{
+   var box = new GroupBox(dialog.content);
+   box.title = "Optional separate LRGB masters";
+   box.sizer = new VerticalSizer; box.sizer.margin = 8; box.sizer.spacing = 6;
+   var mode = labeledCombo(dialog.content, "Input mode:",
+      ["Active linear color master", "Active linear RGB + separate L", "Separate linear R, G, B + L"], 0,
+      "WBPP filter masters must already be registered. L is added after RGB finishing and before final HDR.");
+   dialog.lrgbMode = mode.combo; box.sizer.add(mode.sizer);
+   dialog.lrgbInputs = {};
+   var ids = ["<select an open main view>"];
+   var windows = ImageWindow.windows;
+   for (var i = 0; i < windows.length; ++i) ids.push(windows[i].mainView.fullId);
+   for (var j = 0; j < 4; ++j)
+   {
+      var key = ["L", "R", "G", "B"][j];
+      var row = labeledCombo(dialog.content, key + " master:", ids, 0, "Open the registered linear master before launching the workflow.");
+      dialog.lrgbInputs[key] = row.combo; box.sizer.add(row.sizer);
+   }
+   dialog.lrgbRegistered = new CheckBox(dialog.content);
+   dialog.lrgbRegistered.text = "I confirm all selected masters are linear, registered and share the same crop";
+   box.sizer.add(dialog.lrgbRegistered);
+   var refresh = function()
+   {
+      var mode = dialog.lrgbMode.currentItem;
+      dialog.lrgbInputs.L.enabled = mode > 0;
+      dialog.lrgbRegistered.enabled = mode > 0;
+      for (var k = 0; k < 3; ++k) dialog.lrgbInputs[["R","G","B"][k]].enabled = mode === 2;
+   };
+   dialog.lrgbMode.onItemSelected = refresh; refresh();
+   return box;
+}
+
+function selectedLRGBView(dialog, key)
+{
+   var control = dialog.lrgbInputs[key];
+   if (control.currentItem === 0) throw new Error("Select the " + key + " master.");
+   var view = View.viewById(control.itemText(control.currentItem));
+   if (view.isNull || view.isPreview) throw new Error(key + " master is no longer open as a main view.");
+   return view;
+}
+
+function lrgbInputViews(dialog)
+{
+   if (!dialog.lrgbMode || dialog.lrgbMode.currentItem === 0) return null;
+   if (!dialog.lrgbRegistered.checked) throw new Error("Confirm that all LRGB inputs are linear and registered with matching crops.");
+   var views = { L: selectedLRGBView(dialog, "L") };
+   if (dialog.lrgbMode.currentItem === 2)
+   {
+      views.R = selectedLRGBView(dialog,"R"); views.G = selectedLRGBView(dialog,"G"); views.B = selectedLRGBView(dialog,"B");
+      if (views.R.fullId === views.G.fullId || views.R.fullId === views.B.fullId || views.G.fullId === views.B.fullId)
+         throw new Error("R, G and B must be three distinct masters.");
+   }
+   else views.RGB = ImageWindow.activeWindow.mainView;
+   var reference = views.RGB || views.R;
+   for (var key in views)
+   {
+      var image = views[key].image;
+      if (image.width !== reference.image.width || image.height !== reference.image.height)
+         throw new Error("LRGB inputs have different dimensions. Register and crop them identically first.");
+      if (key === "RGB" ? !image.isColor : image.isColor || image.numberOfNominalChannels !== 1)
+         throw new Error(key + " must be " + (key === "RGB" ? "RGB color." : "a single-channel grayscale master."));
+      if (key !== "L" && views[key].fullId === views.L.fullId)
+         throw new Error("L must be separate from the RGB/filter masters.");
+   }
+   if (dialog.rowsById.crop.enabled.checked)
+      throw new Error("For separate LRGB inputs, turn workflow crop off. Crop all masters identically beforehand, or crop the final image afterward.");
+   if (dialog.finalStretch.currentItem === 0)
+      throw new Error("Separate LRGB mode requires a final RGB stretch.");
+   if (dialog.rowsById.starSeparation.enabled.checked && !dialog.recombine.checked)
+      throw new Error("Separate LRGB mode requires recombination when star separation is enabled.");
+   if (!imageHasAstrometricSolution(reference.window)) plateSolveSettings.autofill(reference.window);
+   return views;
+}
+
+function combineLinearRGB(views)
+{
+   var process = new ChannelCombination;
+   process.channels = [[true,views.R.fullId],[true,views.G.fullId],[true,views.B.fullId]];
+   if (!process.executeGlobal()) throw new Error("RGB channel combination failed.");
+   var window = ImageWindow.activeWindow;
+   window.mainView.id = uniqueMainViewId(views.R.id + "_RGB");
+   window.show();
+   return window.mainView;
+}
+
+function lrgbMedian(view)
+{
+   var image = view.image, sum = 0, channels = image.numberOfNominalChannels;
+   image.resetSelections();
+   try { for (var c=0;c<channels;++c) { image.selectedChannel=c; sum += image.median(); } }
+   finally { image.resetSelections(); }
+   return sum/channels;
+}
+
+function stretchLRGBLuminance(luminance, rgb)
+{
+   var target = lrgbMedian(rgb), center = lrgbMedian(luminance);
+   if (!finiteNumber(target) || !finiteNumber(center) || target <= 0 || target >= 1 || center <= 0 || center >= 1)
+      throw new Error("Cannot match luminance stretch: medians must be between zero and one.");
+   var m = (center-target*center)/(center+target-2*center*target);
+   var process = new HistogramTransformation;
+   process.H = [[0,0.5,1,0,1],[0,0.5,1,0,1],[0,0.5,1,0,1],[0,m,1,0,1],[0,0.5,1,0,1]];
+   clearDisplaySTF(luminance);
+   if (!process.executeOn(luminance)) throw new Error("Luminance stretch failed.");
+   logLine("Luminance match: input median="+center+", RGB target="+target+", midtones="+m+"; no shadow clipping.");
+}
+
+function buildLRGBCandidate(rgb, luminance, weight)
+{
+   if (!finiteNumber(weight) || weight < 0 || weight > 1) throw new Error("Luminance weight must be 0-100%.");
+   var result = cloneHDRView(rgb,"_LRGB");
+   try
+   {
+      if (weight > 0)
+      {
+         var process = new LRGBCombination;
+         process.channels = [[false,"",1],[false,"",1],[false,"",1],[true,luminance.fullId,weight]];
+         process.mL=0.5; process.mc=0.5; process.noiseReduction=false; process.clipHighlights=true;
+         if (!process.executeOn(result.mainView)) throw new Error("LRGB combination failed.");
+      }
+      return result;
+   }
+   catch(e) { result.forceClose(); throw e; }
+}
+
+function reviewLRGB(rgb, linearLuminance)
+{
+   var luminance = cloneHDRView(linearLuminance,"_MatchedLuminance"), dialog = null, accepted = false;
+   try
+   {
+      stretchLRGBLuminance(luminance.mainView,rgb);
+      dialog = new HDRReviewDialog(rgb);
+      dialog.windowTitle = "Luminance combination review";
+      dialog.instructions.text = "Before: processed RGB. After: matched luminance added. Compare at 100%; drag to pan.\nStart at 50%. Matching uses channel-mean medians; inspect star halos and core detail. Skip keeps RGB.";
+      dialog.layers.hide(); dialog.layersLabel.hide();
+      dialog.strengthLabel.text = "L weight (%):"; dialog.strength.value=50;
+      dialog.keepComparison.text = "Keep RGB and matched luminance comparison images";
+      dialog.applyButton.text = "Apply LRGB"; dialog.skipButton.text = "Keep RGB";
+      dialog.updateButton.onClick = function()
+      {
+         dialog.enabled=false; dialog.applyButton.enabled=false;
+         try
+         {
+            if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate=null; }
+            dialog.afterBitmap=null; dialog.differenceBitmap=null;
+            checkAbortRequested();
+            dialog.candidate=buildLRGBCandidate(rgb,luminance.mainView,dialog.strength.value/100);
+            dialog.afterBitmap=dialog.candidate.mainView.image.render(1,false);
+            dialog.displayMode.currentItem=1; ++dialog.previewRevision;
+            dialog.previewStatus.text="L weight "+dialog.strength.value+"%. "+previewChangeSummary(rgb.image,dialog.candidate.mainView.image);
+            dialog.applyButton.enabled=true;
+         }
+         catch(e) { dialog.displayMode.currentItem=0; dialog.previewStatus.text="Preview failed: "+errorMessage(e); if (Console.abortRequested) dialog.cancel(); }
+         finally { dialog.enabled=true; dialog.preview.repaint(); CoreApplication.processEvents(); }
+      };
+      dialog.adjustToContents();
+      if (!dialog.execute()) { checkAbortRequested(); logLine("Luminance skipped; keeping processed RGB."); return rgb; }
+      if (dialog.candidate === null || !dialog.applyButton.enabled) throw new Error("Update the LRGB preview before applying.");
+      if (dialog.keepComparison.checked) { rgb.window.show(); luminance.show(); } else luminance.forceClose();
+      dialog.candidate.show(); accepted=true;
+      logLine("L added after RGB finishing: weight="+dialog.strength.value+"%; Lightness/Saturation=0.5; chrominance noise reduction off.");
+      return dialog.candidate.mainView;
+   }
+   finally
+   {
+      if (!accepted) { if (dialog !== null && dialog.candidate !== null) dialog.candidate.forceClose(); luminance.forceClose(); }
+   }
+}
+
+
 class WorkflowDialog extends Dialog
 {
 constructor()
@@ -1778,7 +1955,7 @@ constructor()
    this.inputLabel.margin = 6;
    this.inputLabel.text = "Active view: " +
       (ImageWindow.activeWindow.isNull ? "<none>" : ImageWindow.activeWindow.currentView.fullId);
-   this.inputLabel.toolTip = "The workflow processes the active main image view in place.";
+   this.inputLabel.toolTip = "The workflow preserves inputs and processes separate copies.";
    this.inputQualityNote = new Label(this.content);
    this.inputQualityNote.wordWrapping = true;
    this.inputQualityNote.useRichText = true;
@@ -1787,8 +1964,9 @@ constructor()
       "processing cannot recover detail or remove defects lost or introduced while creating the master.";
    this.inputQualityNote.toolTip = "Create the best possible linear master with the preprocessing method of your choice before running this workflow.";
    this.linearConfirmation = new CheckBox(this.content);
-   this.linearConfirmation.text = "I confirm this is an unstretched, integrated linear color master";
+   this.linearConfirmation.text = "I confirm the workflow inputs are unstretched, integrated linear masters";
    this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";
+   this.lrgbBox = installLRGBInputs(this);
    this.rememberSettings = new CheckBox(this.content);
    this.rememberSettings.text = "Remember workflow settings";
    this.rememberSettings.toolTip = "Restore the last-used process selections and branch options. " +
@@ -1957,7 +2135,7 @@ constructor()
    this.hdrEnabled.toolTip = "After stretching and star reduction, review native HDRMultiscaleTransform on a copy. Adjust layers and blend strength, then Apply or Skip. Requires a nonlinear final image.";
    this.branchesBox.sizer.add(this.hdrEnabled);
    this.combinedHDREnabled = new CheckBox(this.content);
-   this.combinedHDREnabled.text = "Optional HDR after stars recombination: review combined core and stars";
+   this.combinedHDREnabled.text = "Optional HDR after stars / luminance combination: review core and stars";
    this.combinedHDREnabled.checked = false;
    this.combinedHDREnabled.toolTip = "Additional HDR review after adding stars back, including when Enhance starless is checked. Uses deringing. Requires separation and recombination. Skipped if Keep starless is chosen. With Enhance starless off, overlapping HDR selections produce one final review.";
    this.branchesBox.sizer.add(this.combinedHDREnabled);
@@ -2001,7 +2179,7 @@ constructor()
       self.refreshStarReductionControls();
       self.noisePlacementControl.label.visible = profileContainsStep(profile, "noiseReduction");
       self.noisePlacement.visible = profileContainsStep(profile, "noiseReduction");
-      self.stepsSection.title = profile.label + " â€” linear workflow";
+      self.stepsSection.title = profile.label + " - linear workflow";
       if (self.refreshScrollableLayout !== undefined)
          self.refreshScrollableLayout();
    };
@@ -2048,6 +2226,7 @@ constructor()
    this.content.sizer.add(this.inputQualityNote);
    this.content.sizer.add(this.linearConfirmation);
    this.content.sizer.add(this.rememberSettings);
+   this.content.sizer.add(this.lrgbBox);
    this.content.sizer.add(this.profileSection);
    this.content.sizer.add(this.profileBox);
    this.content.sizer.add(this.stepsSection);
@@ -2674,7 +2853,7 @@ constructor(view)
    this.previewStatus = new Label(this);
    this.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
    this.instructions = new Label(this);
-   this.instructions.text = "Native CurvesTransformation. Edit input/output points (0â€“1000 = 0â€“1), then Update Preview.\nSwitch Before / After to compare. Apply keeps a separate result; Skip preserves the original.";
+   this.instructions.text = "Native CurvesTransformation. Edit input/output points (0-1000 = 0-1), then Update Preview.\nSwitch Before / After to compare. Apply keeps a separate result; Skip preserves the original.";
    this.layersLabel = new Label(this);
    this.layersLabel.text = "Preset:";
    this.layers = new ComboBox(this);
@@ -2710,8 +2889,8 @@ constructor(view)
       input.minValue = 1; input.maxValue = 999; input.value = defaults[i][0];
       var output = new SpinBox(this);
       output.minValue = 0; output.maxValue = 1000; output.value = defaults[i][1];
-      input.toolTip = "Input brightness on a 0â€“1000 scale. Inputs must increase from shadows to highlights.";
-      output.toolTip = "Output value on a 0â€“1000 scale. Above input raises this part of the curve; below input lowers it.";
+      input.toolTip = "Input brightness on a 0-1000 scale. Inputs must increase from shadows to highlights.";
+      output.toolTip = "Output value on a 0-1000 scale. Above input raises this part of the curve; below input lowers it.";
       this.curveInputs.push(input); this.curveOutputs.push(output);
       row.add(label); row.addStretch(); row.add(input); row.add(output);
       this.curveOptions.add(row);
@@ -2891,7 +3070,7 @@ function workflowSourceId(view)
 function finishingMaskExpression(view, low, high)
 {
    if (!finiteNumber(low) || !finiteNumber(high) || low < 0 || high > 1 || low >= high)
-      throw new Error("Mask background limit must be below the highlight limit (0â€“1).");
+      throw new Error("Mask background limit must be below the highlight limit (0-1).");
    var l = view.image.isColor ? "(" + view.id + "[0]+" + view.id + "[1]+" + view.id + "[2])/3" : view.id;
    var rise = "min(1,max(0,((" + l + ")-" + low + ")/0.1))";
    var fall = "min(1,max(0,(" + high + "-(" + l + "))/0.1))";
@@ -3157,7 +3336,7 @@ constructor(view, kind)
    var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.maskLow = new SpinBox(this); this.maskLow.minValue = 0; this.maskLow.maxValue = 999; this.maskLow.value = 50;
    this.maskHigh = new SpinBox(this); this.maskHigh.minValue = 1; this.maskHigh.maxValue = 1000; this.maskHigh.value = 850;
-   this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0â€“1000):";
+   this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0-1000):";
    this.maskLow.onValueUpdated = dirty; this.maskHigh.onValueUpdated = dirty;
    this.maskOptions = new HorizontalSizer; this.maskOptions.spacing = 8;
    this.maskOptions.add(this.maskLabel); this.maskOptions.add(this.maskLow); this.maskOptions.add(this.maskHigh); this.maskOptions.addStretch();
@@ -3585,8 +3764,8 @@ function enhanceStarlessAndRecombine(self, branches)
 function reviewFinalHDR(view, self, branches)
 {
    var existingFinalHDR = !self.finishStarless.checked && self.hdrEnabled.checked;
-   var combinedHDR = self.combinedHDREnabled.checked && branches !== null;
-   if (combinedHDR && self.finishStarless.checked && !self.recombinedStarsApplied)
+   var combinedHDR = self.combinedHDREnabled.checked && (branches !== null || (self.lrgbMode && self.lrgbMode.currentItem > 0));
+   if (combinedHDR && branches !== null && self.finishStarless.checked && !self.recombinedStarsApplied)
    {
       logLine("HDR after recombination skipped: Keep starless was chosen.");
       combinedHDR = false;
@@ -3606,10 +3785,12 @@ function executeWorkflow(self)
    self.enabled = false;
    try
    {
-      var view = ImageWindow.activeWindow.currentView;
+      var lrgbViews = self.lrgbMode && self.lrgbMode.currentItem > 0 ? lrgbInputViews(self) : null;
+      var view = lrgbViews !== null && lrgbViews.R ? lrgbViews.R : ImageWindow.activeWindow.currentView;
       var sourcePath = workflowSourcePath(view);
       var sourceId = workflowSourceId(view);
-      view = cloneWorkflowInput(view);
+      view = lrgbViews !== null && lrgbViews.R ? combineLinearRGB(lrgbViews) : cloneWorkflowInput(view);
+      if (lrgbViews !== null && !imageHasAstrometricSolution(view.window)) plateSolveSettings.autofill(view.window);
       clearDisplaySTF(view);
       checkAbortRequested();
       var linearOrder = linearStageOrder(self.rowsById);
@@ -3735,7 +3916,7 @@ function executeWorkflow(self)
       if (branches === null || self.recombine.checked)
       {
          var finalView = branches === null ? view : branches.starlessView;
-         finalView = reviewFinalHDR(finalView, self, branches);
+         if (lrgbViews === null) finalView = reviewFinalHDR(finalView, self, branches);
          if (!self.finishStarless.checked && self.adaptiveEnabled.checked)
             finalView = reviewAdaptive(finalView);
          checkAbortRequested();
@@ -3748,6 +3929,13 @@ function executeWorkflow(self)
                finalView = reviewFinishing(finalView, "Noise cleanup");
                finalView = reviewFinishing(finalView, "Saturation");
             }
+         }
+         if (lrgbViews !== null)
+         {
+            if (branches !== null && self.finishStarless.checked && !self.recombinedStarsApplied)
+               logLine("Luminance skipped: Keep starless was chosen.");
+            else finalView = reviewLRGB(finalView, lrgbViews.L);
+            finalView = reviewFinalHDR(finalView, self, branches);
          }
          completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);
          if (self.finishingEnabled.checked)

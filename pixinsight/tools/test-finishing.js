@@ -66,6 +66,7 @@ assert.ok(source.indexOf('reviewFinishing(finalView, "Saturation")')<source.inde
 assert.ok(source.indexOf('saveFinalImage(finalView')<source.indexOf('exportSharingImage(finalView'));
 // Exercise the workflow, including a processing failure, against an untouched input.
 ctx.ImageWindow.activeWindow={currentView:view};ctx.Console={show(){},criticalln(){}};
+ctx.reviewFinalHDR=v=>v;
 ctx.workflowSourcePath=()=>'/master.xisf';ctx.workflowSourceId=()=> 'master';
 ctx.cloneWorkflowInput=()=>({id:'working',image:{...view.image,value:.1},window:{}});
 ctx.clearDisplaySTF=v=>{assert.notEqual(v,view);v.stf='identity';};

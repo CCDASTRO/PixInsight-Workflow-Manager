@@ -1,11 +1,50 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.32
+# CCDASTRO PixInsight Workflow Manager v1.1.33
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master.
 
 [Workflow webpage and setup guide](https://ccdastro.com/piworkflow.html) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.1.32 quick start
+## Separate LRGB masters (v1.1.33)
+
+WBPP normally provides integrated filter masters. This optional mode handles RGB
+combination and adds separately stretched luminance after RGB finishing, before
+the final HDR review. The existing active-color-master mode is unchanged.
+
+1. Open registered, **linear** L, R, G and B masters before launching the workflow.
+   Select **Separate linear R, G, B + L** and assign each master. Alternatively,
+   select your linear RGB master and choose **Active linear RGB + separate L**.
+2. Confirm matching registration and crop. Dimensions and grayscale/color types
+   are checked; identical dimensions alone do not prove registration. The workflow
+   does not align masters. Crop identically beforehand or crop the final afterward;
+   leave the workflow crop checkbox off in this mode. Input selections and this
+   confirmation are session-only and are not remembered.
+3. Select the desired RGB processing stages and a final stretch. If separating
+   stars, enable recombination. Color calibration is applied to RGB before L is
+   added. Finish the RGB/starless reviews as usual.
+4. In **Luminance combination review**, start with **L weight 50%**. Click
+   **Update Preview**; compare Before/After at 100% and inspect star wings and the
+   bright core. Change the weight and update again before **Apply LRGB**, or choose
+   **Keep RGB**. Zero weight leaves RGB pixels unchanged. Optional comparison
+   images retain the processed RGB and stretched luminance.
+   Choosing Keep starless in the stars review also skips luminance addition.
+5. Enable **Optional HDR after stars / luminance combination** for the final core
+   review, then save. For M42, 6 layers, 50% blend and bright-core restriction
+   550 / 150 / 8 px gave the preferred balance among the tested settings.
+
+L is cloned and stretched once with a zero-shadow HistogramTransformation to
+match its median to the processed RGB's mean of channel medians. This brightness
+match is not registration, PSF matching or a guarantee of optimal contrast. LRGB
+uses L only, neutral Lightness/Saturation transfer settings (0.5), and chrominance
+noise reduction off. No gradient correction, sharpening or denoising is applied
+automatically to L; prepare its linear master beforehand if needed. Original
+masters remain unchanged. Intrinsic star halos can remain or become more visible
+when luminance is added; use the preview to reduce its weight or keep RGB.
+
+This release also replaces garbled range-label punctuation with plain ASCII
+hyphens, including Protect below / above (0-1000).
+
+## v1.1.33 quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
@@ -45,7 +84,7 @@ Click **Update Preview**, compare Before / After at 100%, then **Apply HDR** or
 **Skip HDR**. Mask preview alone does not enable restriction. The option starts
 off in each review, preserving the previous full-image blend. It uses no workspace
 icon and affects the HDR blend only; bright stars may also enter the mask.
-Native PixInsight testing of core restriction is pending.
+Core restriction was exercised in native PixInsight M42 comparison runs.
 
 ## Optional HDR after stars recombination (v1.1.31)
 

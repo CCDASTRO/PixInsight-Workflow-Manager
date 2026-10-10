@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.33"
+#define VERSION "1.1.34"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1166,12 +1166,84 @@ function applyUnlinkedAutoHistogram(view, targetBackground)
       throw new Error("Unlinked histogram stretch failed on " + view.fullId + ".");
 };
 
+function finalStretchDefinition(selection)
+{
+   if (selection === 3) return { processId: "HistogramTransformation", icon: "CCDASTRO_HistogramStretch" };
+   if (selection === 4) return { processId: "MultiscaleAdaptiveStretch", icon: "CCDASTRO_MASStretch" };
+   throw new Error("Select a configured stretch method first.");
+}
+
+function configuredFinalStretch(selection)
+{
+   var definition = finalStretchDefinition(selection);
+   if (resolveProcessClass([definition.processId]) === null)
+      throw new Error("Install/update PixInsight to provide " + definition.processId + ".");
+   if (ProcessInstance.icons().indexOf(definition.icon) < 0)
+      throw new Error("Configure " + definition.processId + ", drag its New Instance triangle to the workspace, and name the icon " + definition.icon + ".");
+   var process = ProcessInstance.fromIcon(definition.icon);
+   if (process === null || process.processId() !== definition.processId)
+      throw new Error(definition.icon + " must contain a " + definition.processId + " process instance.");
+   if (selection === 3)
+   {
+      var rows = process.H, identity = true;
+      for (var c = 0; c < 4; ++c)
+      {
+         var row = rows[c];
+         if (row[0] !== 0 || row[1] !== 0.5 || row[2] !== 1 || row[3] !== 0 || row[4] !== 1) identity = false;
+      }
+      if (identity) throw new Error("CCDASTRO_HistogramStretch is an identity transform. Set a real stretch before running.");
+   }
+   return process;
+}
+
+function installFinalStretchSetup(dialog, row)
+{
+   var button = new PushButton(dialog.content);
+   button.text = "Stretch setup...";
+   button.toolTip = "Configure the chosen native process and save its workspace icon. Settings are read at Validate and Run.";
+   var status = new Label(dialog.content);
+   status.wordWrapping = true;
+   function refresh()
+   {
+      var selection = dialog.finalStretch.currentItem;
+      button.enabled = selection >= 3;
+      if (selection < 3) { status.text = "Automatic stretch uses calculated settings; Keep linear applies no stretch."; return; }
+      try { configuredFinalStretch(selection); status.text = "Ready: " + finalStretchDefinition(selection).icon + ". Validate after editing the icon."; }
+      catch(e) { status.text = "Setup needed: " + errorMessage(e); }
+   }
+   button.onClick = function()
+   {
+      var definition = finalStretchDefinition(dialog.finalStretch.currentItem);
+      (new MessageBox("1. Open the native " + definition.processId + " process in PixInsight.\n" +
+         "2. Adjust its controls and inspect a preview or test on a separate linear copy.\n" +
+         "3. Drag its New Instance triangle to the workspace; rename the icon " + definition.icon + ".\n" +
+         "4. Keep the icon in this workspace, then Validate and Run Workflow.\n\n" +
+         "To change settings, open that icon, edit the process, and replace/update the icon. Changing an unrelated process window alone does not update the saved icon. Save/reload process icons between sessions.\n\n" +
+         "The workflow reads all saved native settings and applies the process once to its working copy. It does not launch the process interface or calculate automatic settings for this choice. With starless enhancement, this choice stretches the starless branch; controlled stars retain their independent matched reference stretch. Separate LRGB still matches L automatically afterward.",
+         "Configured final stretch", StdIcon.Information, StdButton.Ok)).execute();
+      refresh();
+   };
+   row.add(button);
+   dialog.finalStretchStatus = status;
+   dialog.refreshFinalStretchSetup = refresh;
+   dialog.finalStretch.onItemSelected = refresh;
+   refresh();
+}
+
 function applySelectedAutoHistogram(view, selection, targetBackground)
 {
    if (selection === 1)
       applyLinkedAutoHistogram(view, targetBackground);
    else if (selection === 2)
       applyUnlinkedAutoHistogram(view, targetBackground);
+   else if (selection === 3 || selection === 4)
+   {
+      var process = configuredFinalStretch(selection);
+      clearDisplaySTF(view);
+      logLine("Applying configured " + process.processId() + " from " + finalStretchDefinition(selection).icon + " to " + view.fullId + ".");
+      if (!process.executeOn(view)) throw new Error(process.processId() + " stretch failed on " + view.fullId + ".");
+   }
+   else if (selection !== 0) throw new Error("Unknown stretch selection: " + selection);
 }
 
 function applyLinkedAutoSTF(view, targetBackground)
@@ -1365,6 +1437,10 @@ PreflightValidator.prototype.validate = function()
       {
          logLine("Integration-border check could not be completed: " + errorMessage(e));
       }
+
+   if (this.dialog.finalStretch.currentItem >= 3)
+      try { configuredFinalStretch(this.dialog.finalStretch.currentItem); }
+      catch(e) { result.errors.push("Final image stretch: " + errorMessage(e)); }
 
    var anyEnabled = false;
    for (var i = 0; i < this.dialog.rows.length; ++i)
@@ -2055,9 +2131,10 @@ constructor()
    this.recombine.checked = true;
    this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
    var finalStretchControl = labeledCombo(this.content, "Final image stretch:",
-      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram"], 1,
+      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram", "HistogramTransformation (configured)", "MultiscaleAdaptiveStretch (configured)"], 1,
       "With starless enhancement enabled, stretches the starless branch before reviews and recombination. Otherwise stretches the combined image or the active image without separation.");
    this.finalStretch = finalStretchControl.combo;
+   installFinalStretchSetup(this, finalStretchControl.sizer);
    this.finishStarless.onCheck = function(checked)
    {
       if (checked)
@@ -2067,6 +2144,7 @@ constructor()
          self.finalStretch.currentItem = 1;
          self.recombine.checked = true;
       }
+      self.refreshFinalStretchSetup();
    };
    this.starlessStretchControl = starlessStretchControl;
    this.starsStretchControl = starsStretchControl;
@@ -2125,6 +2203,7 @@ constructor()
    this.branchesBox.sizer.add(starsStretchControl.sizer);
    this.branchesBox.sizer.add(this.recombine);
    this.branchesBox.sizer.add(finalStretchControl.sizer);
+   this.branchesBox.sizer.add(this.finalStretchStatus);
    this.branchesBox.sizer.add(this.starReduction);
    this.branchesBox.sizer.add(starReductionMethodControl.sizer);
    this.branchesBox.sizer.add(this.starReductionIterationsSizer);
@@ -2180,6 +2259,7 @@ constructor()
       self.noisePlacementControl.label.visible = profileContainsStep(profile, "noiseReduction");
       self.noisePlacement.visible = profileContainsStep(profile, "noiseReduction");
       self.stepsSection.title = profile.label + " - linear workflow";
+      if (self.refreshFinalStretchSetup) self.refreshFinalStretchSetup();
       if (self.refreshScrollableLayout !== undefined)
          self.refreshScrollableLayout();
    };
@@ -2294,6 +2374,7 @@ constructor()
    this.applyImageType(true);
    if (restoreWorkflowState(this))
       this.statusText.text = "Restored last-used workflow settings. Confirm the linear input, then Validate.";
+   this.refreshFinalStretchSetup();
    this.imageType.onItemSelected = function()
    {
       self.applyImageType(true);
@@ -2308,6 +2389,7 @@ constructor()
    this.resetButton.onClick = function()
    {
       resetWorkflowControls(self);
+      self.refreshFinalStretchSetup();
       self.statusText.text = "Workflow settings reset to defaults.";
    };
    this.validateButton.onClick = function()

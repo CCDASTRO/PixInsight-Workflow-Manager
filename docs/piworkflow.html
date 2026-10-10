@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.33",
+    "softwareVersion": "1.1.34",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.33">CCDASTRO PixInsight Workflow Manager v1.1.33</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.34">CCDASTRO PixInsight Workflow Manager v1.1.34</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
@@ -578,6 +578,38 @@ The workflow is still running; you do not need to reopen or start it again.</p>
 Dismiss any completion or error message to return to the workflow settings.</p>
 </blockquote>
 <h2 id="final-stretch-and-color-balance">Final stretch and color balance</h2>
+<h3 id="user-configured-histogramtransformation-or-multiscaleadaptivestretch">User-configured HistogramTransformation or MultiscaleAdaptiveStretch</h3>
+<p>The <strong>Final image stretch</strong> dropdown now offers <strong>HistogramTransformation
+(configured)</strong> and <strong>MultiscaleAdaptiveStretch (configured)</strong> alongside Keep
+linear and the two automatic histogram choices. These use native process settings
+saved in workspace icons; they do not add a second stretch.</p>
+<ol>
+<li>Open the native process and adjust its controls. For HistogramTransformation,
+set the channel transforms, shadows, midtones, highlights and output range as
+needed; an identity transform is rejected. For MAS, use the native controls
+available in your installed version, including any desired background reference.</li>
+<li>Test on a separate linear copy or use the native preview. Drag the New Instance
+triangle to the workspace and rename the icon <strong>CCDASTRO_HistogramStretch</strong> or
+<strong>CCDASTRO_MASStretch</strong>, respectively.</li>
+<li>Select the matching workflow choice. <strong>Stretch setup...</strong> shows these steps;
+the status below the dropdown reports Ready or Setup needed. <strong>Validate</strong> checks
+process availability, the icon name/type, and a nonidentity histogram transform.</li>
+<li>To change inputs, edit the saved icon and replace/update it. The workflow reads
+all saved native settings again when running; an unrelated open process window
+does not update that icon. Save/reload icons between PixInsight sessions.</li>
+</ol>
+<p>With starless enhancement enabled, the selected final stretch runs once on the
+starless branch before its reviews and recombination. Otherwise it stretches the
+combined RGB, or the image without star separation. The controlled stars layer
+continues to use its independent matched full/starless histogram reference; these
+choices are not used on sparse stars-only data. Advanced branch dropdowns retain
+their existing choices. Separate LRGB still matches luminance to processed RGB
+automatically afterward; it does not run the RGB stretch icon on L.</p>
+<p>MAS requires a PixInsight installation exposing MultiscaleAdaptiveStretch to
+scripts. Missing/wrong icons, unavailable processes or failed execution stop with
+an explanation; no automatic-stretch fallback is used. Saved process parameters
+and reference views must be appropriate for the working image. The workflow does
+not change them or guarantee that a chosen stretch is suitable for every target.</p>
 <h3 id="which-should-i-choose">Which should I choose?</h3>
 <p><strong>For a natural-looking SPCC-calibrated broadband image, start with Linked Auto
 Histogram.</strong> It applies the same curve to red, green, and blue rather than
@@ -1032,6 +1064,8 @@ configured SyQon icons, and branch dependencies.</li>
 </code></pre>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.34:</strong> Adds configured HistogramTransformation and MultiscaleAdaptiveStretch final choices, workspace-icon setup and preflight checks.</p>
+</li>
 <li><p><strong>v1.1.33:</strong> Adds separate R/G/B/L or RGB + L inputs, automatic luminance stretch matching and adjustable LRGB review before final HDR. Fixes garbled range labels.</p>
 </li>
 <li><p><strong>v1.1.32:</strong> Adds optional bright-core HDR restriction, adjustable threshold, transition and feathering, with inline mask inspection.</p>

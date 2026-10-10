@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.33
+# CCDASTRO PixInsight Workflow Manager v1.1.34
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -435,6 +435,41 @@ first failed stage.
 > Dismiss any completion or error message to return to the workflow settings.
 
 ## Final stretch and color balance
+
+### User-configured HistogramTransformation or MultiscaleAdaptiveStretch
+
+The **Final image stretch** dropdown now offers **HistogramTransformation
+(configured)** and **MultiscaleAdaptiveStretch (configured)** alongside Keep
+linear and the two automatic histogram choices. These use native process settings
+saved in workspace icons; they do not add a second stretch.
+
+1. Open the native process and adjust its controls. For HistogramTransformation,
+   set the channel transforms, shadows, midtones, highlights and output range as
+   needed; an identity transform is rejected. For MAS, use the native controls
+   available in your installed version, including any desired background reference.
+2. Test on a separate linear copy or use the native preview. Drag the New Instance
+   triangle to the workspace and rename the icon **CCDASTRO_HistogramStretch** or
+   **CCDASTRO_MASStretch**, respectively.
+3. Select the matching workflow choice. **Stretch setup...** shows these steps;
+   the status below the dropdown reports Ready or Setup needed. **Validate** checks
+   process availability, the icon name/type, and a nonidentity histogram transform.
+4. To change inputs, edit the saved icon and replace/update it. The workflow reads
+   all saved native settings again when running; an unrelated open process window
+   does not update that icon. Save/reload icons between PixInsight sessions.
+
+With starless enhancement enabled, the selected final stretch runs once on the
+starless branch before its reviews and recombination. Otherwise it stretches the
+combined RGB, or the image without star separation. The controlled stars layer
+continues to use its independent matched full/starless histogram reference; these
+choices are not used on sparse stars-only data. Advanced branch dropdowns retain
+their existing choices. Separate LRGB still matches luminance to processed RGB
+automatically afterward; it does not run the RGB stretch icon on L.
+
+MAS requires a PixInsight installation exposing MultiscaleAdaptiveStretch to
+scripts. Missing/wrong icons, unavailable processes or failed execution stop with
+an explanation; no automatic-stretch fallback is used. Saved process parameters
+and reference views must be appropriate for the working image. The workflow does
+not change them or guarantee that a chosen stretch is suitable for every target.
 
 ### Which should I choose?
 
@@ -923,6 +958,8 @@ node pixinsight/tools/validate-workflow.js
 ```
 
 ## Revision history
+
+- **v1.1.34:** Adds configured HistogramTransformation and MultiscaleAdaptiveStretch final choices, workspace-icon setup and preflight checks.
 
 - **v1.1.33:** Adds separate R/G/B/L or RGB + L inputs, automatic luminance stretch matching and adjustable LRGB review before final HDR. Fixes garbled range labels.
 

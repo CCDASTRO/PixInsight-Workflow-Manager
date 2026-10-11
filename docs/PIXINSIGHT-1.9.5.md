@@ -200,3 +200,12 @@ pixels on temporary synthetic images. No user images were processed. Regression
 checks cover direct values,
 paths, explicit overrides, Save/Cancel and state restoration. Full image validation
 of the new direct settings and interactive dialog testing remain pending.
+
+## v1.1.42: native factory correction
+
+The direct native settings path now uses the existing name-based process factory.
+v1.1.41 incorrectly treated the resolver's returned class-name string as a
+constructor, causing preflight or review failures. Enum values are read from the
+resolved native class. Regression and native checks now use the workflow's actual
+resolver/factory rather than a substitute returning constructor functions.
+The preflight warning now correctly describes preservation of original pixels.

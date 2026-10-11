@@ -5,18 +5,18 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.41.zip" sha1="d363c8b7e06cd4e02141a5e2a2e70a5e91feeb92" type="script" releaseDate="20261011231927">
-         <title>CCDASTRO Workflow Manager 1.1.41</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.42.zip" sha1="91da5934aee3e407b42dab8b4d4f22cece0049c4" type="script" releaseDate="20261011234639">
+         <title>CCDASTRO Workflow Manager 1.1.42</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
-               <li>v1.1.41 adds direct workflow setup for PCC, MLDenoise, SPFC/MGC, histogram/MAS stretches, luminance stretch and final denoise</li>
-               <li>Workspace icons remain optional explicit advanced overrides; typed settings and file paths can be remembered</li>
-               <li>SPFC reads installed broadband filter curves; MGC and MLDenoise offer database/model file selection</li>
-               <li>README and webpage updated; 22 regression scripts, native dialog construction and synthetic histogram checks passed</li>
+               <li>v1.1.42 fixes direct native process construction using the workflow&apos;s name-based factory.</li>
+               <li>Fixes enumeration lookup for direct native process settings.</li>
+               <li>Corrects the obsolete preflight warning: original input pixels are preserved.</li>
+               <li>Validated with 22 regression scripts, native HistogramTransformation and MAS preflight checks, and synthetic histogram processing.</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-11T23:20:10.958Z" encoding="Base64">bjuPwobq0lrwXApwBc5j0Q7nULAtTlQzGelrJ11vFES2fPdx7RkjZDkDWbgsB7k3QQTmrPa4wOG4IbUPx/yLCA==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-11T23:48:36.496Z" encoding="Base64">jjgPkIqlfpjKE+blGDL06R3xDAstpBl9+/+t8S1GTl6lkegUJrIfVxPf4fdR5uGgvtHeSl2zKwB2jTBuKyzaDg==</Signature>

@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.41"
+#define VERSION "1.1.42"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -881,13 +881,13 @@ function configuredNativeProcess(id)
 {
    var definition=nativeControlDefinitions()[id],values=nativeSettings[id];
    if(!definition)throw new Error("Unknown workflow process "+id);
-   var constructor=resolveProcessClass([definition.process]);if(constructor===null)throw new Error("Install/update PixInsight to provide "+definition.process+".");
+   var className=resolveProcessClass([definition.process]);if(className===null)throw new Error("Install/update PixInsight to provide "+definition.process+".");
    if(values.useIcon){if(!definition.icon || ProcessInstance.icons().indexOf(definition.icon)<0)throw new Error("Optional override selected: create "+definition.icon+", or disable its override in workflow setup.");
       var icon=ProcessInstance.fromIcon(definition.icon);if(!icon||icon.processId()!==definition.process)throw new Error(definition.icon+" must contain "+definition.process+".");return icon;}
-   validateNativeSettings(id,values);var p=new constructor;
+   validateNativeSettings(id,values);var p=createProcess(className);
    for(var i=0;i<definition.fields.length;++i){var f=definition.fields[i];
       if(["histogram","luminance","spfc","finalMLT"].indexOf(id)>=0 || f.key==="databaseFiles")continue;
-      var value=values[f.key];if(f.type==="enum"){value=constructor[value];if(typeof value!=="number")throw new Error("Installed "+definition.process+" does not support "+values[f.key]);}
+      var value=values[f.key];if(f.type==="enum"){value=eval(className+"."+value);if(typeof value!=="number")throw new Error("Installed "+definition.process+" does not support "+values[f.key]);}
       requiredNativeProperty(p,f.key,value);
    }
    if(id==="histogram"||id==="luminance"){
@@ -1928,7 +1928,7 @@ PreflightValidator.prototype.validate = function()
    if (profile.id === "emissionMapped")
       result.warnings.push("Mapped narrowband assumes the active image is already combined into the intended color palette; broadband SPCC is intentionally skipped.");
 
-   result.warnings.push("The workflow modifies the active view. Save a copy or enable swap-file undo.");
+   result.warnings.push("The workflow processes a separate working copy; original input pixels are preserved.");
    return result;
 };
 

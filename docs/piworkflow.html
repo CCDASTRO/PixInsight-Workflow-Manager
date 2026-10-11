@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.41",
+    "softwareVersion": "1.1.42",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.41">CCDASTRO PixInsight Workflow Manager v1.1.41</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.42">CCDASTRO PixInsight Workflow Manager v1.1.42</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
@@ -1280,6 +1280,9 @@ SyQon settings and selected override icons, and branch dependencies.</li>
 </code></pre>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.42:</strong> Fixes native direct-process construction and enumeration lookup using
+the workflow factory; corrects the outdated active-view preflight warning.</p>
+</li>
 <li><p><strong>v1.1.41:</strong> Adds direct native setup for PCC, MLDenoise, SPFC/MGC, histogram/MAS
 stretches, luminance histogram stretch and final denoise. Icons remain optional
 explicit overrides; typed settings and file paths can be remembered.</p>

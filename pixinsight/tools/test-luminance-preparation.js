@@ -40,4 +40,22 @@ sequence=[d=>{d.checks[1].checked=true;d.updateButton.onClick();const stale=d.ca
 console.log('Luminance blend pixels, inverted/clamped masks, zero weight, input preservation, failures, configured stretch, single-stretch routing and preview cleanup passed.');
 sequence=[d=>{d.checks[1].checked=true;d.updateButton.onClick();first=d.candidate;d.buttons.items[0].onClick();return true;},d=>{assert.equal(d.input,first.mainView);d.checks[1].checked=true;d.strength.value=35;d.updateButton.onClick();second=d.candidate;d.buttons.items[0].onClick();return true;},d=>{assert.equal(d.input,second.mainView);d.checks[1].checked=true;d.updateButton.onClick();return false;}];
 assert.equal(ctx.reviewLuminanceBlends(target),second.mainView);assert.equal(first.closed,undefined);assert.equal(second.closed,undefined);assert.equal(windows.at(-1).closed,true);
-console.log('Repeated masked blends use the accepted prior pass; Skip cleans up only the unaccepted candidate.');
+console.log('Repeated masked blends use the accepted prior pass; Skip cleans up only the unaccepted candidate.');// Missing/wrong icons recover at the L stage rather than losing completed RGB.
+choices={configured:true};optionsAccept=true;calls=[];
+ctx.ProcessInstance.icons=()=>[];ctx.luminanceStretchRecovery=()=> 'automatic';
+const fresh=ctx.prepareLRGBLuminance(target,target);assert.deepEqual(calls,['stretch']);assert.notEqual(fresh,target);assert.deepEqual(fresh.image.values,target.image.values);assert.equal(windows.at(-2).closed,true);
+ctx.ProcessInstance.icons=()=>['CCDASTRO_LuminanceStretch'];ctx.ProcessInstance.fromIcon=()=>({processId:()=> 'CurvesTransformation'});calls=[];ctx.prepareLRGBLuminance(target,target);assert.deepEqual(calls,['stretch']);
+// A native failure may modify its target before returning false. Fallback must
+// start with original linear pixels, never the failed stretch.
+ctx.ProcessInstance.fromIcon=()=>({processId:()=> 'HistogramTransformation',executeOn(v){v.image.values=[9,9,9];return false;}});calls=[];
+const partial=ctx.prepareLRGBLuminance(target,target);assert.deepEqual(partial.image.values,[.2,.4,.8]);assert.deepEqual(target.image.values,[.2,.4,.8]);assert.equal(windows.at(-2).closed,true);
+ctx.luminanceStretchRecovery=()=> 'rgb';assert.equal(ctx.prepareLRGBLuminance(target,target),null);assert.equal(windows.at(-1).closed,true);
+// Reopening options can retry successfully; aborts never show recovery.
+let recoveries=0;ctx.luminanceStretchRecovery=()=>{recoveries++;ctx.ProcessInstance.fromIcon=()=>({processId:()=> 'HistogramTransformation',executeOn(){return true;}});return 'retry';};
+ctx.prepareLRGBLuminance(target,target);assert.equal(recoveries,1);
+ctx.ProcessInstance.fromIcon=()=>({processId:()=> 'HistogramTransformation',executeOn(){abort=true;throw Error('abort');}});
+assert.throws(()=>ctx.prepareLRGBLuminance(target,target),/abort/);assert.equal(recoveries,1);assert.equal(windows.at(-1).closed,true);abort=false;
+// Keep RGB returns the existing RGB to the workflow; only the unused L copy closes.
+vm.runInContext(text.slice(text.indexOf('function reviewLRGB('),text.indexOf('class WorkflowDialog')),ctx);
+ctx.prepareLRGBLuminance=()=>null;const rgb=view('RGB',[.2,.3,.4],true);const kept=ctx.reviewLRGB(rgb,target,true);assert.equal(kept,rgb);assert.equal(windows.at(-1).closed,true);
+console.log('Missing/wrong/failing L stretch recovery, fresh retries, no double stretch, Keep RGB continuation and abort propagation passed.');

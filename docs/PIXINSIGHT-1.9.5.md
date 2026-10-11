@@ -130,3 +130,12 @@ source stretching is performed. Skipping later passes keeps earlier accepted pas
 LHE Contrast limit (x10) uses 12 for 1.2 and 14 for 1.4. Its automatic brightness mask
 is not a recreation of the external range masks in Lum Steps.xpsm. See the README
 for the full sequence and historical recipe. Native UI testing remains pending.
+
+
+## Luminance stretch recovery (v1.1.37)
+
+Missing, invalid or failing CCDASTRO_LuminanceStretch icons now open a recovery
+review at the L stage. Use automatic matching to continue on a fresh linear-L copy,
+change the stretch choice to reopen options, or Keep RGB and continue to final
+reviews/save without adding L. Completed RGB is retained and is not reprocessed.
+Closing recovery also keeps RGB. Abort requests still stop the workflow.

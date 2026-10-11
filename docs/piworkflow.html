@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.36",
+    "softwareVersion": "1.1.37",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.36">CCDASTRO PixInsight Workflow Manager v1.1.36</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.37">CCDASTRO PixInsight Workflow Manager v1.1.37</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
@@ -361,6 +361,16 @@ update the preview and adjust before Apply LRGB. Keep RGB skips L addition;
 the prepared luminance remains open for inspection. Accepted preparation results
 are separate views; original masters and blend inputs remain unchanged.</li>
 </ol>
+<p>If the configured L stretch icon is missing, has the wrong process type, or fails,
+<strong>Luminance stretch needs attention</strong> offers <strong>Use automatic matching</strong>, <strong>Change
+stretch choice</strong>, and <strong>Keep RGB and continue</strong>. Automatic matching resumes at
+the luminance stage and keeps selected preparation reviews; changing the choice
+reopens preparation options. Keep RGB (or closing the recovery dialog) skips L
+addition and continues to final reviews/save. RGB processing is not repeated.
+Each stretch attempt uses a fresh copy of linear L, so a partially failed stretch
+is never reused. Cancellation/abort requests still stop processing. Workspace
+icons cannot be edited while these modal reviews are open; finish with Keep RGB
+before creating an icon for a later run.</p>
 <p>The supplied Lum Steps recipe used a configured HT stretch (RGB/K shadows
 0.00477715, midtones 0.00247930), HDR with 8 layers, LHE 250 px / 75% / 1.2,
 an inverted-mask 40% source blend, another inverted-mask 35% source blend,
@@ -1142,6 +1152,8 @@ configured SyQon icons, and branch dependencies.</li>
 </code></pre>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.37:</strong> Recovers from missing, invalid or failing luminance stretch icons without discarding completed RGB processing; fresh linear copies protect stretch retries.</p>
+</li>
 <li><p><strong>v1.1.36:</strong> Adds optional luminance preparation with a single automatic/configured HT stretch, separate HDR, repeatable LHE and repeated masked source blends before LRGB. Adds LHE contrast-limit controls and corrects the native HDR internal-mask property to <code>lightnessMask</code>.</p>
 </li>
 <li><p><strong>v1.1.35:</strong> Adds repeatable local contrast review with explicit acceptance between passes, fresh previews and preservation of earlier accepted results.</p>

@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.36
+# CCDASTRO PixInsight Workflow Manager v1.1.37
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -222,6 +222,17 @@ Choosing Keep starless still skips L addition and its preparation.
    update the preview and adjust before Apply LRGB. Keep RGB skips L addition;
    the prepared luminance remains open for inspection. Accepted preparation results
    are separate views; original masters and blend inputs remain unchanged.
+
+If the configured L stretch icon is missing, has the wrong process type, or fails,
+**Luminance stretch needs attention** offers **Use automatic matching**, **Change
+stretch choice**, and **Keep RGB and continue**. Automatic matching resumes at
+the luminance stage and keeps selected preparation reviews; changing the choice
+reopens preparation options. Keep RGB (or closing the recovery dialog) skips L
+addition and continues to final reviews/save. RGB processing is not repeated.
+Each stretch attempt uses a fresh copy of linear L, so a partially failed stretch
+is never reused. Cancellation/abort requests still stop processing. Workspace
+icons cannot be edited while these modal reviews are open; finish with Keep RGB
+before creating an icon for a later run.
 
 The supplied Lum Steps recipe used a configured HT stretch (RGB/K shadows
 0.00477715, midtones 0.00247930), HDR with 8 layers, LHE 250 px / 75% / 1.2,
@@ -1043,6 +1054,8 @@ node pixinsight/tools/validate-workflow.js
 ```
 
 ## Revision history
+
+- **v1.1.37:** Recovers from missing, invalid or failing luminance stretch icons without discarding completed RGB processing; fresh linear copies protect stretch retries.
 
 - **v1.1.36:** Adds optional luminance preparation with a single automatic/configured HT stretch, separate HDR, repeatable LHE and repeated masked source blends before LRGB. Adds LHE contrast-limit controls and corrects the native HDR internal-mask property to `lightnessMask`.
 

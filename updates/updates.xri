@@ -1,23 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <xri version="1.0">
    <description>
       <p>CCDASTRO PixInsight Scripts</p>
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.36.zip" sha1="f9e14cb96ec445f19cb75fc6fe18d3b69d6ade59" type="script" releaseDate="20261011133510">
-         <title>CCDASTRO Workflow Manager 1.1.36</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.37.zip" sha1="4eeca7e8c61faf90051d2f68b409000592220f79" type="script" releaseDate="20261011182100">
+         <title>CCDASTRO Workflow Manager 1.1.37</title>
          <description>
-            <p>Optional luminance preparation before LRGB combination.</p>
+            <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
-               <li>One automatic median-matched or configured HistogramTransformation stretch on a copy of linear L.</li>
-               <li>Luminance HDR, repeated LocalHistogramEqualization, repeated masked source blends and optional post-blend LHE reviews.</li>
-               <li>Blend-source weight and mask inversion controls, fresh previews and retention of accepted passes.</li>
-               <li>Adjustable LHE contrast limit and corrected native HDR lightness-mask property.</li>
-               <li>Registered, compatibly stretched sources and masks must be prepared separately. Native testing of the new preparation reviews remains pending.</li>
+               <li>v1.1.37 recovers from missing, invalid or failing luminance stretch icons without repeating completed RGB processing</li>
+               <li>Choose automatic matching, change the stretch choice, or keep RGB and continue to final reviews and saving</li>
+               <li>Each retry starts from an untouched linear luminance copy; failed temporary copies are closed</li>
+               <li>Includes updated README and website instructions</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-11T13:35:37.072Z" encoding="Base64">shYILWNd9Mp8CN6z9j4CsLxX6WhV/cctS8LEuOdem/vs0XwNxfLg55lEokqJl7LK+jVYtPPd2ld2CM2dwKyAAg==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-11T18:21:43.240Z" encoding="Base64">Zo4xLkRQW93TQ5J6fIJ7qiP8jb57xBzjdcymgwy1JPrh1Y43TTAjFVCDSSw78gnVcNyQ0uB2mAijrO6uRZ4DAg==</Signature>

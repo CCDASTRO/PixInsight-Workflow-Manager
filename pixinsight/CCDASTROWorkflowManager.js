@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.36"
+#define VERSION "1.1.37"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -2099,6 +2099,27 @@ function stretchPreparedLuminance(view, rgb, configured)
    logLine("Luminance stretched once using " + name + "; no automatic median match applied.");
 }
 
+function luminanceStretchRecovery(error)
+{
+   var dialog = new Dialog, choice = "rgb";
+   dialog.windowTitle = "Luminance stretch needs attention";
+   var text = new Label(dialog); text.wordWrapping = true;
+   text.text = errorMessage(error) + "\nRGB processing is complete and preserved. Choose automatic matching, change the stretch choice, or keep RGB and continue to the final reviews/save.\nTo create or edit a workspace icon, keep RGB and finish this run first.";
+   var buttons = new HorizontalSizer; buttons.spacing = 8;
+   function button(label, value)
+   {
+      var b = new PushButton(dialog); b.text = label;
+      b.onClick = function() { choice = value; dialog.ok(); }; buttons.add(b);
+   }
+   button("Use automatic matching", "automatic");
+   button("Change stretch choice", "retry");
+   button("Keep RGB and continue", "rgb");
+   dialog.sizer = new VerticalSizer; dialog.sizer.margin = 10; dialog.sizer.spacing = 8;
+   dialog.sizer.add(text); dialog.sizer.add(buttons); dialog.setMinWidth(620); dialog.adjustToContents();
+   dialog.execute(); checkAbortRequested();
+   return choice;
+}
+
 function prepareLRGBLuminance(view, rgb)
 {
    var options = new Dialog; options.windowTitle = "Luminance preparation options";
@@ -2120,9 +2141,30 @@ function prepareLRGBLuminance(view, rgb)
    options.sizer = new VerticalSizer; options.sizer.margin = 10; options.sizer.spacing = 8;
    options.sizer.add(hint); options.sizer.add(stretch.sizer); options.sizer.add(hdr); options.sizer.add(lhe);
    options.sizer.add(blends); options.sizer.add(after); options.sizer.add(buttons); options.adjustToContents();
-   if (!options.execute()) { checkAbortRequested(); stretchLRGBLuminance(view, rgb); return view; }
-   stretchPreparedLuminance(view, rgb, stretch.combo.currentItem === 1);
-   var current = view;
+   var automaticFallback = false, useReviews = false, current = null;
+   for (;;)
+   {
+      if (!automaticFallback) useReviews = options.execute();
+      checkAbortRequested();
+      var attempt = cloneHDRView(view, "_LPreparation");
+      try
+      {
+         // A failed native process can partially modify pixels. Always retry
+         // from the untouched linear copy, never from a failed/previous stretch.
+         stretchPreparedLuminance(attempt.mainView, rgb,
+            !automaticFallback && useReviews && stretch.combo.currentItem === 1);
+         current = attempt.mainView; attempt.show(); break;
+      }
+      catch(e)
+      {
+         attempt.forceClose(); checkAbortRequested();
+         logLine("Luminance stretch recovery: " + errorMessage(e));
+         var choice = luminanceStretchRecovery(e);
+         if (choice === "rgb") return null;
+         automaticFallback = choice === "automatic";
+      }
+   }
+   if (!useReviews) return current;
    if (hdr.checked) current = reviewHDR(current, true);
    if (lhe.checked) current = reviewFinishing(current, "Local contrast", true);
    if (blends.checked) current = reviewLuminanceBlends(current);
@@ -2138,6 +2180,7 @@ function reviewLRGB(rgb, linearLuminance, prepare)
       if (prepare)
       {
          var prepared = prepareLRGBLuminance(luminance.mainView, rgb);
+         if (prepared === null) { logLine("Luminance skipped after stretch recovery; keeping processed RGB."); return rgb; }
          if (prepared.window !== luminance) { luminance.forceClose(); luminance = prepared.window; }
          luminance.show();
       }

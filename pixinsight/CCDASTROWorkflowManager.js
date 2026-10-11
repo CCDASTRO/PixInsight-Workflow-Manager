@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.40"
+#define VERSION "1.1.41"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -33,14 +33,14 @@ var adapterHelp = {
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    autoDBE: "Runs installed Seti Astro Automatic DBE 1.6. Uses vendor defaults or an optional CCDASTRO_AutoDBE Script icon; corrects only the working copy. Setup explains configuration.",
    graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
-   mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Requires CCDASTRO_SPFC and CCDASTRO_MGC process icons and suitable MARS data. SPCC remains separate.",
+   mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Configure camera/filter curves and MARS files through gradient Setup; advanced icons are optional. SPCC remains separate.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
    spcc: "Use SpectrophotometricColorCalibration. The image must have an astrometric solution.",
-   pcc: "Use PhotometricColorCalibration from the configured CCDASTRO_PCC process icon. Preserves catalog, white reference, and background settings; requires a solved image.",
+   pcc: "Configure PCC white-reference, catalog and background settings in workflow setup; an advanced icon override is optional. Requires a solved image.",
    blurXTerminator: "Use workflow BlurX settings (Correct Only by default), or explicitly select the optional CCDASTRO_BlurX icon override. Runs on linear data before denoise.",
    syqonParallax: "Use remembered SyQon Parallax workflow settings, or an optional CCDASTRO_Parallax icon override.",
    noiseXTerminator: "Use NoiseXTerminator for the main noise-reduction pass.",
-   mlDenoise: "Use the configured CCDASTRO_MLDenoise process icon, including its neural network model path and denoise settings.",
+   mlDenoise: "Set MLDenoise model path and strength in workflow setup; an advanced icon override is optional.",
    syqonPrism: "Use remembered SyQon Prism workflow settings, or an optional CCDASTRO_Prism icon override.",
    starXTerminator: "Use StarXTerminator and request a separate stars-only image.",
    starNet2: "Use StarNet2 in linear mode and request a separate stars-only image.",
@@ -135,7 +135,8 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 10,
+      schemaVersion: 11,
+      native: dialog.nativeValues ? dialog.nativeValues() : null,
       syqon: dialog.syqonValues ? dialog.syqonValues() : null,
       blurX: dialog.blurXValues ? dialog.blurXValues() : null,
       finishStarless: dialog.finishStarless.checked,
@@ -202,7 +203,7 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || ([4,5,6,7,8,9,10].indexOf(state.schemaVersion) < 0) || !state.steps)
+      if (!state || ([4,5,6,7,8,9,10,11].indexOf(state.schemaVersion) < 0) || !state.steps)
          return false;
       if (state.schemaVersion >= 5 && state.imageType >= 0 &&
           state.imageType < WORKFLOW_PROFILES.length)
@@ -251,6 +252,7 @@ function restoreWorkflowState(dialog)
          dialog.starReductionMethod.currentItem = state.starReductionMethod;
       if (state.starReductionIterations >= 1 && state.starReductionIterations <= 3)
          dialog.starReductionIterations.value = state.starReductionIterations;
+      if (dialog.restoreNative && state.native) dialog.restoreNative(state.native);
       if (dialog.restoreSyQon && state.syqon) dialog.restoreSyQon(state.syqon);
       if (dialog.restoreBlurX && state.blurX) dialog.restoreBlurX(state.blurX);
       dialog.refreshStarReductionControls();
@@ -302,6 +304,7 @@ function resetWorkflowControls(dialog)
       row.refreshChoiceHelp();
       row.refreshStatus();
    }
+   if (dialog.restoreNative) dialog.restoreNative(defaultNativeSettings());
    if (dialog.restoreSyQon) dialog.restoreSyQon(defaultSyQonSettings());
    if (dialog.restoreBlurX) dialog.restoreBlurX(defaultBlurXSettings());
    dialog.finishStarless.checked = false;
@@ -807,6 +810,192 @@ AutoDBEAdapter.prototype.execute = function(view)
 };
 
 // A composite gradient adapter: never apply MGC without fresh flux calibration.
+// Native workflow settings: only typed, allowlisted parameters are restored.
+function nativeControlDefinitions()
+{
+   function n(key,label,value,low,high,integer){return {key:key,label:label,value:value,type:integer?"integer":"number",low:low,high:high};}
+   function b(key,label,value){return {key:key,label:label,value:value,type:"boolean"};}
+   function t(key,label,value,type){return {key:key,label:label,value:value,type:type||"text"};}
+   function e(key,label,value,items){return {key:key,label:label,value:value,type:"enum",items:items};}
+   function histogram(){return [n("shadows","Shadows (0-1)",0,0,1),n("midtones","Midtones (0-1)",0.5,0.000001,0.999999),n("highlights","Highlights (0-1)",1,0,1)];}
+   function ml(){return [t("modelPath","Neural network model","","file"),n("amount","Denoise strength (0-1)",0.9,0,1),n("overlapPercent","Overlap (%)",25,1,100,true),e("precision","Precision","Precision_Fast",[["Precision_Fast","Fast"],["Precision_High","High"]]),b("mask","Local support",false)];}
+   return {
+      pcc:{process:"PhotometricColorCalibration",icon:"CCDASTRO_PCC",label:"PCC",fields:[
+         t("whiteReferenceName","White reference name","Average Spiral Galaxy"),n("whiteReferenceSr_JV","White reference r-V",-0.35230,-5,5),n("whiteReferenceJB_JV","White reference B-V",0.28594,-5,5),
+         b("autoCatalog","Automatic catalog",true),t("catalogId","Manual catalog ID","APASS"),t("serverURL","VizieR server","https://vizier.cds.unistra.fr/"),b("autoLimitMagnitude","Automatic limit magnitude",true),n("limitMagnitude","Limit magnitude",12,0,30),
+         b("neutralizeBackground","Neutralize background",true),n("backgroundLow","Background lower limit (sigma)",-2.8,-20,20),n("backgroundHigh","Background upper limit (sigma)",2,-20,20),b("generateGraphs","Generate graphs",true)]},
+      mlDenoise:{process:"MLDenoise",icon:"CCDASTRO_MLDenoise",label:"MLDenoise",fields:ml()},
+      histogram:{process:"HistogramTransformation",icon:"CCDASTRO_HistogramStretch",label:"Histogram stretch",fields:histogram()},
+      luminance:{process:"HistogramTransformation",icon:"CCDASTRO_LuminanceStretch",label:"Luminance histogram stretch",fields:histogram()},
+      mas:{process:"MultiscaleAdaptiveStretch",icon:"CCDASTRO_MASStretch",label:"MultiscaleAdaptiveStretch",fields:[
+         n("aggressiveness","Aggressiveness",0.7,0,1),n("targetBackground","Target background",0.15,0,1),n("dynamicRangeCompression","Dynamic range compression",0.4,0,1),b("contrastRecovery","Recover contrast",true),n("scaleSeparation","Scale separation (px)",1024,32,65536,true),n("contrastRecoveryIntensity","Contrast recovery intensity",1,0,10),
+         b("saturationEnabled","Adjust saturation",true),n("saturationAmount","Saturation amount",0.75,0,1),n("saturationBoost","Saturation boost",0.5,0,1),b("saturationLightnessMask","Saturation lightness mask",true),
+         b("backgroundROIEnabled","Use background rectangle",false),n("backgroundROIX0","Background left",0,0,100000,true),n("backgroundROIY0","Background top",0,0,100000,true),n("backgroundROIWidth","Background width",0,0,100000,true),n("backgroundROIHeight","Background height",0,0,100000,true)]},
+      spfc:{process:"SpectrophotometricFluxCalibration",icon:"CCDASTRO_SPFC",label:"SPFC camera / filters",fields:[
+         t("library","Filter library (.xspd)","","file"),t("deviceQECurveName","Camera QE curve","","curveQ"),t("grayFilterName","Gray / UV-IR filter","","curveL"),t("redFilterName","Red filter","","curveR"),t("greenFilterName","Green filter","","curveG"),t("blueFilterName","Blue filter","","curveB"),
+         b("autoLimitMagnitude","Automatic limit magnitude",true),n("limitMagnitude","Limit magnitude",12,0,30),n("minMagnitude","Minimum magnitude",0,-10,30),n("rejectionLimit","Rejection limit",0.3,0,1),n("psfMinSNR","Minimum detection SNR",40,1,10000)]},
+      mgc:{process:"MultiscaleGradientCorrection",icon:"CCDASTRO_MGC",label:"MGC / MARS database",fields:[t("databaseFiles","MARS database files (one per line)","","files"),t("grayMARSFilter","Gray MARS filter","L"),t("redMARSFilter","Red MARS filter","R"),t("greenMARSFilter","Green MARS filter","G"),t("blueMARSFilter","Blue MARS filter","B"),n("gradientScale","Gradient scale (px)",1024,32,65536,true),n("structureSeparation","Structure separation",3,0,16,true),n("modelSmoothness","Model smoothness",1,0,100),b("enforceFieldLimits","Enforce field limits",true)]},
+      finalNoiseX:{process:"NoiseXTerminator",label:"Final NoiseXTerminator",fields:[n("denoise","Denoise strength (0-1)",0.25,0,1),n("detail","Detail",0.15,0,1),n("iterations","Iterations",2,1,10,true)]},
+      finalMLD:{process:"MLDenoise",label:"Final MLDenoise",fields:ml()},
+      finalACDNR:{process:"ACDNR",label:"Final ACDNR",fields:[b("applyToLightness","Denoise lightness",true),b("applyToChrominance","Denoise chrominance",true),n("sigmaL","Lightness standard deviation",1.5,0.1,10),n("sigmaC","Chrominance standard deviation",2,0.1,10),n("amountL","Lightness amount",0.5,0,1),n("amountC","Chrominance amount",0.5,0,1),n("iterationsL","Lightness iterations",1,1,10,true),n("iterationsC","Chrominance iterations",1,1,10,true)]},
+      finalMLT:{process:"MultiscaleLinearTransform",label:"Final multiscale denoise",fields:[n("noiseLayers","Noise-reduction layers",3,1,4,true),n("threshold","Noise threshold (sigma)",3,0,10),n("amount","Noise-reduction amount",0.5,0,1),n("iterations","Iterations",1,1,10,true)]}
+   };
+}
+function defaultNativeSettings()
+{
+   var defs=nativeControlDefinitions(),out={finalDenoise:{useIcon:false,tool:"NoiseXTerminator"}};
+   for(var id in defs){out[id]={useIcon:false};for(var i=0;i<defs[id].fields.length;++i){var f=defs[id].fields[i];out[id][f.key]=f.value;}}
+   return out;
+}
+var nativeSettings=defaultNativeSettings(), nativeSettingsOwner=null, nativeFilterCache={};
+function validateNativeSettings(id,values)
+{
+   var definition=nativeControlDefinitions()[id];
+   if(!definition || !values || typeof values.useIcon!=="boolean")throw new Error("Invalid native workflow settings: "+id);
+   for(var i=0;i<definition.fields.length;++i){var f=definition.fields[i],v=values[f.key];
+      if(f.type==="number"||f.type==="integer") {if(!finiteNumber(v)||v<f.low||v>f.high||(f.type==="integer"&&v!==Math.round(v)))throw new Error(f.label+" must be "+f.low+" to "+f.high+".");}
+      else if(f.type==="boolean") {if(typeof v!=="boolean")throw new Error("Invalid "+f.label);}
+      else if(typeof v!=="string")throw new Error("Invalid "+f.label);
+      if(f.type==="enum" && !f.items.some(function(item){return item[0]===v;}))throw new Error("Invalid "+f.label);
+   }
+   if((id==="histogram"||id==="luminance") && values.shadows>=values.highlights)throw new Error("Shadows must be below highlights.");
+   if(id==="pcc" && values.backgroundLow>=values.backgroundHigh)throw new Error("Background lower limit must be below upper limit.");
+   if(id==="mas" && values.backgroundROIEnabled && (!values.backgroundROIWidth||!values.backgroundROIHeight))throw new Error("Background rectangle needs positive width and height.");
+}
+function nativeFilterLibrary(path)
+{
+   path=path||CoreApplication.srcDirPath+"/../library/filters.xspd";
+   if(!File.exists(path))throw new Error("Choose the installed filters.xspd library in SPFC setup.");
+   if(nativeFilterCache[path])return nativeFilterCache[path];
+   var text=File.readTextFile(path),result=[],tag,regex=/<Filter\b([^>]*?)\/>/g;
+   function decode(s){return s.replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");}
+   while((tag=regex.exec(text))!==null){var attr={},m,r=/([A-Za-z]+)="([^"]*)"/g;while((m=r.exec(tag[1]))!==null)attr[m[1]]=decode(m[2]);if(attr.name&&attr.data&&attr.channel)result.push(attr);}
+   if(!result.length)throw new Error("No filter curves found in the selected XSPD library.");nativeFilterCache[path]=result;return result;
+}
+function requiredNativeProperty(p,key,value)
+{
+   if(!propertyExists(p,key))throw new Error(p.processId()+" does not support workflow parameter "+key+". Update PixInsight or select an advanced icon override.");
+   p[key]=value;
+}
+function configuredNativeProcess(id)
+{
+   var definition=nativeControlDefinitions()[id],values=nativeSettings[id];
+   if(!definition)throw new Error("Unknown workflow process "+id);
+   var constructor=resolveProcessClass([definition.process]);if(constructor===null)throw new Error("Install/update PixInsight to provide "+definition.process+".");
+   if(values.useIcon){if(!definition.icon || ProcessInstance.icons().indexOf(definition.icon)<0)throw new Error("Optional override selected: create "+definition.icon+", or disable its override in workflow setup.");
+      var icon=ProcessInstance.fromIcon(definition.icon);if(!icon||icon.processId()!==definition.process)throw new Error(definition.icon+" must contain "+definition.process+".");return icon;}
+   validateNativeSettings(id,values);var p=new constructor;
+   for(var i=0;i<definition.fields.length;++i){var f=definition.fields[i];
+      if(["histogram","luminance","spfc","finalMLT"].indexOf(id)>=0 || f.key==="databaseFiles")continue;
+      var value=values[f.key];if(f.type==="enum"){value=constructor[value];if(typeof value!=="number")throw new Error("Installed "+definition.process+" does not support "+values[f.key]);}
+      requiredNativeProperty(p,f.key,value);
+   }
+   if(id==="histogram"||id==="luminance"){
+      if(values.shadows===0&&values.midtones===0.5&&values.highlights===1)throw new Error("Set a real stretch in "+definition.label+" setup; current settings are identity.");
+      p.H=[[0,0.5,1,0,1],[0,0.5,1,0,1],[0,0.5,1,0,1],[values.shadows,values.midtones,values.highlights,0,1],[0,0.5,1,0,1]];
+   }
+   if(id==="mlDenoise"||id==="finalMLD"){if(!values.modelPath.trim()||!File.exists(values.modelPath))throw new Error("Choose an existing neural network model in "+definition.label+" setup.");}
+   if(id==="pcc"){p.applyCalibration=true;}
+   // Direct modes produce the processed image, not a process-specific preview.
+   var previewFlags=id==="mlDenoise"||id==="finalMLD"?["noisePreview","maskPreview"]:id==="mas"?["previewLargeScale"]:id==="finalACDNR"?["previewMask"]:[];
+   for(var k=0;k<previewFlags.length;++k)if(propertyExists(p,previewFlags[k]))p[previewFlags[k]]=false;
+   if(id==="finalNoiseX")for(var k=0,flags=["enable_color_separation","enable_frequency_separation"];k<flags.length;++k)if(propertyExists(p,flags[k]))p[flags[k]]=false;
+
+   if(id==="spfc"){
+      var curves=nativeFilterLibrary(values.library),mapping=[["deviceQECurveName","deviceQECurve","Q"],["grayFilterName","grayFilterTrCurve","L"],["redFilterName","redFilterTrCurve","R"],["greenFilterName","greenFilterTrCurve","G"],["blueFilterName","blueFilterTrCurve","B"]];
+      for(var c=0;c<mapping.length;++c){var pair=mapping[c],curve=null;for(var j=0;j<curves.length;++j)if(curves[j].name===values[pair[0]]&&(curves[j].channel===pair[2]||(pair[2]==="L"&&curves[j].channel==="PAN"))){curve=curves[j];break;}
+         if(!curve)throw new Error("Select "+pair[0]+" in SPFC setup for your camera/filters.");requiredNativeProperty(p,pair[0],curve.name);requiredNativeProperty(p,pair[1],curve.data);}
+      p.narrowbandMode=false;for(var k=6;k<definition.fields.length;++k){var f=definition.fields[k];requiredNativeProperty(p,f.key,values[f.key]);}
+   }
+   if(id==="mgc"){
+      var paths=values.databaseFiles.split(/\r?\n/).map(function(s){return s.trim();}).filter(function(s){return s.length>0;});
+      if(!paths.length)throw new Error("Add MARS database files in MGC setup.");for(var k=0;k<paths.length;++k)if(!File.exists(paths[k]))throw new Error("MARS database file missing: "+paths[k]);
+      requiredNativeProperty(p,"marsDatabaseFiles",paths.map(function(path){return [true,path];}));p.useMARSDatabase=true;p.command="";p.showGradientModel=false;
+   }
+   if(id==="finalMLT"){
+      var layers=p.layers;for(var k=0;k<layers.length;++k){layers[k][1]=false;layers[k][3]=k<values.noiseLayers;layers[k][4]=values.threshold;layers[k][5]=values.amount;layers[k][6]=values.iterations;}p.layers=layers;p.linear=false;
+   }
+   return p;
+}
+function restoreNativeSettings(values)
+{
+   var defaults=defaultNativeSettings(),copy=JSON.parse(JSON.stringify(values));
+   for(var id in defaults){if(!copy[id])throw new Error("Missing saved native settings "+id);if(id!=="finalDenoise")validateNativeSettings(id,copy[id]);}
+   if(typeof copy.finalDenoise.useIcon!=="boolean"||["NoiseXTerminator","MLDenoise","ACDNR","MultiscaleLinearTransform"].indexOf(copy.finalDenoise.tool)<0)throw new Error("Invalid saved final denoise selection.");nativeSettings=copy;
+}
+function saveNativeWorkflowSettings()
+{
+   if(nativeSettingsOwner)saveWorkflowState(nativeSettingsOwner,false);
+}
+function configureNativeProcess(id)
+{
+   var definition=nativeControlDefinitions()[id],current=nativeSettings[id],accepted=null;
+   var d=new Dialog;d.windowTitle=definition.label+" workflow setup";
+   var root=new VerticalSizer;root.margin=10;root.spacing=8;d.sizer=root;
+   var override=new CheckBox(d);override.text="Use "+(definition.icon||"")+" icon override (optional)";override.checked=current.useIcon;override.visible=!!definition.icon;root.add(override);
+   var hint=new Label(d);hint.wordWrapping=true;hint.text=id==="spfc"?"Choose the actual camera QE and broadband filter curves from your installed library. Narrowband or custom curves use an advanced icon override.":id==="pcc"?"White-reference color indices must match the named reference. Native defaults use Average Spiral Galaxy. Automatic catalog/limit options take precedence over manual values.":"Set workflow inputs below. Advanced parameters retain installed native defaults. Save settings does not apply the process to an image.";root.add(hint);
+   var scroll=new ScrollBox(d);scroll.setMinSize(650,400);var content=new Control(scroll.viewport);content.sizer=new VerticalSizer;content.sizer.margin=8;content.sizer.spacing=6;var controls={},curves=null;
+   if(id==="spfc"){try{curves=nativeFilterLibrary(current.library);}catch(e){curves=[];}}
+   function addField(f){var row=new HorizontalSizer;row.spacing=8;var label=new Label(content);label.text=f.label+":";label.minWidth=235;row.add(label);var c;
+      if(f.type==="boolean"){c=new CheckBox(content);c.checked=current[f.key];}
+      else if(f.type==="integer"){c=new SpinBox(content);c.minValue=f.low;c.maxValue=f.high;c.value=current[f.key];}
+      else if(f.type==="enum"||f.type.indexOf("curve")===0){c=new ComboBox(content);c.values=[];
+         if(f.type==="enum"){for(var i=0;i<f.items.length;++i){c.addItem(f.items[i][1]);c.values.push(f.items[i][0]);}}
+         else{c.addItem("Select a curve...");c.values.push("");var channel=f.type.substring(5);for(var i=0;i<curves.length;++i)if(curves[i].channel===channel||(channel==="L"&&curves[i].channel==="PAN")){c.addItem(curves[i].name);c.values.push(curves[i].name);}}
+         c.currentItem=Math.max(0,c.values.indexOf(current[f.key]));
+      } else if(f.type==="files"){c=new TextBox(content);c.text=current[f.key];c.setMinHeight(85);}
+      else{c=new Edit(content);c.text=String(current[f.key]);}
+      c.toolTip=(f.type==="number"||f.type==="integer")?"Allowed range: "+f.low+" to "+f.high:"";
+      row.add(c,100);controls[f.key]={control:c,field:f};
+      if(f.type==="file"||f.type==="files"){var browse=new PushButton(content);browse.text=f.type==="files"?"Add files...":"Browse...";browse.onClick=function(){var file=new OpenFileDialog;file.caption=f.label;file.multipleSelections=f.type==="files";if(file.execute()){if(f.type==="files")c.text+=(c.text.trim()?"\n":"")+file.fileNames.join("\n");else c.text=file.fileName;if(id==="spfc"&&f.key==="library")reloadSPFC();}};row.add(browse);controls[f.key].browse=browse;}
+      content.sizer.add(row);
+   }
+   for(var i=0;i<definition.fields.length;++i)addField(definition.fields[i]);
+   function reloadSPFC(){
+      try{curves=nativeFilterLibrary(controls.library.control.text.trim());}
+      catch(e){curves=[];hint.text=errorMessage(e)+" Choose a valid XSPD library, then select its curves.";}
+      for(var key in controls){var item=controls[key],f=item.field;if(f.type.indexOf("curve")!==0)continue;var c=item.control,selected=c.values[c.currentItem],channel=f.type.substring(5);c.clear();c.values=[""];c.addItem("Select a curve...");
+         for(var j=0;j<curves.length;++j)if(curves[j].channel===channel||(channel==="L"&&curves[j].channel==="PAN")){c.addItem(curves[j].name);c.values.push(curves[j].name);}c.currentItem=Math.max(0,c.values.indexOf(selected));}
+   }
+   if(id==="spfc")controls.library.control.onEditCompleted=reloadSPFC;
+   content.adjustToContents();scroll.verticalScrollRange=[0,Math.max(0,content.height-400)];scroll.onVerticalScrollPosUpdated=function(pos){content.move(0,-pos);};
+   scroll.viewport.onResize=function(){content.resize(scroll.viewport.width,content.height);scroll.verticalScrollRange=[0,Math.max(0,content.height-scroll.viewport.height)];};root.add(scroll,100);
+   function refresh(){for(var key in controls){controls[key].control.enabled=!override.checked;if(controls[key].browse)controls[key].browse.enabled=!override.checked;}}override.onCheck=refresh;refresh();
+   var buttons=new HorizontalSizer;buttons.spacing=8;buttons.addStretch();
+   var defaults=new PushButton(d);defaults.text="Reset tool defaults";defaults.onClick=function(){for(var key in controls){var item=controls[key],f=item.field,c=item.control;if(f.type==="boolean")c.checked=f.value;else if(f.type==="integer")c.value=f.value;else if(f.type==="enum"||f.type.indexOf("curve")===0)c.currentItem=Math.max(0,c.values.indexOf(f.value));else c.text=String(f.value);}override.checked=false;if(id==="spfc")reloadSPFC();refresh();};buttons.add(defaults);
+   var save=new PushButton(d);save.text="Save settings";save.onClick=function(){try{var v={useIcon:override.checked};for(var key in controls){var item=controls[key],c=item.control,f=item.field;v[key]=f.type==="boolean"?c.checked:f.type==="integer"?c.value:f.type==="number"?Number(c.text.trim()):f.type==="enum"||f.type.indexOf("curve")===0?c.values[c.currentItem]:c.text.trim();if(f.type==="number"&&!c.text.trim())throw new Error("Enter "+f.label);}
+      validateNativeSettings(id,v);accepted=v;d.ok();}catch(e){(new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok)).execute();}};buttons.add(save);
+   var cancel=new PushButton(d);cancel.text="Cancel";cancel.onClick=function(){d.cancel();};buttons.add(cancel);root.add(buttons);d.adjustToContents();
+   if(d.execute()&&accepted){nativeSettings[id]=accepted;saveNativeWorkflowSettings();if(nativeSettingsOwner)nativeSettingsOwner.refreshNativeControls();return true;}return false;
+}
+function finalDenoiseKey(tool)
+{
+   return {NoiseXTerminator:"finalNoiseX",MLDenoise:"finalMLD",ACDNR:"finalACDNR",MultiscaleLinearTransform:"finalMLT"}[tool];
+}
+function configureFinalDenoise()
+{
+   var d=new Dialog;d.windowTitle="Final noise cleanup tool";var tools=["NoiseXTerminator","MLDenoise","ACDNR","MultiscaleLinearTransform"];
+   var choice=labeledCombo(d,"Denoiser:",tools,tools.indexOf(nativeSettings.finalDenoise.tool),"Process strength is separate from the review's blend Amount.");
+   var override=new CheckBox(d);override.text="Use CCDASTRO_FinalDenoise icon override (optional)";override.checked=nativeSettings.finalDenoise.useIcon;
+   override.onCheck=function(){choice.combo.enabled=!override.checked;};override.onCheck();
+   var button=new PushButton(d);button.text="Configure / use tool";button.onClick=function(){d.ok();};var cancel=new PushButton(d);cancel.text="Cancel";cancel.onClick=function(){d.cancel();};
+   d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=8;d.sizer.add(choice.sizer);d.sizer.add(override);d.sizer.add(button);d.sizer.add(cancel);d.adjustToContents();
+   if(!d.execute())return false;var selected={useIcon:override.checked,tool:tools[choice.combo.currentItem]};
+   if(!selected.useIcon&&!configureNativeProcess(finalDenoiseKey(selected.tool)))return false;nativeSettings.finalDenoise=selected;saveNativeWorkflowSettings();return true;
+}
+function installNativeControls(dialog)
+{
+   nativeSettingsOwner=dialog;var box=new GroupBox(dialog.content);box.title="Native process setup (icons optional)";box.sizer=new HorizontalSizer;box.sizer.margin=8;box.sizer.spacing=8;
+   var options=[["pcc","colorCalibration","pcc","PCC setup..."],["mlDenoise","noiseReduction","mlDenoise","MLDenoise setup..."]],buttons=[];
+   for(var i=0;i<options.length;++i){var b=new PushButton(box);b.text=options[i][3];box.sizer.add(b);buttons.push(b);b.onClick=(function(id){return function(){configureNativeProcess(id);};})(options[i][0]);}
+   var final=new PushButton(box);final.text="Final denoise setup...";final.onClick=configureFinalDenoise;box.sizer.add(final);
+   dialog.nativeValues=function(){return JSON.parse(JSON.stringify(nativeSettings));};dialog.restoreNative=function(values){restoreNativeSettings(values);};
+   dialog.refreshNativeControls=function(){for(var i=0;i<options.length;++i){var row=dialog.rowsById[options[i][1]];buttons[i].enabled=row.enabled.checked&&row.adapterId()===options[i][2];row.refreshStatus();}if(dialog.refreshFinalStretchSetup)dialog.refreshFinalStretchSetup();};
+   for(var i=0;i<options.length;++i)(function(index){var row=dialog.rowsById[options[index][1]],previous=row.refreshStatus;row.refreshStatus=function(){previous.call(row);buttons[index].enabled=row.enabled.checked&&row.adapterId()===options[index][2];};})(i);
+   dialog.refreshNativeControls();return box;
+}
+// End native workflow settings.
+
 function MGCAdapter()
 {
    this.id = "mgc";
@@ -815,20 +1004,7 @@ function MGCAdapter()
 
 MGCAdapter.prototype.loadIcons = function()
 {
-   var result = {};
-   var names = ["CCDASTRO_SPFC", "CCDASTRO_MGC"];
-   var classes = ["SpectrophotometricFluxCalibration", "MultiscaleGradientCorrection"];
-   for (var i = 0; i < names.length; ++i)
-   {
-      if (resolveProcessClass([classes[i]]) === null)
-         throw new Error("Install the " + classes[i] + " process.");
-      if (ProcessInstance.icons().indexOf(names[i]) < 0)
-         throw new Error("Create the configured process icon '" + names[i] + "'. Use gradient Setup... for instructions.");
-      var process = ProcessInstance.fromIcon(names[i]);
-      if (process === null || process.processId() !== classes[i])
-         throw new Error("Icon '" + names[i] + "' must contain " + classes[i] + ", not a script or another process.");
-      result[i === 0 ? "spfc" : "mgc"] = process;
-   }
+   var result = {spfc:configuredNativeProcess("spfc"),mgc:configuredNativeProcess("mgc")};
    if (propertyExists(result.mgc, "command") && result.mgc.command !== "")
       throw new Error("CCDASTRO_MGC must be a gradient-correction instance, not a database-management command.");
    if (propertyExists(result.mgc, "useMARSDatabase") && !result.mgc.useMARSDatabase)
@@ -844,7 +1020,7 @@ MGCAdapter.prototype.available = function()
 
 MGCAdapter.prototype.requirement = function()
 {
-   try { this.loadIcons(); return "SPFC and MGC icons are configured. Confirm catalog paths, filter curves, preprocessing metadata, and MARS coverage for this image."; }
+   try { this.loadIcons(); return "SPFC and MGC settings are ready. Confirm catalog paths, filter curves, preprocessing metadata, and MARS coverage for this image."; }
    catch (e) { return errorMessage(e); }
 };
 
@@ -1011,9 +1187,7 @@ MLDenoiseAdapter.prototype.configuredProcess = function()
 {
    if (resolveProcessClass(["MLDenoise"]) === null)
       throw new Error("Install the MLDenoise PixInsight process.");
-   var process = ProcessInstance.fromIcon("CCDASTRO_MLDenoise");
-   if (process === null)
-      throw new Error("Configure MLDenoise with a neural network model file and drag its New Instance triangle to the workspace. Rename the icon CCDASTRO_MLDenoise.");
+   var process = configuredNativeProcess("mlDenoise");
    if (process.processId() !== "MLDenoise")
       throw new Error("CCDASTRO_MLDenoise must contain an MLDenoise process instance.");
    if (typeof process.modelPath !== "string" || process.modelPath.trim().length === 0)
@@ -1055,11 +1229,7 @@ PCCIconAdapter.prototype.configuredProcess = function()
 {
    if (resolveProcessClass(["PhotometricColorCalibration"]) === null)
       throw new Error("Install or restore PixInsight's PhotometricColorCalibration process.");
-   if (ProcessInstance.icons().indexOf("CCDASTRO_PCC") < 0)
-      throw new Error("Configure PhotometricColorCalibration and drag its New Instance triangle to the workspace. Rename the icon CCDASTRO_PCC.");
-   var process = ProcessInstance.fromIcon("CCDASTRO_PCC");
-   if (process === null || process.processId() !== "PhotometricColorCalibration")
-      throw new Error("CCDASTRO_PCC must contain a PhotometricColorCalibration process instance.");
+   var process = configuredNativeProcess("pcc");
    if (propertyExists(process, "applyCalibration") && !process.applyCalibration)
       throw new Error("Enable Apply color calibration in CCDASTRO_PCC, then replace the icon.");
    return process;
@@ -1073,7 +1243,7 @@ PCCIconAdapter.prototype.available = function()
 
 PCCIconAdapter.prototype.requirement = function()
 {
-   try { this.configuredProcess(); return "Configured CCDASTRO_PCC settings are ready."; }
+   try { this.configuredProcess(); return "PCC workflow settings are ready."; }
    catch (e) { return errorMessage(e); }
 };
 
@@ -1083,7 +1253,7 @@ PCCIconAdapter.prototype.execute = function(view)
    if (!imageHasAstrometricSolution(view.window))
       throw new Error("PCC requires an astrometric solution. Solve the image first.");
    checkAbortRequested();
-   logLine("Running configured PhotometricColorCalibration (CCDASTRO_PCC) on " + view.fullId);
+   logLine("Running PhotometricColorCalibration on " + view.fullId);
    if (!process.executeOn(view))
       throw new Error("Configured PhotometricColorCalibration failed.");
    checkAbortRequested();
@@ -1194,7 +1364,7 @@ function defaultWorkflow()
          ["plateSolve"], "plateSolve",
          "Uses metadata-derived seed values and skips images that are already solved."),
       new WorkflowStep("colorCalibration", "3. Color calibration",
-         ["spcc", "pcc"], "spcc", "SPCC and PCC require a solved color image. PCC uses CCDASTRO_PCC."),
+         ["spcc", "pcc"], "spcc", "SPCC and PCC require a solved color image. PCC uses workflow settings or an optional icon override."),
       new WorkflowStep("deconvolution", "4. Deblur / structure recovery",
          ["blurXTerminator", "syqonParallax"], "blurXTerminator",
          "Runs on linear data before the main denoise pass."),
@@ -1388,11 +1558,7 @@ function configuredFinalStretch(selection)
    var definition = finalStretchDefinition(selection);
    if (resolveProcessClass([definition.processId]) === null)
       throw new Error("Install/update PixInsight to provide " + definition.processId + ".");
-   if (ProcessInstance.icons().indexOf(definition.icon) < 0)
-      throw new Error("Configure " + definition.processId + ", drag its New Instance triangle to the workspace, and name the icon " + definition.icon + ".");
-   var process = ProcessInstance.fromIcon(definition.icon);
-   if (process === null || process.processId() !== definition.processId)
-      throw new Error(definition.icon + " must contain a " + definition.processId + " process instance.");
+   var process = configuredNativeProcess(selection === 3 ? "histogram" : "mas");
    if (selection === 3)
    {
       var rows = process.H, identity = true;
@@ -1410,7 +1576,7 @@ function installFinalStretchSetup(dialog, row)
 {
    var button = new PushButton(dialog.content);
    button.text = "Stretch setup...";
-   button.toolTip = "Configure the chosen native process and save its workspace icon. Settings are read at Validate and Run.";
+   button.toolTip = "Set the chosen process inputs directly, or select an optional advanced icon override.";
    var status = new Label(dialog.content);
    status.wordWrapping = true;
    function refresh()
@@ -1418,19 +1584,12 @@ function installFinalStretchSetup(dialog, row)
       var selection = dialog.finalStretch.currentItem;
       button.enabled = selection >= 3;
       if (selection < 3) { status.text = "Automatic stretch uses calculated settings; Keep linear applies no stretch."; return; }
-      try { configuredFinalStretch(selection); status.text = "Ready: " + finalStretchDefinition(selection).icon + ". Validate after editing the icon."; }
+      try { configuredFinalStretch(selection); status.text = "Ready: " + finalStretchDefinition(selection).processId + " workflow settings."; }
       catch(e) { status.text = "Setup needed: " + errorMessage(e); }
    }
    button.onClick = function()
    {
-      var definition = finalStretchDefinition(dialog.finalStretch.currentItem);
-      (new MessageBox("1. Open the native " + definition.processId + " process in PixInsight.\n" +
-         "2. Adjust its controls and inspect a preview or test on a separate linear copy.\n" +
-         "3. Drag its New Instance triangle to the workspace; rename the icon " + definition.icon + ".\n" +
-         "4. Keep the icon in this workspace, then Validate and Run Workflow.\n\n" +
-         "To change settings, open that icon, edit the process, and replace/update the icon. Changing an unrelated process window alone does not update the saved icon. Save/reload process icons between sessions.\n\n" +
-         "The workflow reads all saved native settings and applies the process once to its working copy. It does not launch the process interface or calculate automatic settings for this choice. With starless enhancement, this choice stretches the starless branch; controlled stars retain their independent matched reference stretch. Separate LRGB still matches L automatically afterward.",
-         "Configured final stretch", StdIcon.Information, StdButton.Ok)).execute();
+      configureNativeProcess(dialog.finalStretch.currentItem === 3 ? "histogram" : "mas");
       refresh();
    };
    row.add(button);
@@ -1450,7 +1609,7 @@ function applySelectedAutoHistogram(view, selection, targetBackground)
    {
       var process = configuredFinalStretch(selection);
       clearDisplaySTF(view);
-      logLine("Applying configured " + process.processId() + " from " + finalStretchDefinition(selection).icon + " to " + view.fullId + ".");
+      logLine("Applying " + process.processId() + " using " + (nativeSettings[selection===3?"histogram":"mas"].useIcon ? "optional icon override" : "workflow settings") + " to " + view.fullId + ".");
       if (!process.executeOn(view)) throw new Error(process.processId() + " stretch failed on " + view.fullId + ".");
    }
    else if (selection !== 0) throw new Error("Unknown stretch selection: " + selection);
@@ -2015,11 +2174,9 @@ function WorkflowRow(parent, step)
                self.refreshStatus(); return;
             }
             if (self.step.id === "gradient")
-               (new MessageBox("MGC setup:\n\n1. Configure SpectrophotometricFluxCalibration for your camera/QE, filters, and Gaia catalog; save its process icon as CCDASTRO_SPFC.\n\n" +
-                  "2. Configure MultiscaleGradientCorrection with installed MARS data and matching filters; save its process icon as CCDASTRO_MGC.\n\n" +
-                  "3. Confirm suitable MARS coverage and test both processes on a copy of the linear master. Mapped narrowband palettes are not supported.\n\n" +
-                  "The workflow runs Plate Solve if needed > SPFC > MGC. SPCC remains separate. The next dialog configures plate solving.",
-                  "MGC Setup", StdIcon.Information, StdButton.Ok)).execute();
+            {
+               configureNativeProcess("spfc"); configureNativeProcess("mgc");
+            }
             (new PlateSolveSetupDialog(plateSolveSettings)).execute();
             self.refreshStatus();
          }
@@ -2315,13 +2472,10 @@ function reviewLuminanceBlends(view)
 function stretchPreparedLuminance(view, rgb, configured)
 {
    if (!configured) { stretchLRGBLuminance(view, rgb); return; }
-   var name = "CCDASTRO_LuminanceStretch";
-   if (ProcessInstance.icons().indexOf(name) < 0) throw new Error("Create a HistogramTransformation icon named " + name + ", or choose automatic matching.");
-   var p = ProcessInstance.fromIcon(name);
-   if (p === null || p.processId() !== "HistogramTransformation") throw new Error(name + " must be a HistogramTransformation process icon.");
+   var p = configuredNativeProcess("luminance");
    clearDisplaySTF(view);
    if (!p.executeOn(view)) throw new Error("Configured luminance stretch failed.");
-   logLine("Luminance stretched once using " + name + "; no automatic median match applied.");
+   logLine("Luminance stretched once using configured workflow settings; no automatic median match applied.");
 }
 
 function luminanceStretchRecovery(error)
@@ -2329,7 +2483,7 @@ function luminanceStretchRecovery(error)
    var dialog = new Dialog, choice = "rgb";
    dialog.windowTitle = "Luminance stretch needs attention";
    var text = new Label(dialog); text.wordWrapping = true;
-   text.text = errorMessage(error) + "\nRGB processing is complete and preserved. Choose automatic matching, change the stretch choice, or keep RGB and continue to the final reviews/save.\nTo create or edit a workspace icon, keep RGB and finish this run first.";
+   text.text = errorMessage(error) + "\nRGB processing is complete and preserved. Choose automatic matching, change the stretch choice, or keep RGB and continue to the final reviews/save.\nChange stretch choice to configure workflow inputs, or use automatic matching.";
    var buttons = new HorizontalSizer; buttons.spacing = 8;
    function button(label, value)
    {
@@ -2350,12 +2504,13 @@ function prepareLRGBLuminance(view, rgb)
    var options = new Dialog; options.windowTitle = "Luminance preparation options";
    var hint = new Label(options);
    hint.text = "Prepare a copy of linear L before LRGB. Choose one stretch, then optional reviews.\nBlends need open, registered grayscale sources with compatible stretches and grayscale masks.\nCancel uses automatic matching and skips these optional reviews.";
-   var stretch = labeledCombo(options, "L stretch:", ["Automatic median match to processed RGB", "Configured HistogramTransformation icon"], 0,
-      "For an exact stretch, create CCDASTRO_LuminanceStretch. This replaces automatic matching; it does not run a second stretch.");
+   var stretch = labeledCombo(options, "L stretch:", ["Automatic median match to processed RGB", "HistogramTransformation (workflow settings)"], 0,
+      "Configure luminance histogram inputs below; an optional advanced icon override is available. This replaces automatic matching.");
    function check(text)
    {
       var c = new CheckBox(options); c.text = text; c.checked = false; return c;
    }
+   var stretchSetup=new PushButton(options);stretchSetup.text="L stretch setup...";stretchSetup.onClick=function(){configureNativeProcess("luminance");};
    var hdr = check("Review HDR on luminance");
    var lhe = check("Review local contrast on luminance (repeatable)");
    var blends = check("Review masked source blends (repeatable)");
@@ -2364,7 +2519,7 @@ function prepareLRGBLuminance(view, rgb)
    var skip = new PushButton(options); skip.text = "Use automatic match only"; skip.onClick = function() { options.cancel(); };
    var buttons = new HorizontalSizer; buttons.spacing = 8; buttons.addStretch(); buttons.add(button); buttons.add(skip);
    options.sizer = new VerticalSizer; options.sizer.margin = 10; options.sizer.spacing = 8;
-   options.sizer.add(hint); options.sizer.add(stretch.sizer); options.sizer.add(hdr); options.sizer.add(lhe);
+   options.sizer.add(hint); options.sizer.add(stretch.sizer); options.sizer.add(stretchSetup); options.sizer.add(hdr); options.sizer.add(lhe);
    options.sizer.add(blends); options.sizer.add(after); options.sizer.add(buttons); options.adjustToContents();
    var automaticFallback = false, useReviews = false, current = null;
    for (;;)
@@ -2538,6 +2693,7 @@ constructor()
    this.blurXBox=installBlurXControls(this);
    this.stepsBox.sizer.add(this.blurXBox);
    this.syqonBox=installSyQonControls(this);this.stepsBox.sizer.add(this.syqonBox);
+   this.nativeBox=installNativeControls(this);this.stepsBox.sizer.add(this.nativeBox);
    var noisePlacementControl = labeledCombo(this.content, "Noise placement:",
       ["Before star separation", "Starless branch"], 1,
       "Choose whether the main denoise pass affects the complete image or only the starless branch.");
@@ -2580,7 +2736,7 @@ constructor()
    this.recombine.checked = true;
    this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
    var finalStretchControl = labeledCombo(this.content, "Final image stretch:",
-      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram", "HistogramTransformation (configured)", "MultiscaleAdaptiveStretch (configured)"], 1,
+      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram", "HistogramTransformation (workflow settings)", "MultiscaleAdaptiveStretch (workflow settings)"], 1,
       "With starless enhancement enabled, stretches the starless branch before reviews and recombination. Otherwise stretches the combined image or the active image without separation.");
    this.finalStretch = finalStretchControl.combo;
    installFinalStretchSetup(this, finalStretchControl.sizer);
@@ -3747,11 +3903,12 @@ function createFinishingMask(view, low, high)
 
 function configuredFinalDenoise()
 {
-   if (ProcessInstance.icons().indexOf("CCDASTRO_FinalDenoise") < 0)
-      throw new Error("Final denoise icon is not configured. Open a supported denoise process, choose light settings for a stretched image, drag its New Instance triangle to the workspace, and rename the icon CCDASTRO_FinalDenoise. Save/load your process-icon file for future sessions. You can Skip noise cleanup now.");
-   var p = ProcessInstance.fromIcon("CCDASTRO_FinalDenoise");
-   if (p === null)
-      throw new Error("Configure a light nonlinear denoise process and name its workspace icon CCDASTRO_FinalDenoise. Supported: NoiseXTerminator, MLDenoise, ACDNR or MultiscaleLinearTransform. You can also Skip this stage.");
+   var p;
+   if(nativeSettings.finalDenoise.useIcon){
+      if(ProcessInstance.icons().indexOf("CCDASTRO_FinalDenoise")<0)throw new Error("Optional CCDASTRO_FinalDenoise override selected: create its icon or turn off the override in Final denoise setup.");
+      p=ProcessInstance.fromIcon("CCDASTRO_FinalDenoise");
+      if(!p)throw new Error("CCDASTRO_FinalDenoise must contain a supported denoise process.");
+   } else p=configuredNativeProcess(finalDenoiseKey(nativeSettings.finalDenoise.tool));
    var id = p.processId();
    if (["NoiseXTerminator", "MLDenoise", "ACDNR", "MultiscaleLinearTransform"].indexOf(id) < 0)
       throw new Error("CCDASTRO_FinalDenoise must contain a supported denoise process configured for a stretched image.");
@@ -4036,7 +4193,7 @@ constructor(view, kind, pass)
    this.maskOptions = new HorizontalSizer; this.maskOptions.spacing = 8;
    this.maskOptions.add(this.maskLabel); this.maskOptions.add(this.maskLow); this.maskOptions.add(this.maskHigh); this.maskOptions.addStretch();
    this.denoiseHint = new Label(this);
-   this.denoiseHint.text = kind === "Noise cleanup" ? "Uses CCDASTRO_FinalDenoise configured for a stretched image, blended by Amount. Skip if noise is acceptable." : "";
+   this.denoiseHint.text = kind === "Noise cleanup" ? "Set the denoiser in Denoise setup. Process strength is separate from this review Amount (blend %). Skip if noise is acceptable." : "";
    this.layers.onValueUpdated = dirty;
    this.strength.onValueUpdated = dirty;
    this.updateButton.onClick = function()
@@ -4100,6 +4257,7 @@ constructor(view, kind, pass)
    this.sizer.add(this.maskOptions);
    if (kind === "Local contrast") { this.sizer.add(this.nebulaMaskRow); this.sizer.add(this.nebulaRegisteredRow); }
    this.sizer.add(this.denoiseHint);
+   this.denoiseSetup=new PushButton(this);this.denoiseSetup.text="Denoise setup...";this.denoiseSetup.visible=kind==="Noise cleanup";this.denoiseSetup.onClick=function(){if(configureFinalDenoise())dirty();};this.sizer.add(this.denoiseSetup);
    this.sizer.add(this.previewStatus);
    this.sizer.add(this.keepComparison);
    this.sizer.add(this.buttons);

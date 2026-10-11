@@ -5,7 +5,17 @@ let available=true,icons=[],current=null,executed=0,reads=0,automatic=[],clears=
 const identity=()=>Array.from({length:5},()=>[0,.5,1,0,1]);
 const histogram=()=>({H:identity(),processId:()=> 'HistogramTransformation',executeOn:v=>{executed++;return true;}});
 const mas=()=>({targetBackground:.2,contrastRecovery:true,processId:()=> 'MultiscaleAdaptiveStretch',executeOn:v=>{executed++;return true;}});
-const ctx=vm.createContext({resolveProcessClass:()=>available?function(){}:null,ProcessInstance:{icons:()=>icons,fromIcon:()=>{reads++;return current;}},clearDisplaySTF:()=>clears++,logLine:s=>logs.push(s),applyLinkedAutoHistogram:(v,t)=>automatic.push(['linked',t]),applyUnlinkedAutoHistogram:(v,t)=>automatic.push(['unlinked',t]),errorMessage:e=>e.message,PushButton:function(){},Label:function(){}});
+const ctx=vm.createContext({nativeSettings:{histogram:{useIcon:true},mas:{useIcon:true}},resolveProcessClass:()=>available?function(){}:null,ProcessInstance:{icons:()=>icons,fromIcon:()=>{reads++;return current;}},clearDisplaySTF:()=>clears++,logLine:s=>logs.push(s),applyLinkedAutoHistogram:(v,t)=>automatic.push(['linked',t]),applyUnlinkedAutoHistogram:(v,t)=>automatic.push(['unlinked',t]),errorMessage:e=>e.message,PushButton:function(){},Label:function(){}});
+
+// Exercise the explicit advanced-icon route; direct workflow settings have separate coverage.
+vm.runInContext(`function configuredNativeProcess(id) {
+ const defs={pcc:['PhotometricColorCalibration','CCDASTRO_PCC'],mlDenoise:['MLDenoise','CCDASTRO_MLDenoise'],spfc:['SpectrophotometricFluxCalibration','CCDASTRO_SPFC'],mgc:['MultiscaleGradientCorrection','CCDASTRO_MGC'],histogram:['HistogramTransformation','CCDASTRO_HistogramStretch'],mas:['MultiscaleAdaptiveStretch','CCDASTRO_MASStretch'],luminance:['HistogramTransformation','CCDASTRO_LuminanceStretch']};
+ const [type,name]=defs[id];
+ if(typeof resolveProcessClass==='function' && resolveProcessClass([type])===null)throw Error('Install '+type);
+ if(typeof ProcessInstance.icons==='function' && !ProcessInstance.icons().includes(name))throw Error('Create icon; Configure '+type);
+ const p=ProcessInstance.fromIcon(name);if(!p)throw Error('Create icon; Configure '+type);
+ if(p.processId()!==type)throw Error(name+' must contain '+type);return p;
+}`, ctx);
 vm.runInContext(code,ctx);const v={fullId:'working'};
 ctx.applySelectedAutoHistogram(v,0,.18);ctx.applySelectedAutoHistogram(v,1,.18);ctx.applySelectedAutoHistogram(v,2,.15);assert.deepEqual(automatic,[['linked',.18],['unlinked',.15]]);assert.equal(executed,0);
 assert.throws(()=>ctx.configuredFinalStretch(3),/Configure Histogram/);icons=['CCDASTRO_HistogramStretch'];current=mas();assert.throws(()=>ctx.configuredFinalStretch(3),/must contain/);
@@ -21,6 +31,6 @@ const dialog={content:{},finalStretch:{currentItem:4}},row={add(button){this.but
 current=mas();ctx.installFinalStretchSetup(dialog,row);assert.equal(row.button.enabled,true);assert.match(dialog.finalStretchStatus.text,/Ready/);
 dialog.finalStretch.currentItem=1;dialog.finalStretch.onItemSelected();assert.equal(row.button.enabled,false);
 dialog.finalStretch.currentItem=3;current=histogram();dialog.finalStretch.onItemSelected();assert.match(dialog.finalStretchStatus.text,/Setup needed/);
-assert.match(source,/HistogramTransformation \(configured\).*MultiscaleAdaptiveStretch \(configured\)/);
+assert.match(source,/HistogramTransformation \(workflow settings\).*MultiscaleAdaptiveStretch \(workflow settings\)/);
 assert.match(source,/result.errors.push\("Final image stretch: " \+ errorMessage\(e\)\)/);
 console.log('Configured HT/MAS selection, saved settings, identity/missing/wrong-icon checks, availability, failure propagation and setup status passed.');

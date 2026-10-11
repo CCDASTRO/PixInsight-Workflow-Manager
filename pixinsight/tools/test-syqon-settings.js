@@ -62,5 +62,5 @@ if(vendorRoot) for(const id of Object.keys(adapters)){
   if(name==='Prism'){assert.equal(loaded.strength,.4);assert.equal(loaded.modelKind,'prism_mini');}
   if(name==='Starless'){assert.equal(loaded.overlap,128);assert.equal(loaded.starsOnlyMode,'Subtraction');}
 }
-assert.match(source,/schemaVersion: 10/);assert.match(source,/dialog\.restoreSyQon\(state\.syqon\)/);
+assert.match(source,/schemaVersion: 11/);assert.match(source,/dialog\.restoreSyQon\(state\.syqon\)/);
 console.log('SyQon no-icon settings, paths/discovery, optional overrides, validation, working-copy targeting and installed vendor parameter loading passed.');

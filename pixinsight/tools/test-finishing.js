@@ -9,7 +9,7 @@ function sizer(){this.add=()=>{};this.addStretch=()=>{};}
 const PixelMath=proc('PixelMath'),Convolution=proc('Convolution'),Curves=proc('CurvesTransformation');Convolution.Parametric=0;Curves.AkimaSubsplines=2;
 const Resample=proc('Resample');Resample.AbsolutePixels=1;Resample.ForceWidthAndHeight=0;Resample.Auto=0;
 let files=[],savePaths=['/share.jpg'];
-const ctx=vm.createContext({finiteNumber:Number.isFinite,cloneHDRView:()=>window(),uniqueMainViewId:x=>x,
+const ctx=vm.createContext({nativeSettings:{finalDenoise:{useIcon:true}},finiteNumber:Number.isFinite,cloneHDRView:()=>window(),uniqueMainViewId:x=>x,
  ImageWindow:window,PixelMath,Convolution,CurvesTransformation:Curves,LocalHistogramEqualization:proc('LocalHistogramEqualization'),Resample,
  ProcessInstance:{icons:()=>icon===null?[]:["CCDASTRO_FinalDenoise"],fromIcon:()=>{if(icon===null)throw Error("No such instance icon");return icon;}},File:{exists:()=>false},checkAbortRequested(){},logLine(){},
  Dialog:control,Control:control,Label:control,ComboBox:control,SpinBox:control,CheckBox:control,PushButton:control,HorizontalSizer:sizer,VerticalSizer:sizer,

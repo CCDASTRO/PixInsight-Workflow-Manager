@@ -180,3 +180,23 @@ still requires Generate Starless and closing the vendor window after completion.
 Regression checks cover settings, paths, overrides and actual installed vendor
 parameter loading without launching executables. Native image processing and new
 setup-dialog interaction remain pending user testing.
+
+## v1.1.41: direct native setup with optional icon overrides
+
+PCC, MLDenoise, SPFC/MGC, HistogramTransformation/MAS, luminance histogram stretch
+and final noise cleanup now have workflow setup controls. Settings and file paths
+are remembered when enabled; icons remain explicit optional advanced overrides.
+SPFC direct mode reads broadband curves from the installed filters.xspd or a
+selected XSPD library. Custom/narrowband settings use an advanced SPFC override.
+MGC direct mode requires existing MARS files; MLDenoise needs an existing model.
+Linked RGB/K histogram defaults are identity until configured. MAS exposes native
+stretch, contrast, saturation and background-rectangle controls. Final denoise
+exposes four supported tools and keeps process strength separate from review blend.
+Typed settings are validated; unknown native properties stop execution. Existing
+image-preservation, stretch order, luminance recovery and preview blending remain.
+Native PixInsight checks created every configured process, constructed all 11
+setup dialogs and the complete manager, and verified RGB/grayscale histogram
+pixels on temporary synthetic images. No user images were processed. Regression
+checks cover direct values,
+paths, explicit overrides, Save/Cancel and state restoration. Full image validation
+of the new direct settings and interactive dialog testing remain pending.

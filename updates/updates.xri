@@ -5,18 +5,18 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.40.zip" sha1="c7930331b54080e355969966fd572d8acb2f1797" type="script" releaseDate="20261011224018">
-         <title>CCDASTRO Workflow Manager 1.1.40</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.41.zip" sha1="d363c8b7e06cd4e02141a5e2a2e70a5e91feeb92" type="script" releaseDate="20261011231927">
+         <title>CCDASTRO Workflow Manager 1.1.41</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
-               <li>v1.1.40 adds SyQon Parallax, Prism and Starless setup controls without required workspace icons</li>
-               <li>Executable paths and adjustable tool settings can be remembered; advanced icons remain explicit optional overrides</li>
-               <li>Supported integrations remain Parallax/Prism v1.5 and Starless v3.0.2; Starless still requires manual Generate/close steps</li>
-               <li>README and webpage updated; regression and installed vendor parameter-loading checks passed</li>
+               <li>v1.1.41 adds direct workflow setup for PCC, MLDenoise, SPFC/MGC, histogram/MAS stretches, luminance stretch and final denoise</li>
+               <li>Workspace icons remain optional explicit advanced overrides; typed settings and file paths can be remembered</li>
+               <li>SPFC reads installed broadband filter curves; MGC and MLDenoise offer database/model file selection</li>
+               <li>README and webpage updated; 22 regression scripts, native dialog construction and synthetic histogram checks passed</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-11T22:41:02.925Z" encoding="Base64">aOyrrPHzQVHnLw7HO2O55Jj+MiF4FbKrQ58FQhHBv7pgif3crkyH9IvOWLRdaFdbdMvBcRXbYOMaak1UmckhCg==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-11T23:20:10.958Z" encoding="Base64">bjuPwobq0lrwXApwBc5j0Q7nULAtTlQzGelrJ11vFES2fPdx7RkjZDkDWbgsB7k3QQTmrPa4wOG4IbUPx/yLCA==</Signature>

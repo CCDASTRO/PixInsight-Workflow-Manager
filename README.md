@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.40
+# CCDASTRO PixInsight Workflow Manager v1.1.41
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -103,6 +103,32 @@ visible. It returns automatically when the run ends.**
 
 ## [short video](https://youtu.be/0G-PI8F51rE)
 
+## Direct process setup and optional icons (v1.1.41)
+
+The remaining native choices now offer direct workflow setup. Workspace icons
+are optional advanced overrides. Enable **Remember workflow settings** to retain
+these settings and paths; without it, edits last for the current session.
+**Reset Defaults** restores tool defaults and disables overrides. Older saved
+configurations use the new direct defaults until you configure these inputs or
+explicitly enable the corresponding existing icon override.
+
+| Choice | Where to configure it |
+| --- | --- |
+| PCC | Select PCC, then **PCC setup...** under Native process setup |
+| MLDenoise | Select MLDenoise, then **MLDenoise setup...** |
+| SPFC + MGC | Select MGC, then the gradient row's **Setup...**: SPFC, MGC and plate-solve setup open in order |
+| HistogramTransformation / MAS | Select it under Final image stretch, then **Stretch setup...** |
+| Luminance HistogramTransformation | Select the histogram option in luminance preparation, then **L stretch setup...** |
+| Final noise cleanup | **Final denoise setup...** in the manager, or **Denoise setup...** in the cleanup review |
+
+Click **Save settings**, then **Validate** for selected linear stages and final
+stretch. Setup does not run a process on an image. All runs use working copies.
+An open standalone process window does not change workflow settings. Optional
+icons are read only when their explicit **Use icon override** checkbox is enabled.
+Missing model/MARS files and identity histogram stretches need setup before use.
+Licenses, model compatibility, catalog access and MARS sky coverage are checked
+by the native tools during execution; file existence does not establish these.
+
 ## Quick start
 
 1. Select your original integrated, unstretched color master. For BlurXTerminator, use the workflow settings (Correct Only by default), or explicitly select the optional **CCDASTRO_BlurX** icon override. Run **Validate**,
@@ -114,12 +140,11 @@ visible. It returns automatically when the run ends.**
 3. Leave **Final inspection, local contrast, noise cleanup, saturation and sharing
    export** enabled to review all five finishing steps. Inspect at 100% and drag
    to pan. Each adjustment can be applied or skipped.
-4. For final noise cleanup, save your denoiser settings in a workspace icon named
-   **CCDASTRO_FinalDenoise**. The icon stores a process and its settings; it does
-   not point to an image. Use gentle settings for the already-stretched image,
-   or **Skip Noise cleanup**. At the default 15% blend, the result combines
-   85% of the pre-cleanup image with 15% of the denoised image.
-   See [Final denoise icon: what it stores and how to create it](#final-denoise-icon-what-it-stores-and-how-to-create-it).
+4. For final noise cleanup, click **Final denoise setup...** in the manager or
+   **Denoise setup...** in the cleanup review. Choose a tool and gentle settings
+   for the already-stretched image, or **Skip Noise cleanup**. No icon is needed.
+   At the default 15% blend, the result combines 85% of the pre-cleanup image
+   with 15% of the denoised image. See [Final denoise setup and optional icon](#final-denoise-setup-and-optional-icon).
 5. Save the full-resolution XISF, then optionally export a separate sharing copy.
    Your chosen default is **JPEG quality 95, longest edge 2048 pixels**. Smaller
    images are not enlarged. Cancelling either save leaves the processed image open.
@@ -186,9 +211,9 @@ before **Luminance combination review** and the final combined-image HDR review.
 Choosing Keep starless still skips L addition and its preparation.
 
 1. In **Luminance preparation options**, choose **Automatic median match to
-   processed RGB**, or **Configured HistogramTransformation icon**. For the latter,
-   configure native HistogramTransformation and create a workspace icon named
-   `CCDASTRO_LuminanceStretch`. Only one stretch runs: the configured stretch
+   processed RGB**, or **HistogramTransformation (workflow settings)**. For the latter,
+   click **L stretch setup...** and enter shadows, midtones and highlights.
+   An advanced `CCDASTRO_LuminanceStretch` override is optional. Only one stretch runs: the configured stretch
    replaces automatic matching. The input L must still be linear. Choosing
    **Use automatic match only**, or cancelling these options, skips the optional
    reviews and uses the normal automatic match.
@@ -330,47 +355,31 @@ the current linear master; there is no automatic fallback to another gradient to
 
 ### MGC setup
 
-1. Open **SpectrophotometricFluxCalibration**. Select the appropriate camera/QE
-   and filter transmission settings and configure its Gaia spectrophotometric
-   catalog. Drag a configured process instance to the workspace and rename it
-   exactly `CCDASTRO_SPFC`.
-2. Open **MultiscaleGradientCorrection**. **Set up the MARS database file
-   locations before creating or saving the process icon.** Add your installed
-   MARS database files, choose suitable reference filters, and configure the
-   gradient settings. Use MARS database mode, not a reference-image or
-   database-management command. Only then drag the configured process's
-   **New Instance** triangle onto the workspace and rename the icon exactly
-   `CCDASTRO_MGC`. This captures the MARS locations and other process settings
-   for the workflow to reuse.
-3. Test both native processes on a copy of the solved, linear master. Confirm
-   the target lies within usable MARS coverage and that its preprocessing
-   metadata and filter information meet SPFC requirements.
-4. Select MGC in the manager. Click the gradient row's **Setup...** button for
-   guidance and plate-solving seed values, then run **Validate**.
-5. Keep both icons loaded in the workspace. Save them as a process-icon file
-   for reuse; the manager remembers the choice, not the icons themselves.
+1. Select MGC and click the gradient row's **Setup...**.
+2. In **SPFC camera / filters**, choose the actual camera QE, gray/UV-IR and R/G/B
+   filter curves from the installed `library/filters.xspd`. A custom XSPD library
+   can be browsed; changing it refreshes the curve choices. Set magnitude limits,
+   rejection and minimum detection SNR, then **Save settings**. Do not guess the
+   camera/filter configuration. Direct setup is broadband; custom/narrowband
+   parameters remain available through an optional `CCDASTRO_SPFC` override.
+3. In **MGC / MARS database**, use **Add files...** to select your installed MARS
+   files, one per line. Set reference filter IDs and gradient scale, structure
+   separation, smoothness and field limits, then **Save settings**. The workflow
+   selects MARS database mode, clears database commands and suppresses the model
+   output. Advanced `CCDASTRO_MGC` settings are an optional override.
+4. Configure plate-solving seeds in the following dialog if needed, then Validate.
+   Confirm suitable MARS coverage and preprocessing metadata before processing.
 
-**Already created the MGC icon, or moved the MARS files?** Open the saved
-`CCDASTRO_MGC` instance, correct its database locations, then update or replace
-that workspace icon and save your process-icon file again. Changing settings
-in a separate MGC instance does not update the existing saved icon. Reload the
-saved icon and confirm its MARS locations before running the workflow.
+Moved a database? Update its path in MGC setup. Settings and paths are remembered
+when enabled. For icon overrides, update the icon itself after moving files.
+Preflight checks process availability, selected paths, MARS mode and astrometry
+or solver setup. It cannot certify catalog contents, sky coverage, filter
+suitability or preprocessing provenance; native processes check those at execution.
+Errors stop processing without applying a fallback correction.
 
-Preflight checks the installed processes, exact icon names/types, MARS mode,
-and astrometry or solver setup. It cannot certify catalog contents, sky coverage,
-filter suitability, or preprocessing provenance: the native processes perform
-those checks at execution. Errors stop the workflow; they do not trigger a
-second correction on a partially processed image. Inspect the Process Console
-and restart from an appropriate saved master when retrying.
-
-The mapped narrowband color profile blocks MGC because arbitrary palette
-combinations do not necessarily correspond to physical MARS passbands. Use
-GradientCorrection or GraXpert there. Selecting Custom does not make a mapped
-image physically suitable for MGC.
-
-**MGC says Setup needed:** confirm both icons above are loaded and contain the
-correct native processes. If the image is unsolved, review the gradient
-**Setup...** dialog for coordinates and image scale.
+The mapped narrowband profile blocks MGC because arbitrary palettes need not
+correspond to physical MARS passbands. Use GradientCorrection or GraXpert there.
+Selecting Custom does not make a mapped image physically suitable for MGC.
 
 ## Configure Plate Solve if needed
 
@@ -407,20 +416,21 @@ astrometric solution; leave **Plate Solve if needed** enabled for unsolved image
 
 For PCC:
 
-1. Open PixInsight's **PhotometricColorCalibration** process and select the
-   appropriate catalog, white reference, and background-neutralization settings.
-   Enable **Apply color calibration**.
-2. Drag its **New Instance** triangle to the workspace and rename the process
-   icon **CCDASTRO_PCC**. This icon stores the process settings, not an image.
-3. Select PCC in the workflow, then **Validate** and **Run Workflow**. The
-   configured icon is applied to the current linear working copy after gradient
-   correction and plate solving, before deblur, denoise, and stretching.
+1. Select PCC, then click **PCC setup...** under **Native process setup**.
+2. Native default white reference is Average Spiral Galaxy, with r-V -0.35230
+   and B-V 0.28594. For a custom reference, enter its correct name and both color
+   indices; changing the name alone does not change its calibration coefficients.
+   Set automatic/manual catalog and limiting magnitude, VizieR server, background
+   neutralization limits and graph generation. Automatic options take precedence
+   over their manual values. Apply color calibration is enabled automatically.
+3. Save settings, Validate and Run Workflow. PCC runs on the solved linear RGB
+   working copy before deblur, denoise and stretching.
 
-The workflow preserves the icon's settings. A missing icon, wrong process type,
-or disabled calibration blocks preflight with an explanation. Update the icon
-when changing PCC settings. PixInsight checks catalog access and photometry
-requirements during execution. Native PCC execution in this workflow is pending
-user testing; automated checks cover the adapter and its failure cases.
+For advanced controls, enable the optional **Use CCDASTRO_PCC icon override**
+and supply a configured PCC icon with Apply color calibration enabled. Missing,
+wrong or disabled-calibration overrides block preflight. Native catalog access
+and photometry requirements are checked at execution. The new direct parameters
+and UI construction were checked in PixInsight; full image testing remains pending.
 
 For comparison, process separate copies of the original linear master with SPCC
 and PCC, using identical **Linked Auto Histogram** settings. Do not apply one
@@ -573,26 +583,27 @@ Native PixInsight testing of the new controls remains pending.
 
 ## Final stretch and color balance
 
-### User-configured HistogramTransformation or MultiscaleAdaptiveStretch
+### HistogramTransformation or MultiscaleAdaptiveStretch settings
 
-The **Final image stretch** dropdown now offers **HistogramTransformation
-(configured)** and **MultiscaleAdaptiveStretch (configured)** alongside Keep
-linear and the two automatic histogram choices. These use native process settings
-saved in workspace icons; they do not add a second stretch.
+**Final image stretch** offers **HistogramTransformation (workflow settings)**
+and **MultiscaleAdaptiveStretch (workflow settings)** alongside Keep linear and
+the automatic histogram choices. They each apply one stretch.
 
-1. Open the native process and adjust its controls. For HistogramTransformation,
-   set the channel transforms, shadows, midtones, highlights and output range as
-   needed; an identity transform is rejected. For MAS, use the native controls
-   available in your installed version, including any desired background reference.
-2. Test on a separate linear copy or use the native preview. Drag the New Instance
-   triangle to the workspace and rename the icon **CCDASTRO_HistogramStretch** or
-   **CCDASTRO_MASStretch**, respectively.
-3. Select the matching workflow choice. **Stretch setup...** shows these steps;
-   the status below the dropdown reports Ready or Setup needed. **Validate** checks
-   process availability, the icon name/type, and a nonidentity histogram transform.
-4. To change inputs, edit the saved icon and replace/update it. The workflow reads
-   all saved native settings again when running; an unrelated open process window
-   does not update that icon. Save/reload icons between PixInsight sessions.
+1. Select the method and click **Stretch setup...**.
+2. HistogramTransformation exposes normalized shadows, midtones and highlights
+   for linked RGB/K. Defaults are identity and require a real stretch before use.
+   Shadows must be below highlights; midtones must lie strictly between 0 and 1.
+   Use an optional `CCDASTRO_HistogramStretch` override for independent channels
+   or output-range controls.
+3. MAS exposes aggressiveness, target background, dynamic-range compression,
+   contrast recovery, scale separation/intensity, saturation amount/boost and
+   lightness mask. Defaults match the inspected installed process: 0.70 / 0.15 /
+   0.40, scale 1024, contrast intensity 1.0, saturation 0.75 / 0.50. These are
+   starting points, not a guarantee of the right result. Optional background
+   rectangle coordinates are in image pixels; provide a valid background region.
+   An advanced `CCDASTRO_MASStretch` override remains available.
+4. Save settings, Validate, then run on the original linear master. Inspect the
+   result. To change inputs, reopen setup; settings are remembered when enabled.
 
 With starless enhancement enabled, the selected final stretch runs once on the
 starless branch before its reviews and recombination. Otherwise it stretches the
@@ -681,28 +692,20 @@ they use screen blending and disable the final recombined stretch.
 
 ### MLDenoise setup
 
-MLDenoise requires a neural network model file; a fresh process instance has no
-model path. Before selecting MLDenoise in the workflow:
+MLDenoise requires a compatible neural network model. Select MLDenoise, then
+**MLDenoise setup...**. Browse the model file and set amount, overlap, Fast/High
+precision and local support. Save settings and Validate. Preflight checks that
+the model file exists; the native process checks compatibility at execution.
+Backend and other advanced parameters retain installed native defaults.
 
-1. Open the native MLDenoise process and select a compatible model file.
-2. Configure the denoise settings and test on a copy of your image.
-3. Drag the New Instance triangle to the workspace and rename the icon
-   `CCDASTRO_MLDenoise`. Keep this icon loaded when running the workflow.
-4. Select MLDenoise in the workflow and click Validate. The workflow checks the
-   icon's process type, nonempty model path, and that the file exists.
+An optional `CCDASTRO_MLDenoise` override preserves advanced process settings.
+Changing the standalone process window does not change direct workflow controls
+or an existing override icon. Update the selected source of settings explicitly.
 
-Changing settings in the native dialog does not update an existing icon; replace
-the icon after changing the model or denoise parameters. The workflow executes
-the configured icon at the selected denoise placement. It cannot determine model
-compatibility from the filename; the native process validates it during execution.
-Automated adapter tests use mocked APIs; runtime verification is pending.
-
-Preview updates now show a revision number and sampled mean/max absolute pixel
-change, expressed as a percentage of the normalized 0–1 pixel range. A small
-nonzero change may be hard to see at fit-to-window scale; inspect the retained
-comparison images at full resolution. Zero strength intentionally leaves pixels
-unchanged. The Process Console records settings and measured change for each
-recalculation. Runtime verification of the repaint changes is pending.
+Preview updates show a revision number and sampled mean/max absolute pixel
+change as a percentage of the normalized 0-1 range. A small change may be hard
+to see at Fit scale; compare at 100%. Zero strength intentionally leaves pixels
+unchanged. The Process Console records settings and measured changes.
 
 ## Enhance the starless image before recombination
 
@@ -923,8 +926,8 @@ it; cancelling the final save or sharing export leaves the images open.
 2. **Local contrast:** native LocalHistogramEqualization, radius 64 pixels,
    slope limit 1.5 and Amount 20% by default. Radius and amount are adjustable.
    A smoothed brightness mask protects the dark background and bright highlights.
-3. **Noise cleanup:** runs the denoise process and settings stored in the
-   **CCDASTRO_FinalDenoise** workspace icon on a copy of the current image.
+3. **Noise cleanup:** runs the tool and settings selected in **Denoise setup...**
+   on a copy of the current image. Icons are optional advanced overrides.
    Default Amount is a 15% blend of the denoised result. Use **Skip Noise cleanup**
    if the image already looks clean. Setup and blend details are explained below.
 4. **Saturation:** a native CurvesTransformation saturation curve, Amount 10%
@@ -963,49 +966,38 @@ can amplify noise and flatten or exaggerate structure; use only passes that help
 This works in the starless finishing path and the combined-image finishing path.
 Native interactive testing remains pending.
 
-### Final denoise icon: what it stores and how to create it
+### Final denoise setup and optional icon
 
-**CCDASTRO_FinalDenoise is a saved set of settings for a denoise process**,
-for example MLDenoise or NoiseXTerminator. It does not point to an image and
-is not an image file. Installing a denoise module does not create this icon.
-The name tells the workflow which saved process instance to read.
+Click **Final denoise setup...** before running, or **Denoise setup...** inside
+Noise cleanup. Choose NoiseXTerminator, MLDenoise, ACDNR or MultiscaleLinearTransform,
+then configure the tool. Cancel leaves the previous choice/settings unchanged.
 
-Create it before starting the workflow:
+- NoiseXTerminator: single-strength mode, denoise 0.25, detail 0.15, iterations 2 initially.
+- MLDenoise: model-file browser, strength, overlap, precision and local support.
+- ACDNR: lightness/chrominance selection, standard deviations, amounts and iterations.
+- MultiscaleLinearTransform: number of noise layers, threshold, amount and iterations.
+  Direct setup enables noise reduction only on the chosen fine layers, disables
+  bias adjustments and preserves the residual layer. The image is already stretched;
+  the workflow sets linear false. No nonlinear checkbox is needed for other tools.
 
-1. Open your preferred supported denoise process in PixInsight.
-2. Configure gentle noise reduction for the **already-stretched image**.
-   **No nonlinear checkbox is required.** Here, nonlinear describes the image
-   after stretching; it does not mean every denoiser has a linear/nonlinear
-   setting. If your denoiser has no such option, there is nothing to select.
-   Save gentle cleanup settings appropriate for the image you see in the preview.
-   For MLDenoise, select an existing neural network model file; its path is part
-   of the settings saved in the icon.
-3. Drag the process window's **New Instance triangle** onto the PixInsight workspace.
-   This creates a workspace process icon containing those settings.
-4. Rename that workspace icon exactly **CCDASTRO_FinalDenoise**.
-5. Save your process-icon file and reload it in future sessions. If you change
-   settings in a separate process window, replace/update the saved icon as well;
-   the workflow reads the icon's stored settings.
+These are tool settings, separate from the review's **Amount**, which blends the
+processed result. Use gentle settings, Update Preview and inspect at 100%; changing
+setup invalidates the old preview until it is recalculated. Skip remains available.
 
-When you click **Update Preview** in Noise cleanup, the workflow reads the icon,
-runs that denoise process on a copy of the image carried forward from the previous
-step, and blends the denoised result with the image before cleanup. It does not
-apply the saved icon to your original unstretched master. Supported processes are
-NoiseXTerminator, MLDenoise, ACDNR and MultiscaleLinearTransform. MLDenoise requires
-an existing model file. For MultiscaleLinearTransform, the workflow itself sets
-the linear parameter to false; you do not need to locate a nonlinear checkbox.
+For advanced parameters, enable **Use CCDASTRO_FinalDenoise icon override** and
+create that named workspace icon from a supported configured denoise process.
+The icon stores parameters, not an image. MLDenoise overrides need a valid model
+path. Update/reload the icon explicitly when changing advanced settings.
 
 **Amount 15% means 85% of the image before cleanup plus 15% of the denoised
 image.** It is separate from the denoiser's own strength setting. Amount 0%
 leaves the stage image unchanged; 100% uses the complete denoised result. The
 blend helps keep final cleanup gentle, but inspect faint detail before Apply.
 
-The final-cleanup icon is separate from the earlier linear denoise icon so you
-can keep different settings for the two stages. The workflow does not reuse the
-main denoise icon automatically. If the image already looks clean, or you have
-not created the final icon, click **Skip Noise cleanup**. The current image
-continues unchanged to the saturation review. A missing or invalid icon prevents
-Apply; it does not prevent Skip.
+Final-cleanup settings are separate from the earlier linear denoise settings,
+so each stage can use an appropriate strength. If the image already looks clean,
+click **Skip Noise cleanup**. Missing or invalid selected settings prevent an
+accepted cleanup preview; configure the tool in the review or skip it.
 
 The local contrast and saturation mask limits are editable on a 0–1000 scale.
 Defaults protect values below 50 (0.05) and above 850 (0.85), with soft transitions
@@ -1039,8 +1031,9 @@ failure cleanup, denoise blending, preview controls, resize geometry and saving.
 
 ## Troubleshooting
 
-**A native process says Setup needed.** Install or update that process, restart
-PixInsight, reopen the manager, and click Validate.
+**A native process says Setup needed.** Open its workflow setup and check model/
+database paths, camera/filter curves or histogram inputs. If an override is enabled,
+check its named icon. Install/update a missing process, restart PixInsight and Validate.
 
 **A SyQon choice says Setup needed.** Open its SyQon setup dialog and choose an
 existing executable. Install the supported vendor integration and click Validate.
@@ -1151,6 +1144,9 @@ node pixinsight/tools/validate-workflow.js
 
 ## Revision history
 
+- **v1.1.41:** Adds direct native setup for PCC, MLDenoise, SPFC/MGC, histogram/MAS
+  stretches, luminance histogram stretch and final denoise. Icons remain optional
+  explicit overrides; typed settings and file paths can be remembered.
 - **v1.1.40:** Adds remembered SyQon executable paths and adjustable Parallax, Prism
   and Starless settings. Their workspace icons are now optional explicit overrides.
 - **v1.1.39:** Makes the BlurX icon optional; adds remembered Correct Only/sharpening/halo controls and an explicit icon override. Correct Only is the default.

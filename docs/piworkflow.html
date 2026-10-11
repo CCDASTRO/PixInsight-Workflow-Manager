@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.39",
+    "softwareVersion": "1.1.40",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.39">CCDASTRO PixInsight Workflow Manager v1.1.39</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.40">CCDASTRO PixInsight Workflow Manager v1.1.40</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
@@ -240,7 +240,7 @@ satellite trails, residual hot pixels, walking noise, and integration borders
 before continuing. Later processing can enhance good data, but it cannot recover
 detail or reliably remove defects lost or introduced during preprocessing.</p>
 <p>The preflight validator reports unavailable process classes and missing SyQon
-process icons before execution.</p>
+executables or selected override icons before execution.</p>
 <h2 id="workflow-manager-interface">Workflow Manager interface</h2>
 <p>Select the processing steps with the checkboxes, choose the desired tool for
 each step, and click <strong>Run Workflow</strong>. The manager runs the selected steps in
@@ -561,20 +561,60 @@ calibration on top of the other. Calibration establishes color balance; stretchi
 curves, and saturation still determine the final appearance. PCC does not reproduce
 Photoshop Auto Color or HDR Toning automatically.</p>
 <h2 id="configure-syqon-choices">Configure SyQon choices</h2>
-<p>SyQon's PixInsight integrations are instantiable scripts that manage external
-applications, model files, licenses, temporary files, and output import. The
-workflow manager reads the configured process icons and calls the locally
-installed SyQon processing functions in an isolated scope. This preserves vendor
-settings and progress dialogs without recursively executing a Script instance,
-which PixInsight does not support. The vendor files are not modified or bundled.</p>
-<p>Supported script versions are Parallax v1.5, Prism v1.5, and Starless v3.0.2.
-Validation rejects other versions or missing scripts before image processing.</p>
-<p>Create these exact process-icon names only for the SyQon tools you plan to use:</p>
+<p>SyQon tools no longer require workspace icons by default. Install the vendor
+application, its models/license as applicable, and its PixInsight integration.
+Supported script versions are Parallax v1.5, Prism v1.5, and Starless v3.0.2.
+Missing scripts and unsupported versions block preflight. The workflow calls the
+locally installed processing functions; vendor files are not modified or bundled.</p>
+<ol>
+<li>Enable the relevant workflow stage and select its SyQon tool.</li>
+<li>In <strong>SyQon settings</strong>, click <strong>Parallax setup</strong>, <strong>Prism setup</strong>, or
+<strong>Starless setup</strong>. The corresponding button is enabled for the selected tool.</li>
+<li>Confirm the executable path. The workflow can discover paths saved by the
+vendor integration; otherwise click <strong>Browse</strong> and select the executable.</li>
+<li>Set the controls below and click <strong>Save settings</strong>, then <strong>Validate</strong>.
+Enable <strong>Remember workflow settings</strong> to retain settings and paths between
+sessions. Otherwise settings last for the current session.</li>
+</ol>
 <table>
 <thead>
 <tr>
-<th>SyQon integration</th>
-<th>Required process icon</th>
+<th>Tool</th>
+<th>Workflow controls and starting defaults</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parallax</td>
+<td>Aberration correction on; sharpening 0%; star reduction 0; Classic mode; linked temporary stretch on; CPU off</td>
+</tr>
+<tr>
+<td>Prism / DeepPrism</td>
+<td>Strength 85%; DeepPrism model; CPU off</td>
+</tr>
+<tr>
+<td>Starless</td>
+<td>Overlap 64 pixels; 128 is also available</td>
+</tr>
+<tr>
+<td>All three</td>
+<td>Executable path and timeout, initially 20 minutes</td>
+</tr>
+</tbody>
+</table>
+<p>Parallax and Prism use the vendor's reversible temporary stretch for linear
+input. Other advanced parameters retain the installed vendor defaults. Adjust
+strength to suit the data and inspect results; executable discovery does not
+verify model availability or licensing. Vendor execution checks these prerequisites.</p>
+<p>For advanced settings, configure a vendor Script icon and explicitly enable
+<strong>Use icon override</strong> in that tool's setup dialog. The workflow then uses its
+saved parameters instead of the workflow controls; disable the override to return
+to the built-in settings. Merely having an icon in the workspace does not select it.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Optional override icon</th>
 </tr>
 </thead>
 <tbody>
@@ -592,16 +632,9 @@ Validation rejects other versions or missing scripts before image processing.</p
 </tr>
 </tbody>
 </table>
-<p>For each SyQon tool:</p>
-<ol>
-<li>Install and configure the SyQon application and its PixInsight integration.</li>
-<li>Open the SyQon script from <strong>Script &gt; SyQon</strong>.</li>
-<li>Select the executable, model, and desired conservative settings.</li>
-<li>Disable the SyQon settings dialog option when available. This does not remove
-the manual interaction required by the Starless application described below.</li>
-<li>Drag the script's New Instance triangle to the PixInsight workspace.</li>
-<li>Rename the icon to the exact name in the table above.</li>
-</ol>
+<p>Drag the vendor script's New Instance triangle to the workspace and rename it
+as above. A missing or wrong-type icon blocks validation only when its override
+is selected. Reset Defaults clears the overrides and restores the starting settings.</p>
 <p>The workflow uses <strong>Subtraction</strong> for Starless stars-only generation on its
 linear input and verifies that a stars-only view was created before continuing.
 <strong>SyQon Starless requires manual interaction; this stage cannot run unattended.</strong>
@@ -1121,7 +1154,8 @@ confirmation is required.</li>
 stretch. Disable it when manual GHS or HistogramTransformation work is desired.</li>
 <li>Native process adapters use conservative defaults. Unrecognized optional
 third-party parameters retain the installed process defaults.</li>
-<li>SyQon choices require correctly named process icons and vendor-side setup.</li>
+<li>SyQon choices require the vendor application, supported integration, executable,
+and applicable models/license. Workspace icons are optional overrides.</li>
 <li>SyQon Starless requires a manual <strong>Generate Starless</strong> click and closing its
 window after processing; workflows using this stage are not fully unattended.</li>
 <li>If a third-party star-removal tool produces multiple auxiliary views with
@@ -1132,14 +1166,17 @@ remain future work.</li>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <p><strong>A native process says Setup needed.</strong> Install or update that process, restart
 PixInsight, reopen the manager, and click Validate.</p>
-<p><strong>A SyQon choice says Setup needed.</strong> Create the required process icon with the
-exact name listed above. Confirm that the icon runs successfully by itself.</p>
+<p><strong>A SyQon choice says Setup needed.</strong> Open its SyQon setup dialog and choose an
+existing executable. Install the supported vendor integration and click Validate.
+If Use icon override is selected, supply the correctly named Script icon or turn
+the override off to use workflow settings.</p>
 <p><strong>Plate Solve says Setup needed or SPCC preflight fails.</strong> Open <strong>Setup...</strong>, use
 metadata autofill, and confirm coordinates plus resolution or focal length and
 pixel size. Alternatively, run ImageSolver manually and reopen the manager.</p>
 <p><strong>No stars-only view is detected.</strong> Configure the selected star-removal tool to
-generate stars. For SyQon Starless, use Subtraction and rename its process icon
-<code>CCDASTRO_Starless</code>.</p>
+generate stars. The workflow forces Subtraction for SyQon Starless. Complete
+Generate Starless and close its application window after processing finishes so
+PixInsight can import the outputs.</p>
 <h3 id="blurxterminator-workflow-settings-and-optional-icon-v1.1.39">BlurXTerminator workflow settings and optional icon (v1.1.39)</h3>
 <p>No BlurX workspace icon is required by default. Select BlurXTerminator in
 <strong>4. Deblur / structure recovery</strong>, then use <strong>BlurXTerminator settings</strong> in the
@@ -1209,7 +1246,7 @@ but cannot be combined with the final recombined stretch.</li>
 recombination, with Strong, Moderate, or Soft modes and 1–3 iterations.</li>
 <li>Linear-add or nonlinear screen-blend PixelMath recombination.</li>
 <li>Preflight validation for input state, astrometry, installed process classes,
-configured SyQon icons, and branch dependencies.</li>
+SyQon settings and selected override icons, and branch dependencies.</li>
 <li>Version 3 profile-aware workflow schema with <code>main</code>, <code>starless</code>, and <code>stars</code> lanes.</li>
 <li>Contextual mouse-over help for processing choices and branch controls.</li>
 <li>Certified PixInsight code-signing support for trusted Update Manager packages.</li>
@@ -1227,6 +1264,9 @@ configured SyQon icons, and branch dependencies.</li>
 </code></pre>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.40:</strong> Adds remembered SyQon executable paths and adjustable Parallax, Prism
+and Starless settings. Their workspace icons are now optional explicit overrides.</p>
+</li>
 <li><p><strong>v1.1.39:</strong> Makes the BlurX icon optional; adds remembered Correct Only/sharpening/halo controls and an explicit icon override. Correct Only is the default.</p>
 </li>
 <li><p><strong>v1.1.38:</strong> Adds optional registered nebula masks to LHE and Curves, repeatable Curves with individual RGB channels, and optional final contrast/color review after L addition and HDR.</p>

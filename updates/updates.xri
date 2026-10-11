@@ -5,18 +5,18 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.39.zip" sha1="e93993ac1745f8154c4c352ec9a3df311d2df9f6" type="script" releaseDate="20261011222029">
-         <title>CCDASTRO Workflow Manager 1.1.39</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.40.zip" sha1="c7930331b54080e355969966fd572d8acb2f1797" type="script" releaseDate="20261011224018">
+         <title>CCDASTRO Workflow Manager 1.1.40</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
-               <li>v1.1.39 runs BlurXTerminator without a workspace icon by default, using explicit Correct Only settings</li>
-               <li>Workflow controls offer adjustable star/nonstellar sharpening and halo adjustment; Automatic PSF is enabled</li>
-               <li>An explicit optional CCDASTRO_BlurX icon override preserves all saved process settings</li>
-               <li>BlurX settings are remembered; README and website instructions updated</li>
+               <li>v1.1.40 adds SyQon Parallax, Prism and Starless setup controls without required workspace icons</li>
+               <li>Executable paths and adjustable tool settings can be remembered; advanced icons remain explicit optional overrides</li>
+               <li>Supported integrations remain Parallax/Prism v1.5 and Starless v3.0.2; Starless still requires manual Generate/close steps</li>
+               <li>README and webpage updated; regression and installed vendor parameter-loading checks passed</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-11T22:20:42.714Z" encoding="Base64">HpogOlQTmFTJbwql3cpGZjdFyu65QRQwuHvK9pXgkZxx771J2JrBELc5eJK/t/nsvQg4GGNOthFiluIFJBYQAA==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-11T22:41:02.925Z" encoding="Base64">aOyrrPHzQVHnLw7HO2O55Jj+MiF4FbKrQ58FQhHBv7pgif3crkyH9IvOWLRdaFdbdMvBcRXbYOMaak1UmckhCg==</Signature>

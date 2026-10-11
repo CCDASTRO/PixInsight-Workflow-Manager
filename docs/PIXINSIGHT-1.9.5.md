@@ -164,3 +164,19 @@ explicit CCDASTRO_BlurX override preserves the icon settings; a missing/wrong ic
 blocks validation only when that override is selected. Settings are remembered,
 old saved configurations use the new defaults, and Reset Defaults clears the override.
 Mocked API regression checks pass; native no-icon execution remains pending.
+
+## v1.1.40: SyQon settings without required icons
+
+Select a SyQon tool in an enabled stage, then open its setup button in SyQon
+settings. Confirm the discovered executable or browse once. Save settings with
+Remember workflow settings enabled to retain the path and controls between runs.
+Parallax exposes correction, sharpening, star reduction, mode, linked temporary
+stretch and CPU; defaults use correction with zero sharpening/reduction. Prism
+exposes strength (85%), DeepPrism/Prism Mini and CPU. Starless exposes overlap
+64/128. Each exposes a timeout (20 minutes initially). Advanced parameters retain
+installed vendor defaults. An explicit icon override remains available for each.
+Supported integrations remain Parallax/Prism v1.5 and Starless v3.0.2. Starless
+still requires Generate Starless and closing the vendor window after completion.
+Regression checks cover settings, paths, overrides and actual installed vendor
+parameter loading without launching executables. Native image processing and new
+setup-dialog interaction remain pending user testing.

@@ -19,6 +19,8 @@ const ctx=vm.createContext({finiteNumber:Number.isFinite,cloneHDRView:()=>window
  SaveFileDialog:function(){this.execute=()=>{this.filePath=savePaths.shift();return !!this.filePath;};},
  FileFormat:function(){this.isNull=false;},FileFormatInstance:function(){this.isNull=false;files.push(this);this.create=()=>true;this.writeImage=()=>true;this.isOpen=true;this.close=()=>{this.closed=true;this.isOpen=false;return true;};},
  PropertyType:{String:46},PropertyAttribute:{Storable:128,Permanent:2}});
+ctx.ImageWindow.windows=[];
+vm.runInContext(source.slice(source.indexOf('function validateNebulaMask('),source.indexOf('function buildAdaptiveCandidate(')),ctx);
 vm.runInContext(source.slice(source.indexOf('function cloneWorkflowInput('),source.indexOf('function finalOutputPath(')),ctx);
 vm.runInContext(source.slice(source.indexOf('function finalOutputPath('),source.indexOf('function saveFinalImage(')),ctx);
 const plain=x=>JSON.parse(JSON.stringify(x));

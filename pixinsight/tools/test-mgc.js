@@ -145,3 +145,11 @@ test("final finishing requires a stretch and recombination", () => {
   f.dialog.recombine.checked = true;
   assert.ok(!f.validate().errors.some(x => x.includes("Final finishing")));
 });
+test("post-luminance review validates its tools with earlier finishing disabled", () => {
+  const f=fixture({solved:true});f.dialog.postLuminanceReview={checked:true};f.dialog.lrgbMode={currentItem:1};
+  assert.ok(f.validate().errors.some(x=>x.includes('Post-luminance contrast/color review requires')));
+  f.dialog.finalStretch.currentItem=1;f.context.resolveProcessClass=()=>null;
+  assert.ok(f.validate().errors.some(x=>x.includes('Post-luminance review requires LocalHistogramEqualization')));
+  f.dialog.lrgbMode.currentItem=0;
+  assert.ok(!f.validate().errors.some(x=>x.includes('Post-luminance')));
+});

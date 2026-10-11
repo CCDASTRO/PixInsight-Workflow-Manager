@@ -5,18 +5,18 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.37.zip" sha1="4eeca7e8c61faf90051d2f68b409000592220f79" type="script" releaseDate="20261011182100">
-         <title>CCDASTRO Workflow Manager 1.1.37</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.38.zip" sha1="fc265fd3fbff3d2ca3c5a0996a236d9eda52e1af" type="script" releaseDate="20261011203920">
+         <title>CCDASTRO Workflow Manager 1.1.38</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
-               <li>v1.1.37 recovers from missing, invalid or failing luminance stretch icons without repeating completed RGB processing</li>
-               <li>Choose automatic matching, change the stretch choice, or keep RGB and continue to final reviews and saving</li>
-               <li>Each retry starts from an untouched linear luminance copy; failed temporary copies are closed</li>
-               <li>Includes updated README and website instructions</li>
+               <li>v1.1.38 adds optional registered grayscale nebula masks to LHE and Curves, with inversion and configurable brightness protection</li>
+               <li>Repeatable Curves supports contrast, saturation and individual RGB channels</li>
+               <li>Optional final contrast and color reviews follow luminance addition and final HDR</li>
+               <li>Tools are general-purpose and user-selectable; README and website instructions updated</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-11T18:21:43.240Z" encoding="Base64">Zo4xLkRQW93TQ5J6fIJ7qiP8jb57xBzjdcymgwy1JPrh1Y43TTAjFVCDSSw78gnVcNyQ0uB2mAijrO6uRZ4DAg==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-11T20:39:50.803Z" encoding="Base64">03X3ApViSz2tw/hkOvyQ7u56/kFOAvphfMSkDk+PZQUqD6ZrSeG41WVk1zTtx/tEDcO8VtScLXFzOWxcgGdICg==</Signature>

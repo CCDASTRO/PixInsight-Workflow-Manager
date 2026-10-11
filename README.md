@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.37
+# CCDASTRO PixInsight Workflow Manager v1.1.38
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -505,6 +505,57 @@ first failed stage.
 >
 > **The Workflow Manager window returns automatically after the run finishes or stops with an error.**
 > Dismiss any completion or error message to return to the workflow settings.
+
+## Nebula masks and final contrast/color after luminance
+
+In **LHE (Local contrast)** and **Curves** reviews, the optional **Nebula mask**
+dropdown lists open grayscale main views with matching dimensions. Prepare and
+open your mask before starting the workflow: the review windows are modal. A mask
+can come from RangeSelection or another PixInsight mask tool applied to a registered,
+matching-crop copy. Use a smooth mask that includes the wanted faint nebulosity and
+protects unwanted background, stars and the bright core. The workflow does not
+identify nebulae automatically or create an object-specific mask.
+
+1. Select the mask and confirm its registration and crop. Matching dimensions alone
+   do not establish registration. Masks must share the working image's exact crop;
+   leave workflow crop off or prepare a mask for the resulting crop beforehand.
+2. White permits processing, black protects, and gray gives partial processing.
+   **Invert** reverses coverage. Values are clamped to 0-1 on a temporary mask copy;
+   the original mask and input pixels remain unchanged. The mask's pixel values,
+   not its display STF, determine coverage.
+3. In LHE, an external mask replaces the automatic brightness mask by default.
+   Enable **Also use brightness protection** to multiply the nebula mask by the
+   existing **Protect below / above** mask. This can further protect the core, but
+   can also exclude the faint wisps you intended to enhance. With no external mask,
+   LHE retains its automatic brightness protection. Curves with no mask affects
+   the whole image.
+4. Click **Update Preview** and compare Before/After at 100%. Changing mask, invert,
+   confirmation or processing settings invalidates Apply until a new preview succeeds.
+   LHE carries the selected mask into successive accepted passes within that review.
+5. Curves now offers RGB/K, Lightness, Saturation and individual Red, Green and Blue
+   channels. Choose **Apply and add another Curves pass** to accept a contrast pass
+   and then adjust saturation or color balance on its result. Each new pass starts
+   with an Identity curve and carries the mask selection; choose/edit its curve and
+   update the preview. Each preview starts from that pass's input, without stacking
+   preview updates. Skip keeps earlier accepted passes.
+
+In either separate-LRGB input mode, enable **Review final contrast and color after
+luminance addition**. This session-only option starts off. After an accepted,
+nonzero L addition and the optional final core HDR review, it opens **Local contrast**
+with repeatable LHE, followed by **Curves** with repeatable channel adjustments,
+then saves the accepted result. It also works when the normal finishing checkbox
+is off. Keep RGB, Keep starless, a zero L weight, or luminance-stretch recovery that
+skips L addition also skips this new review sequence. Each adjustment can be skipped.
+
+For a first M42 comparison, try a broad LHE pass at radius 200-250 px, amount 15-25%
+and contrast limit 1.2-1.4, with a mask admitting the outer wisps. Then use a gentle
+Lightness curve followed by a separate Saturation pass if needed. These are starting
+points; check noise and rings at 100%. Using strong LHE on both L and the final LRGB
+can compound contrast and artifacts. This feature does not recover clipped core data.
+
+Mask weighting, inversion, brightness combination, validation, input preservation,
+cleanup and review routing are covered by mocked pixel/API regression checks.
+Native PixInsight testing of the new controls remains pending.
 
 ## Final stretch and color balance
 
@@ -1054,6 +1105,8 @@ node pixinsight/tools/validate-workflow.js
 ```
 
 ## Revision history
+
+- **v1.1.38:** Adds optional registered nebula masks to LHE and Curves, repeatable Curves with individual RGB channels, and optional final contrast/color review after L addition and HDR.
 
 - **v1.1.37:** Recovers from missing, invalid or failing luminance stretch icons without discarding completed RGB processing; fresh linear copies protect stretch retries.
 

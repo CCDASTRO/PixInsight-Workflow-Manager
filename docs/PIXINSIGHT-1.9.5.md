@@ -139,3 +139,17 @@ review at the L stage. Use automatic matching to continue on a fresh linear-L co
 change the stretch choice to reopen options, or Keep RGB and continue to final
 reviews/save without adding L. Completed RGB is retained and is not reprocessed.
 Closing recovery also keeps RGB. Abort requests still stop the workflow.
+
+## v1.1.38: nebula masks and post-luminance contrast/color
+
+LHE and Curves reviews accept an optional open registered grayscale mask with
+matching crop and dimensions. White allows the operation, black protects, gray
+partially applies it; inversion and temporary clamping are supported. External
+LHE masks replace brightness protection unless the user combines both. Source
+masks and images remain unchanged. Prepare masks before launching modal reviews.
+
+Curves adds individual RGB channels and successive accepted passes. Separate-LRGB
+inputs offer a session-only final LHE/Curves review after accepted nonzero L addition
+and optional final HDR. Keep RGB/Keep starless/zero L skip this sequence. No new
+stretch or automatic denoise is introduced. Regression checks use mocked pixel/API
+implementations; native PixInsight validation of these new controls remains pending.

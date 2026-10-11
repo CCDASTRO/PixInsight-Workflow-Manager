@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.37"
+#define VERSION "1.1.38"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1527,6 +1527,15 @@ PreflightValidator.prototype.validate = function()
       if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
          result.errors.push("Curves review requires an image stretch in this workflow.");
    }
+   if (this.dialog.postLuminanceReview && this.dialog.postLuminanceReview.checked && this.dialog.lrgbMode.currentItem > 0)
+   {
+      if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
+         result.errors.push("Post-luminance contrast/color review requires a workflow RGB stretch.");
+      if (separationEnabled && !this.dialog.recombine.checked)
+         result.errors.push("Post-luminance review requires automatic stars recombination.");
+      for (var j=0, names=["LocalHistogramEqualization", "Convolution", "PixelMath", "CurvesTransformation"]; j<names.length; ++j)
+         if (resolveProcessClass([names[j]]) === null) result.errors.push("Post-luminance review requires " + names[j] + ".");
+   }
    if (this.dialog.finishingEnabled.checked)
    {
       if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
@@ -1861,12 +1870,18 @@ function installLRGBInputs(dialog)
    dialog.luminancePreparation.checked = false;
    dialog.luminancePreparation.toolTip = "Optional session-only reviews on an L copy, before LRGB. Blend sources and masks must already be registered and open.";
    box.sizer.add(dialog.luminancePreparation);
+   dialog.postLuminanceReview = new CheckBox(dialog.content);
+   dialog.postLuminanceReview.text = "Review final contrast and color after luminance addition";
+   dialog.postLuminanceReview.checked = false;
+   dialog.postLuminanceReview.toolTip = "Session-only. LHE and repeatable Curves after L combination and final HDR, before saving. Each can be skipped.";
+   box.sizer.add(dialog.postLuminanceReview);
    var refresh = function()
    {
       var mode = dialog.lrgbMode.currentItem;
       dialog.lrgbInputs.L.enabled = mode > 0;
       dialog.lrgbRegistered.enabled = mode > 0;
       dialog.luminancePreparation.enabled = mode > 0;
+      dialog.postLuminanceReview.enabled = mode > 0;
       for (var k = 0; k < 3; ++k) dialog.lrgbInputs[["R","G","B"][k]].enabled = mode === 2;
    };
    dialog.lrgbMode.onItemSelected = refresh; refresh();
@@ -2172,8 +2187,9 @@ function prepareLRGBLuminance(view, rgb)
    return current;
 }
 
-function reviewLRGB(rgb, linearLuminance, prepare)
+function reviewLRGB(rgb, linearLuminance, prepare, state)
 {
+   if (state) state.added = false;
    var luminance = cloneHDRView(linearLuminance,"_MatchedLuminance"), dialog = null, accepted = false;
    try
    {
@@ -2214,6 +2230,7 @@ function reviewLRGB(rgb, linearLuminance, prepare)
       if (dialog.candidate === null || !dialog.applyButton.enabled) throw new Error("Update the LRGB preview before applying.");
       if (dialog.keepComparison.checked) { rgb.window.show(); luminance.show(); } else if (!prepare) luminance.forceClose();
       dialog.candidate.show(); accepted=true;
+      if (state) state.added = dialog.strength.value > 0;
       logLine("L added after RGB finishing: weight="+dialog.strength.value+"%; Lightness/Saturation=0.5; chrominance noise reduction off.");
       return dialog.candidate.mainView;
    }
@@ -3122,14 +3139,94 @@ function curvesWithAmount(points, amount)
    return result;
 }
 
-function buildAdaptiveCandidate(view, strength, points, channel)
+
+function validateNebulaMask(view, settings)
+{
+   if (!settings || !settings.id) return null;
+   if (!settings.registered) throw new Error("Confirm the nebula mask is registered and shares the image crop.");
+   var mask = View.viewById(settings.id);
+   if (mask.isNull || mask.isPreview || mask.fullId === view.fullId ||
+       mask.image.isColor || mask.image.numberOfNominalChannels !== 1 ||
+       mask.image.width !== view.image.width || mask.image.height !== view.image.height)
+      throw new Error("Nebula mask must be an open, separate grayscale main view with matching dimensions and registration.");
+   return mask;
+}
+
+function createNebulaReviewMask(view, settings, low, high)
+{
+   var source = validateNebulaMask(view, settings);
+   if (source === null) return null;
+   var mask = cloneHDRView(source, "_NebulaReviewMask");
+   try
+   {
+      var p = new PixelMath;
+      p.useSingleExpression = true; p.createNewImage = false;
+      p.rescale = false; p.truncate = true;
+      var coverage = "min(1,max(0,$T))";
+      if (settings.invert) coverage = "(1-" + coverage + ")";
+      p.expression = coverage;
+      if (settings.brightness) p.expression += "*(" + finishingMaskExpression(view, low, high) + ")";
+      if (!p.executeOn(mask.mainView)) throw new Error("Nebula mask preparation failed.");
+      clearDisplaySTF(mask.mainView); checkAbortRequested();
+      logLine("Nebula mask: " + source.fullId + "; invert=" + settings.invert + "; brightness protection=" + settings.brightness);
+      return mask;
+   }
+   catch (e) { mask.forceClose(); throw e; }
+}
+
+function installNebulaMaskControls(dialog, view, dirty, brightness)
+{
+   var row = new HorizontalSizer; row.spacing = 8;
+   var label = new Label(dialog); label.text = "Nebula mask:"; row.add(label);
+   dialog.nebulaMask = new ComboBox(dialog);
+   dialog.nebulaMask.addItem(brightness ? "Automatic brightness protection" : "None (whole image)");
+   var windows = ImageWindow.windows;
+   for (var i=0; i<windows.length; ++i)
+   {
+      var v = windows[i].mainView;
+      if (v.fullId !== view.fullId && !v.image.isColor && v.image.numberOfNominalChannels === 1 &&
+          v.image.width === view.image.width && v.image.height === view.image.height)
+         dialog.nebulaMask.addItem(v.fullId);
+   }
+   dialog.nebulaMask.currentItem = 0; row.add(dialog.nebulaMask, 100);
+   dialog.nebulaInvert = new CheckBox(dialog); dialog.nebulaInvert.text = "Invert"; row.add(dialog.nebulaInvert);
+   dialog.nebulaBrightness = new CheckBox(dialog);
+   dialog.nebulaBrightness.text = "Also use brightness protection";
+   dialog.nebulaBrightness.visible = brightness; row.add(dialog.nebulaBrightness);
+   var confirm = new CheckBox(dialog);
+   confirm.text = "I confirm this mask is registered and shares the image crop";
+   dialog.nebulaRegistered = confirm;
+   dialog.nebulaMaskSettings = function() {
+      return {id:dialog.nebulaMask.currentItem > 0 ? dialog.nebulaMask.itemText(dialog.nebulaMask.currentItem) : "",
+         invert:dialog.nebulaInvert.checked, brightness:brightness && dialog.nebulaBrightness.checked,
+         registered:confirm.checked};
+   };
+   function changed() {
+      var selected = dialog.nebulaMask.currentItem > 0;
+      dialog.nebulaInvert.enabled = confirm.enabled = dialog.nebulaBrightness.enabled = selected;
+      dirty();
+   }
+   dialog.nebulaMask.onItemSelected = function() { confirm.checked = false; changed(); };
+   dialog.nebulaInvert.onCheck = dirty; dialog.nebulaBrightness.onCheck = dirty; confirm.onCheck = dirty;
+   dialog.nebulaMaskRow = row; dialog.nebulaRegisteredRow = confirm;
+   dialog.restoreNebulaMask = function(settings) {
+      if (!settings) return;
+      for (var i=1; i<dialog.nebulaMask.numberOfItems; ++i)
+         if (dialog.nebulaMask.itemText(i) === settings.id) dialog.nebulaMask.currentItem = i;
+      dialog.nebulaInvert.checked = settings.invert; dialog.nebulaBrightness.checked = settings.brightness;
+      confirm.checked = settings.registered; changed();
+   };
+   changed();
+}
+
+function buildAdaptiveCandidate(view, strength, points, channel, nebulaMask)
 {
    var curve = curvesWithAmount(points, strength);
-   if (["K", "L", "S"].indexOf(channel) < 0)
+   if (["K", "L", "S", "R", "G", "B"].indexOf(channel) < 0)
       throw new Error("Unsupported CurvesTransformation channel.");
-   if (channel === "S" && !view.image.isColor)
-      throw new Error("Saturation requires a color image. Select RGB/K or Lightness.");
-   var window = cloneHDRView(view, "_Curves");
+   if (["S", "R", "G", "B"].indexOf(channel) >= 0 && !view.image.isColor)
+      throw new Error("This channel requires a color image. Select RGB/K or Lightness.");
+   var window = cloneHDRView(view, "_Curves"), mask = null;
    try
    {
       checkAbortRequested();
@@ -3142,13 +3239,20 @@ function buildAdaptiveCandidate(view, strength, points, channel)
          process[channels[i] + "t"] = CurvesTransformation.AkimaSubsplines;
       }
       process[channel] = curve;
+      if (nebulaMask && nebulaMask.id)
+      {
+         mask = createNebulaReviewMask(view, nebulaMask);
+         window.setMask(mask); window.maskEnabled = true; window.maskInverted = false; window.maskVisible = false;
+      }
       logLine("CurvesTransformation channel " + channel + ": " + JSON.stringify(curve));
       if (!process.executeOn(window.mainView))
          throw new Error("CurvesTransformation failed.");
+      if (mask !== null) window.removeMask();
       checkAbortRequested();
       return window;
    }
-   catch (e) { window.forceClose(); throw e; }
+   catch (e) { try { if (mask !== null) window.removeMask(); } finally { window.forceClose(); } throw e; }
+   finally { if (mask !== null) mask.forceClose(); }
 }
 
 class AdaptiveReviewDialog extends Dialog
@@ -3163,7 +3267,7 @@ constructor(view)
    this.previewStatus = new Label(this);
    this.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
    this.instructions = new Label(this);
-   this.instructions.text = "Native CurvesTransformation. Edit input/output points (0-1000 = 0-1), then Update Preview.\nSwitch Before / After to compare. Apply keeps a separate result; Skip preserves the original.";
+   this.instructions.text = "Native CurvesTransformation. Edit input/output points (0-1000 = 0-1), then Update Preview.\nSwitch Before / After to compare. Optional grayscale nebula mask: white allows, black protects. Apply keeps a separate result.\nApply and add another Curves pass for contrast followed by color; Skip keeps accepted passes.";
    this.layersLabel = new Label(this);
    this.layersLabel.text = "Preset:";
    this.layers = new ComboBox(this);
@@ -3183,6 +3287,7 @@ constructor(view)
    this.channel.addItem("RGB/K");
    this.channel.addItem("Lightness");
    this.channel.addItem("Saturation (color images)");
+   this.channel.addItem("Red (color images)"); this.channel.addItem("Green (color images)"); this.channel.addItem("Blue (color images)");
    this.channel.currentItem = 0;
    this.curveInputs = [];
    this.curveOutputs = [];
@@ -3240,13 +3345,18 @@ constructor(view)
    this.updateButton = new PushButton(this);
    this.updateButton.text = "Update Preview";
    this.applyButton = new PushButton(this);
+   this.anotherPassRequested = false;
+   this.anotherCurveButton = new PushButton(this); this.anotherCurveButton.text = "Apply and add another Curves pass";
+   this.anotherCurveButton.enabled = false;
+   this.anotherCurveButton.onClick = function() { if (self.applyButton.enabled) { self.anotherPassRequested = true; self.ok(); } };
    this.applyButton.text = "Apply Curves";
    this.applyButton.enabled = false;
    this.skipButton = new PushButton(this);
    this.skipButton.text = "Skip Curves";
    this.skipButton.onClick = function() { self.cancel(); };
-   this.applyButton.onClick = function() { self.ok(); };
-   var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   this.applyButton.onClick = function() { self.anotherPassRequested = false; self.ok(); };
+   var dirty = function() { self.anotherCurveButton.enabled = false; self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   installNebulaMaskControls(this, view, dirty, false);
    this.layers.onItemSelected = function(index)
    {
       var presets = [ [[100,160],[350,500],[700,820]], [[100,70],[350,350],[700,800]], [[100,100],[350,350],[700,700]] ];
@@ -3270,6 +3380,7 @@ constructor(view)
    {
       self.enabled = false;
       self.applyButton.enabled = false;
+      if (self.anotherCurveButton) self.anotherCurveButton.enabled = false;
       self.previewStatus.text = "Calculating new preview...";
       self.previewStatus.repaint();
       try
@@ -3279,7 +3390,7 @@ constructor(view)
          self.differenceBitmap = null;
          self.displayMode.currentItem = 1;
          logLine("Curves preview settings: " + self.strength.value + "% curve amount.");
-         self.candidate = buildAdaptiveCandidate(view, self.strength.value, curvesReviewPoints(self), ["K", "L", "S"][self.channel.currentItem]);
+         self.candidate = buildAdaptiveCandidate(view, self.strength.value, curvesReviewPoints(self), ["K", "L", "S", "R", "G", "B"][self.channel.currentItem], self.nebulaMaskSettings());
          self.candidate.mainView.image.resetSelections();
          self.afterBitmap = self.candidate.mainView.image.render(1, false);
          ++self.previewRevision;
@@ -3287,6 +3398,7 @@ constructor(view)
             previewChangeSummary(view.image, self.candidate.mainView.image);
          logLine(self.windowTitle + " - " + self.previewStatus.text);
          self.applyButton.enabled = true;
+         if (self.anotherCurveButton) self.anotherCurveButton.enabled = true;
       }
       catch (e)
       {
@@ -3309,6 +3421,7 @@ constructor(view)
    this.buttons = new HorizontalSizer;
    this.buttons.spacing = 8;
    this.buttons.addStretch();
+   this.buttons.add(this.anotherCurveButton);
    this.buttons.add(this.applyButton);
    this.buttons.add(this.skipButton);
    this.sizer = new VerticalSizer;
@@ -3319,6 +3432,7 @@ constructor(view)
    this.sizer.add(this.comparisonOptions);
    this.sizer.add(this.options);
    this.sizer.add(this.curveOptions);
+   this.sizer.add(this.nebulaMaskRow); this.sizer.add(this.nebulaRegisteredRow);
    this.sizer.add(this.previewStatus);
    this.sizer.add(this.keepComparison);
    this.sizer.add(this.buttons);
@@ -3328,7 +3442,17 @@ constructor(view)
 
 function reviewAdaptive(view)
 {
+   var state = {pass:1};
+   do { view = reviewAdaptivePass(view, state); ++state.pass; } while (state.another);
+   return view;
+}
+
+function reviewAdaptivePass(view, state)
+{
+   state.another = false;
    var dialog = new AdaptiveReviewDialog(view);
+   if (state.pass > 1 && dialog.layers && dialog.layers.onItemSelected) { dialog.layers.currentItem = 2; dialog.layers.onItemSelected(2); }
+   if (state.mask && dialog.restoreNebulaMask) dialog.restoreNebulaMask(state.mask);
    var accepted = false;
    try
    {
@@ -3342,6 +3466,8 @@ function reviewAdaptive(view)
       }
       dialog.candidate.show();
       accepted = true;
+      state.another = dialog.anotherPassRequested;
+      state.mask = dialog.nebulaMaskSettings ? dialog.nebulaMaskSettings() : null;
       logLine("CurvesTransformation applied: " + dialog.strength.value + "% curve amount. Original view retained.");
       return dialog.candidate.mainView;
    }
@@ -3422,7 +3548,7 @@ function configuredFinalDenoise()
    return p;
 }
 
-function buildFinishingCandidate(view, kind, amount, radius, low, high, slope)
+function buildFinishingCandidate(view, kind, amount, radius, low, high, slope, nebulaMask)
 {
    if (!finiteNumber(amount) || amount < 0 || amount > 100)
       throw new Error("Finishing amount must be between 0 and 100 percent.");
@@ -3457,7 +3583,7 @@ function buildFinishingCandidate(view, kind, amount, radius, low, high, slope)
       if (amount === 0) return candidate;
       if (kind !== "Noise cleanup")
       {
-         mask = createFinishingMask(view, low, high);
+         mask = nebulaMask && nebulaMask.id ? createNebulaReviewMask(view, nebulaMask, low, high) : createFinishingMask(view, low, high);
          candidate.setMask(mask); candidate.maskEnabled = true;
          candidate.maskInverted = false; candidate.maskVisible = false;
       }
@@ -3492,6 +3618,7 @@ function reviewFinishing(view, kind, luminance)
          dialog.maskLow.value = settings.low; dialog.maskHigh.value = settings.high;
          dialog.keepComparison.checked = settings.keep;
          if (dialog.slopeLimit) dialog.slopeLimit.value = settings.slope;
+         if (settings.mask && dialog.restoreNebulaMask) dialog.restoreNebulaMask(settings.mask);
       }
       var accepted = false;
       try
@@ -3510,11 +3637,21 @@ function reviewFinishing(view, kind, luminance)
          if (kind !== "Local contrast" || !dialog.anotherPassRequested) return current;
          settings = {radius:dialog.layers.value, amount:dialog.strength.value,
             low:dialog.maskLow.value, high:dialog.maskHigh.value, keep:dialog.keepComparison.checked,
-            slope:dialog.slopeLimit ? dialog.slopeLimit.value : 15};
+            slope:dialog.slopeLimit ? dialog.slopeLimit.value : 15,
+            mask:dialog.nebulaMaskSettings ? dialog.nebulaMaskSettings() : null};
          ++pass;
       }
       finally { if (!accepted && dialog.candidate !== null) dialog.candidate.forceClose(); }
    }
+}
+
+function reviewPostLuminance(view, dialog, state)
+{
+   if (!state.added || !dialog.postLuminanceReview || !dialog.postLuminanceReview.checked) return view;
+   logLine("Reviewing final contrast and color after luminance and HDR.");
+   view = reviewFinishing(view, "Local contrast");
+   checkAbortRequested();
+   return reviewAdaptive(view);
 }
 
 function inspectFinalImage(view)
@@ -3609,6 +3746,7 @@ constructor(view, kind, pass)
    this.previewStatus.text = "Showing Before. Click Update Preview to calculate After.";
    this.instructions = new Label(this);
    this.instructions.text = kind === "Inspection" ? "Inspect at 100%: background noise, star halos, clipped highlights and faint detail. Drag to pan." : "Preview " + kind + ". Compare Before / After at 100%; drag to pan. Apply keeps a separate result.\nLocal contrast and saturation protect dark background and bright highlights with a smooth brightness mask.";
+   if (kind === "Local contrast") this.instructions.text += "\nAn optional registered grayscale nebula mask replaces brightness protection unless Also use brightness protection is checked. White allows; black protects.";
    if (kind === "Local contrast") this.instructions.text += "\nAdd another pass accepts this preview and starts the next pass from it. Update Preview never stacks passes. Skip keeps earlier accepted passes.";
    this.layersLabel = new Label(this);
    this.layersLabel.text = "Radius (pixels):";
@@ -3681,6 +3819,7 @@ constructor(view, kind, pass)
    this.slopeLabel = new Label(this); this.slopeLabel.text = "Contrast limit (x10):";
    this.slopeLimit.onValueUpdated = dirty;
    this.maskLow.onValueUpdated = dirty; this.maskHigh.onValueUpdated = dirty;
+   if (kind === "Local contrast") installNebulaMaskControls(this, view, dirty, true);
    this.maskOptions = new HorizontalSizer; this.maskOptions.spacing = 8;
    this.maskOptions.add(this.maskLabel); this.maskOptions.add(this.maskLow); this.maskOptions.add(this.maskHigh); this.maskOptions.addStretch();
    this.denoiseHint = new Label(this);
@@ -3701,7 +3840,7 @@ constructor(view, kind, pass)
          self.differenceBitmap = null;
          self.displayMode.currentItem = 1;
          logLine(kind + " preview settings: " + self.strength.value + "% amount.");
-         self.candidate = buildFinishingCandidate(view, kind, self.strength.value, self.layers.value, self.maskLow.value/1000, self.maskHigh.value/1000, self.slopeLimit.value/10);
+         self.candidate = buildFinishingCandidate(view, kind, self.strength.value, self.layers.value, self.maskLow.value/1000, self.maskHigh.value/1000, self.slopeLimit.value/10, self.nebulaMaskSettings ? self.nebulaMaskSettings() : null);
          self.candidate.mainView.image.resetSelections();
          self.afterBitmap = self.candidate.mainView.image.render(1, false);
          ++self.previewRevision;
@@ -3746,6 +3885,7 @@ constructor(view, kind, pass)
    this.sizer.add(slopeRow);
    this.slopeLabel.visible = this.slopeLimit.visible = kind === "Local contrast";
    this.sizer.add(this.maskOptions);
+   if (kind === "Local contrast") { this.sizer.add(this.nebulaMaskRow); this.sizer.add(this.nebulaRegisteredRow); }
    this.sizer.add(this.denoiseHint);
    this.sizer.add(this.previewStatus);
    this.sizer.add(this.keepComparison);
@@ -4282,10 +4422,12 @@ function executeWorkflow(self)
          }
          if (lrgbViews !== null)
          {
+            var luminanceState = {added:false};
             if (branches !== null && self.finishStarless.checked && !self.recombinedStarsApplied)
                logLine("Luminance skipped: Keep starless was chosen.");
-            else finalView = reviewLRGB(finalView, lrgbViews.L, self.luminancePreparation && self.luminancePreparation.checked);
+            else finalView = reviewLRGB(finalView, lrgbViews.L, self.luminancePreparation && self.luminancePreparation.checked, luminanceState);
             finalView = reviewFinalHDR(finalView, self, branches);
+            finalView = reviewPostLuminance(finalView, self, luminanceState);
          }
          completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);
          if (self.finishingEnabled.checked)

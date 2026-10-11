@@ -6,7 +6,7 @@ function CurvesTransformation(){processes.push(this);this.executeOn=()=>!fail; f
 CurvesTransformation.AkimaSubsplines=2;
 function Control(){this.enabled=true;this.repaint=()=>{};this.setMinSize=()=>{};this.addItem=()=>{};this.adjustToContents=()=>{};}
 function Sizer(){this.add=()=>{};this.addStretch=()=>{};}
-const ctx=vm.createContext({CurvesTransformation,finiteNumber:Number.isFinite,
+const ctx=vm.createContext({ImageWindow:{windows:[]},CurvesTransformation,finiteNumber:Number.isFinite,
  checkAbortRequested:()=>{if(abort)throw Error('abort');},logLine:()=>{},
  cloneHDRView:()=>{const w={mainView:{image:{resetSelections(){},render(){return {};}}},forceClose(){this.closed=true;},show(){this.shown=true;}};windows.push(w);return w;},
  Dialog:Control,Label:Control,ComboBox:Control,SpinBox:Control,CheckBox:Control,PushButton:Control,Control,
@@ -22,7 +22,7 @@ assert.deepEqual(plain(ctx.curvesWithAmount(points,0)),points.map(([x])=>[x,x]))
 assert.throws(()=>ctx.curvesWithAmount([[0,0],[.5,.6],[.4,.7],[1,1]],100),/increase/);
 assert.throws(()=>ctx.curvesWithAmount(points,101),/amount/);
 const view={image:{isColor:true,render:()=>({})}};
-for(const channel of ['K','L','S']){
+for(const channel of ['K','L','S','R','G','B']){
  const w=ctx.buildAdaptiveCandidate(view,100,points,channel),p=processes.at(-1);
  assert.deepEqual(plain(p[channel]),points);
  for(const other of ['R','G','B','K','A','L','a','b','c','H','S']){
@@ -55,3 +55,15 @@ for(const apply of [false,true]){
 assert.ok(source.indexOf('finalView = reviewHDR(finalView)')<source.indexOf('finalView = reviewAdaptive(finalView)'));
 assert.ok(source.indexOf('finalView = reviewAdaptive(finalView)')<source.indexOf('saveFinalImage(finalView'));
 console.log('Native curves channels, identity, amount, input validation, cleanup, editable controls, presets, Apply/Skip and comparison retention passed (mocked APIs).');
+
+// A second Curves review operates on the accepted result; Skip keeps that result.
+let passNumber=0, passViews=[], skipped;
+ctx.testDialog=function(){
+  const n=passNumber++; const w={mainView:{pass:n},show(){},forceClose(){this.closed=true;}};
+  if(n===1)skipped=w;
+  this.execute=()=>n===0;this.candidate=w;this.applyButton={enabled:true};this.keepComparison={checked:false};
+  this.strength={value:100};this.anotherPassRequested=true;
+};
+vm.runInContext('AdaptiveReviewDialog = testDialog;',ctx);
+const accepted=ctx.reviewAdaptive(view);assert.equal(accepted.pass,0);assert.equal(passNumber,2);assert.ok(skipped.closed);
+console.log('Repeated Curves keeps accepted passes when a later pass is skipped.');

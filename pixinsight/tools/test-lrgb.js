@@ -24,6 +24,7 @@ ctx.LRGBCombination=function(){this.executeOn=()=>false;};assert.throws(()=>ctx.
 assert.throws(()=>ctx.buildLRGBCandidate(views.RGB,views.L,1.1),/weight/);
 // Exercise full routing with both input modes; HDR must follow RGB finishing and L review.
 Object.assign(ctx,{Console:{show(){},criticalln(s){throw Error(s);}},checkAbortRequested(){},workflowSourcePath:()=>'',workflowSourceId:()=>'',cloneWorkflowInput:v=>mk('working',true),combineLinearRGB:()=>mk('combined',true),linearStageOrder:()=>[],adapters:{},applySelectedAutoHistogram:()=>calls.push('stretch'),reviewAdaptive:v=>{calls.push('curves');return v;},inspectFinalImage(){},reviewFinishing:(v,k)=>{calls.push(k);return v;},reviewLRGB:(v,l,prepare)=>{if(d.luminancePreparation)assert.equal(prepare,true);calls.push('L');return v;},reviewFinalHDR:v=>{calls.push('HDR');return v;},saveFinalImage:()=>{calls.push('save');return '';},exportSharingImage:()=>'',MessageBox:function(){this.execute=()=>{};},TITLE:'test',StdIcon:{Information:0,Error:1},StdButton:{Ok:0}});
+vm.runInContext(source.slice(source.indexOf('function reviewPostLuminance('),source.indexOf('function inspectFinalImage(')),ctx);
 vm.runInContext(source.slice(source.indexOf('function executeWorkflow('),source.indexOf('function applyWorkflowCrop(')),ctx);
 d.luminancePreparation={checked:true};
 for(const mode of [1,2]){
@@ -31,3 +32,10 @@ for(const mode of [1,2]){
  ctx.executeWorkflow(d);assert.match(d.statusText.text,/successfully/);assert.deepEqual(calls,['stretch','curves','Local contrast','Noise cleanup','Saturation','L','HDR','save']);
 }
 console.log('LRGB validation, automatic matching, neutral combination, zero weight, cleanup and finishing/HDR order passed.');
+// Opt-in post-L finishing runs after HDR even when the earlier finishing group is off.
+d.postLuminanceReview={checked:true};d.finishingEnabled.checked=false;d.adaptiveEnabled.checked=false;
+ctx.reviewLRGB=(v,l,prepare,state)=>{calls.push('L');state.added=true;return v;};
+calls=[];ctx.executeWorkflow(d);assert.deepEqual(calls,['stretch','L','HDR','Local contrast','curves','save']);
+ctx.reviewLRGB=(v,l,prepare,state)=>{calls.push('Keep RGB');state.added=false;return v;};
+calls=[];ctx.executeWorkflow(d);assert.deepEqual(calls,['stretch','Keep RGB','HDR','save']);
+console.log('Full workflow post-L contrast/color order and Keep RGB skip passed.');

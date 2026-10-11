@@ -35,6 +35,7 @@ assert.throws(()=>ctx.buildFinishingCandidate(view,'Saturation',10,64,.05,.85),/
 let candidate=ctx.buildFinishingCandidate(view,'Local contrast',20,64,.05,.85);
 assert.ok(candidate.removed);assert.equal(candidate.closed,undefined);assert.ok(windows.at(-1).closed);
 assert.equal(processes.find(x=>x.id==='LocalHistogramEqualization').p.amount,.2);
+ctx.buildFinishingCandidate(view,'Local contrast',75,250,.05,.85,1.2);assert.equal(processes.findLast(x=>x.id==='LocalHistogramEqualization').p.slopeLimit,1.2);assert.throws(()=>ctx.buildFinishingCandidate(view,'Local contrast',20,64,.05,.85,.5),/contrast limit/);
 fail='LocalHistogramEqualization';assert.throws(()=>ctx.buildFinishingCandidate(view,'Local contrast',20,64,.05,.85),/failed/);assert.ok(windows.at(-1).closed&&windows.at(-2).closed);fail='';
 const color={...view,image:{...view.image,isColor:true}};
 candidate=ctx.buildFinishingCandidate(color,'Saturation',10,64,.05,.85);
@@ -87,7 +88,7 @@ ctx.buildFinishingCandidate=(base,...args)=>{bases.push(base);return originalBui
 let firstAccepted,secondAccepted;
 finishingActions=[d=>{
  assert.equal(d.anotherPassButton.enabled,false);
- d.layers.value=150;d.strength.value=20;d.keepComparison.checked=false;
+ d.layers.value=150;d.strength.value=20;d.slopeLimit.value=12;d.keepComparison.checked=false;
  d.updateButton.onClick();const replaced=d.candidate;
  d.updateButton.onClick();assert.equal(replaced.closed,true);
  assert.equal(bases.at(-1),color);assert.equal(bases.at(-2),color);
@@ -95,7 +96,7 @@ finishingActions=[d=>{
  d.updateButton.onClick();firstAccepted=d.candidate;
  d.anotherPassButton.onClick();return true;
 },d=>{
- assert.match(d.windowTitle,/pass 2/);assert.equal(d.layers.value,150);assert.equal(d.strength.value,20);
+ assert.match(d.windowTitle,/pass 2/);assert.equal(d.layers.value,150);assert.equal(d.strength.value,20);assert.equal(d.slopeLimit.value,12);
  assert.equal(d.skipButton.text,'Finish without this pass');
  d.layers.value=64;d.strength.value=10;d.updateButton.onClick();
  assert.equal(bases.at(-1),firstAccepted.mainView);secondAccepted=d.candidate;

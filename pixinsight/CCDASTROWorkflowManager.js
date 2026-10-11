@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.35"
+#define VERSION "1.1.36"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -1856,11 +1856,17 @@ function installLRGBInputs(dialog)
    dialog.lrgbRegistered = new CheckBox(dialog.content);
    dialog.lrgbRegistered.text = "I confirm all selected masters are linear, registered and share the same crop";
    box.sizer.add(dialog.lrgbRegistered);
+   dialog.luminancePreparation = new CheckBox(dialog.content);
+   dialog.luminancePreparation.text = "Review luminance preparation: stretch, HDR, local contrast and masked blends";
+   dialog.luminancePreparation.checked = false;
+   dialog.luminancePreparation.toolTip = "Optional session-only reviews on an L copy, before LRGB. Blend sources and masks must already be registered and open.";
+   box.sizer.add(dialog.luminancePreparation);
    var refresh = function()
    {
       var mode = dialog.lrgbMode.currentItem;
       dialog.lrgbInputs.L.enabled = mode > 0;
       dialog.lrgbRegistered.enabled = mode > 0;
+      dialog.luminancePreparation.enabled = mode > 0;
       for (var k = 0; k < 3; ++k) dialog.lrgbInputs[["R","G","B"][k]].enabled = mode === 2;
    };
    dialog.lrgbMode.onItemSelected = refresh; refresh();
@@ -1960,18 +1966,188 @@ function buildLRGBCandidate(rgb, luminance, weight)
    catch(e) { result.forceClose(); throw e; }
 }
 
-function reviewLRGB(rgb, linearLuminance)
+function luminanceViewList(view, masks)
+{
+   var ids = [masks ? "<select a mask>" : "<select a blend source>"];
+   var windows = ImageWindow.windows;
+   for (var i = 0; i < windows.length; ++i)
+   {
+      var candidate = windows[i].mainView;
+      if (candidate.fullId !== view.fullId && !candidate.image.isColor &&
+          candidate.image.numberOfNominalChannels === 1 &&
+          candidate.image.width === view.image.width && candidate.image.height === view.image.height)
+         ids.push(candidate.fullId);
+   }
+   return ids;
+}
+
+function validateLuminanceBlend(view, source, mask, amount)
+{
+   if (!finiteNumber(amount) || amount < 0 || amount > 100)
+      throw new Error("Blend source weight must be between 0 and 100 percent.");
+   var inputs = [source, mask];
+   for (var i = 0; i < inputs.length; ++i)
+   {
+      var input = inputs[i];
+      if (!input || input.isNull || input.isPreview) throw new Error("Select an open main view for both source and mask.");
+      if (input.image.isColor || input.image.numberOfNominalChannels !== 1 ||
+          input.image.width !== view.image.width || input.image.height !== view.image.height)
+         throw new Error("Luminance blend source and mask must be grayscale with matching dimensions.");
+      if (input.fullId === view.fullId) throw new Error("Select a separate source and mask, not the luminance being treated.");
+   }
+   if (source.fullId === mask.fullId) throw new Error("Blend source and mask must be different views.");
+}
+
+function buildLuminanceBlend(view, source, mask, amount, inverted)
+{
+   validateLuminanceBlend(view, source, mask, amount);
+   var result = cloneHDRView(view, "_LuminanceBlend");
+   try
+   {
+      checkAbortRequested();
+      if (amount > 0)
+      {
+         var p = new PixelMath;
+         p.useSingleExpression = true; p.createNewImage = false;
+         p.rescale = false; p.truncate = true;
+         var coverage = "min(1,max(0," + mask.fullId + "))";
+         if (inverted) coverage = "(1-" + coverage + ")";
+         var weight = "(" + amount/100 + "*" + coverage + ")";
+         p.expression = "(1-" + weight + ")*" + view.fullId + "+" + weight + "*" + source.fullId;
+         if (!p.executeOn(result.mainView)) throw new Error("Masked luminance blend failed.");
+      }
+      checkAbortRequested();
+      return result;
+   }
+   catch(e) { result.forceClose(); throw e; }
+}
+
+function reviewLuminanceBlends(view)
+{
+   var current = view, pass = 1;
+   for (;;)
+   {
+      var dialog = new HDRReviewDialog(current), accepted = false;
+      dialog.windowTitle = "Masked luminance blend - pass " + pass;
+      dialog.instructions.text = "Before: current stretched L. After: masked blend with selected source. White permits blending; Invert reverses it.\nSources must already be registered and stretched compatibly. This review does not align, stretch or normalize them.";
+      dialog.layers.hide(); dialog.layersLabel.hide();
+      dialog.keepComparison.text = "Keep a before-blend comparison image";
+      dialog.strengthLabel.text = "Source weight (%):"; dialog.strength.value = 40;
+      dialog.applyButton.text = "Apply blend and finish";
+      dialog.skipButton.text = pass === 1 ? "Skip masked blends" : "Finish without this blend";
+      var sourceRow = labeledCombo(dialog, "Source:", luminanceViewList(current, false), 0, "Open registered, compatibly stretched grayscale source.");
+      var maskRow = labeledCombo(dialog, "Mask:", luminanceViewList(current, true), 0, "Open registered grayscale mask; white allows blending.");
+      var invert = new CheckBox(dialog); invert.text = "Invert mask";
+      var confirmed = new CheckBox(dialog);
+      confirmed.text = "I confirm source/mask registration and compatible source stretch";
+      var another = new PushButton(dialog); another.text = "Apply blend and add another"; another.enabled = false;
+      var repeat = false;
+      another.onClick = function() { if (!dialog.applyButton.enabled || dialog.candidate === null) return; repeat = true; dialog.ok(); };
+      dialog.buttons.insert(1, another);
+      dialog.sizer.insert(4, sourceRow.sizer); dialog.sizer.insert(5, maskRow.sizer);
+      dialog.sizer.insert(6, invert); dialog.sizer.insert(7, confirmed);
+      var dirty = function() { dialog.applyButton.enabled = false; another.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview."; };
+      sourceRow.combo.onItemSelected = maskRow.combo.onItemSelected = dirty;
+      invert.onCheck = confirmed.onCheck = dirty; dialog.strength.onValueUpdated = dirty;
+      var usedSource = "", usedMask = "", usedAmount = 0, usedInvert = false;
+      dialog.updateButton.onClick = function()
+      {
+         dialog.enabled = false; dialog.applyButton.enabled = false; another.enabled = false;
+         try
+         {
+            if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate = null; }
+            dialog.afterBitmap = null; dialog.differenceBitmap = null;
+            if (!confirmed.checked) throw new Error("Confirm registration and compatible source stretch before previewing.");
+            if (sourceRow.combo.currentItem === 0 || maskRow.combo.currentItem === 0)
+               throw new Error("Select both a source and a mask.");
+            usedSource = sourceRow.combo.itemText(sourceRow.combo.currentItem);
+            usedMask = maskRow.combo.itemText(maskRow.combo.currentItem);
+            usedAmount = dialog.strength.value; usedInvert = invert.checked;
+            dialog.candidate = buildLuminanceBlend(current, View.viewById(usedSource), View.viewById(usedMask), usedAmount, usedInvert);
+            dialog.afterBitmap = dialog.candidate.mainView.image.render(1, false);
+            dialog.displayMode.currentItem = 1; ++dialog.previewRevision;
+            dialog.previewStatus.text = previewChangeSummary(current.image, dialog.candidate.mainView.image);
+            dialog.applyButton.enabled = true; another.enabled = true;
+         }
+         catch(e) { dialog.displayMode.currentItem = 0; dialog.previewStatus.text = "Preview failed: " + errorMessage(e); if (Console.abortRequested) dialog.cancel(); }
+         finally { dialog.enabled = true; dialog.preview.repaint(); CoreApplication.processEvents(); }
+      };
+      dialog.adjustToContents();
+      try
+      {
+         if (!dialog.execute()) { checkAbortRequested(); return current; }
+         if (dialog.candidate === null || !dialog.applyButton.enabled) throw new Error("Update the blend preview before applying.");
+         if (dialog.keepComparison.checked) { var before = cloneHDRView(current, "_BeforeLuminanceBlend"); before.show(); }
+         dialog.candidate.show(); accepted = true; current = dialog.candidate.mainView;
+         logLine("Luminance blend pass " + pass + ": source=" + usedSource + ", mask=" + usedMask + ", inverted=" + usedInvert + ", source weight=" + usedAmount + "%.");
+         if (!repeat) return current;
+         ++pass;
+      }
+      finally { if (!accepted && dialog.candidate !== null) dialog.candidate.forceClose(); }
+   }
+}
+
+function stretchPreparedLuminance(view, rgb, configured)
+{
+   if (!configured) { stretchLRGBLuminance(view, rgb); return; }
+   var name = "CCDASTRO_LuminanceStretch";
+   if (ProcessInstance.icons().indexOf(name) < 0) throw new Error("Create a HistogramTransformation icon named " + name + ", or choose automatic matching.");
+   var p = ProcessInstance.fromIcon(name);
+   if (p === null || p.processId() !== "HistogramTransformation") throw new Error(name + " must be a HistogramTransformation process icon.");
+   clearDisplaySTF(view);
+   if (!p.executeOn(view)) throw new Error("Configured luminance stretch failed.");
+   logLine("Luminance stretched once using " + name + "; no automatic median match applied.");
+}
+
+function prepareLRGBLuminance(view, rgb)
+{
+   var options = new Dialog; options.windowTitle = "Luminance preparation options";
+   var hint = new Label(options);
+   hint.text = "Prepare a copy of linear L before LRGB. Choose one stretch, then optional reviews.\nBlends need open, registered grayscale sources with compatible stretches and grayscale masks.\nCancel uses automatic matching and skips these optional reviews.";
+   var stretch = labeledCombo(options, "L stretch:", ["Automatic median match to processed RGB", "Configured HistogramTransformation icon"], 0,
+      "For an exact stretch, create CCDASTRO_LuminanceStretch. This replaces automatic matching; it does not run a second stretch.");
+   function check(text)
+   {
+      var c = new CheckBox(options); c.text = text; c.checked = false; return c;
+   }
+   var hdr = check("Review HDR on luminance");
+   var lhe = check("Review local contrast on luminance (repeatable)");
+   var blends = check("Review masked source blends (repeatable)");
+   var after = check("Review local contrast again after masked blends");
+   var button = new PushButton(options); button.text = "Prepare luminance"; button.onClick = function() { options.ok(); };
+   var skip = new PushButton(options); skip.text = "Use automatic match only"; skip.onClick = function() { options.cancel(); };
+   var buttons = new HorizontalSizer; buttons.spacing = 8; buttons.addStretch(); buttons.add(button); buttons.add(skip);
+   options.sizer = new VerticalSizer; options.sizer.margin = 10; options.sizer.spacing = 8;
+   options.sizer.add(hint); options.sizer.add(stretch.sizer); options.sizer.add(hdr); options.sizer.add(lhe);
+   options.sizer.add(blends); options.sizer.add(after); options.sizer.add(buttons); options.adjustToContents();
+   if (!options.execute()) { checkAbortRequested(); stretchLRGBLuminance(view, rgb); return view; }
+   stretchPreparedLuminance(view, rgb, stretch.combo.currentItem === 1);
+   var current = view;
+   if (hdr.checked) current = reviewHDR(current, true);
+   if (lhe.checked) current = reviewFinishing(current, "Local contrast", true);
+   if (blends.checked) current = reviewLuminanceBlends(current);
+   if (after.checked) current = reviewFinishing(current, "Local contrast", true);
+   return current;
+}
+
+function reviewLRGB(rgb, linearLuminance, prepare)
 {
    var luminance = cloneHDRView(linearLuminance,"_MatchedLuminance"), dialog = null, accepted = false;
    try
    {
-      stretchLRGBLuminance(luminance.mainView,rgb);
+      if (prepare)
+      {
+         var prepared = prepareLRGBLuminance(luminance.mainView, rgb);
+         if (prepared.window !== luminance) { luminance.forceClose(); luminance = prepared.window; }
+         luminance.show();
+      }
+      else stretchLRGBLuminance(luminance.mainView,rgb);
       dialog = new HDRReviewDialog(rgb);
       dialog.windowTitle = "Luminance combination review";
-      dialog.instructions.text = "Before: processed RGB. After: matched luminance added. Compare at 100%; drag to pan.\nStart at 50%. Matching uses channel-mean medians; inspect star halos and core detail. Skip keeps RGB.";
+      dialog.instructions.text = "Before: processed RGB. After: luminance added. Compare at 100%; drag to pan.\nStart at 50%. Matching uses channel-mean medians; inspect star halos and core detail. Skip keeps RGB.";
       dialog.layers.hide(); dialog.layersLabel.hide();
       dialog.strengthLabel.text = "L weight (%):"; dialog.strength.value=50;
-      dialog.keepComparison.text = "Keep RGB and matched luminance comparison images";
+      dialog.keepComparison.text = "Keep RGB and luminance comparison images";
       dialog.applyButton.text = "Apply LRGB"; dialog.skipButton.text = "Keep RGB";
       dialog.updateButton.onClick = function()
       {
@@ -1993,14 +2169,14 @@ function reviewLRGB(rgb, linearLuminance)
       dialog.adjustToContents();
       if (!dialog.execute()) { checkAbortRequested(); logLine("Luminance skipped; keeping processed RGB."); return rgb; }
       if (dialog.candidate === null || !dialog.applyButton.enabled) throw new Error("Update the LRGB preview before applying.");
-      if (dialog.keepComparison.checked) { rgb.window.show(); luminance.show(); } else luminance.forceClose();
+      if (dialog.keepComparison.checked) { rgb.window.show(); luminance.show(); } else if (!prepare) luminance.forceClose();
       dialog.candidate.show(); accepted=true;
       logLine("L added after RGB finishing: weight="+dialog.strength.value+"%; Lightness/Saturation=0.5; chrominance noise reduction off.");
       return dialog.candidate.mainView;
    }
    finally
    {
-      if (!accepted) { if (dialog !== null && dialog.candidate !== null) dialog.candidate.forceClose(); luminance.forceClose(); }
+      if (!accepted) { if (dialog !== null && dialog.candidate !== null) dialog.candidate.forceClose(); if (!prepare || dialog === null) luminance.forceClose(); }
    }
 }
 
@@ -2575,7 +2751,7 @@ function installHDRCoreControls(dialog, view)
    dialog.adjustToContents();
 }
 
-function buildHDRCandidate(view, layers, strength, coreSettings)
+function buildHDRCandidate(view, layers, strength, coreSettings, lightnessMask)
 {
    var window = cloneHDRView(view, "_HDR");
    var coreMask = null;
@@ -2588,12 +2764,12 @@ function buildHDRCandidate(view, layers, strength, coreSettings)
       hdr.numberOfIterations = 1;
       hdr.toLightness = view.image.isColor;
       hdr.preserveHue = view.image.isColor;
-      hdr.luminanceMask = true;
+      hdr.lightnessMask = lightnessMask === undefined ? true : lightnessMask;
       hdr.deringing = true;
       hdr.smallScaleDeringing = 0.00;
       hdr.largeScaleDeringing = 0.25;
       hdr.outputDeringingMaps = false;
-      logLine("HDR ringing protection: deringing enabled; small-scale=0.00, large-scale=0.25; lightness mask enabled.");
+      logLine("HDR ringing protection: deringing enabled; small-scale=0.00, large-scale=0.25; lightness mask=" + hdr.lightnessMask + ".");
       if (!hdr.executeOn(window.mainView))
          throw new Error("HDRMultiscaleTransform failed.");
       checkAbortRequested();
@@ -2795,7 +2971,7 @@ constructor(view)
          self.displayMode.currentItem = 1;
          logLine("HDR preview settings: " + self.layers.value + " layers, " + self.strength.value + "% blend.");
          self.candidate = buildHDRCandidate(view, self.layers.value, self.strength.value,
-            self.hdrCoreSettings ? self.hdrCoreSettings() : null);
+            self.hdrCoreSettings ? self.hdrCoreSettings() : null, self.hdrLightnessMask);
          self.candidate.mainView.image.resetSelections();
          self.afterBitmap = self.candidate.mainView.image.render(1, false);
          ++self.previewRevision;
@@ -2840,10 +3016,19 @@ constructor(view)
 }
 }
 
-function reviewHDR(view)
+function reviewHDR(view, luminance)
 {
    var dialog = new HDRReviewDialog(view);
    installHDRCoreControls(dialog, view);
+   if (luminance)
+   {
+      dialog.windowTitle = "Luminance HDR review";
+      var internalMask = new CheckBox(dialog);
+      internalMask.text = "Use HDR internal lightness mask";
+      internalMask.checked = false; dialog.hdrLightnessMask = false;
+      internalMask.onCheck = function(checked) { dialog.hdrLightnessMask = checked; dialog.applyButton.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview."; };
+      dialog.sizer.insert(4, internalMask); dialog.adjustToContents();
+   }
    var accepted = false;
    try
    {
@@ -3194,7 +3379,7 @@ function configuredFinalDenoise()
    return p;
 }
 
-function buildFinishingCandidate(view, kind, amount, radius, low, high)
+function buildFinishingCandidate(view, kind, amount, radius, low, high, slope)
 {
    if (!finiteNumber(amount) || amount < 0 || amount > 100)
       throw new Error("Finishing amount must be between 0 and 100 percent.");
@@ -3208,7 +3393,9 @@ function buildFinishingCandidate(view, kind, amount, radius, low, high)
    {
       process = new LocalHistogramEqualization;
       process.radius = radius;
-      process.slopeLimit = 1.5; process.amount = amount / 100; process.circularKernel = true;
+      if (slope === undefined) slope = 1.5;
+      if (!finiteNumber(slope) || slope < 1 || slope > 10) throw new Error("LHE contrast limit must be between 1 and 10.");
+      process.slopeLimit = slope; process.amount = amount / 100; process.circularKernel = true;
       // Leave histogramBins at the native default; no legacy enum access.
    }
    else if (kind === "Noise cleanup") process = configuredFinalDenoise();
@@ -3249,17 +3436,19 @@ function buildFinishingCandidate(view, kind, amount, radius, low, high)
    finally { if (mask !== null) mask.forceClose(); }
 }
 
-function reviewFinishing(view, kind)
+function reviewFinishing(view, kind, luminance)
 {
    var current = view, settings = null, pass = 1;
    for (;;)
    {
       var dialog = new FinishingReviewDialog(current, kind, pass);
+      if (luminance) dialog.windowTitle = "Luminance local contrast review - pass " + pass;
       if (settings !== null)
       {
          dialog.layers.value = settings.radius; dialog.strength.value = settings.amount;
          dialog.maskLow.value = settings.low; dialog.maskHigh.value = settings.high;
          dialog.keepComparison.checked = settings.keep;
+         if (dialog.slopeLimit) dialog.slopeLimit.value = settings.slope;
       }
       var accepted = false;
       try
@@ -3277,7 +3466,8 @@ function reviewFinishing(view, kind)
          current = dialog.candidate.mainView;
          if (kind !== "Local contrast" || !dialog.anotherPassRequested) return current;
          settings = {radius:dialog.layers.value, amount:dialog.strength.value,
-            low:dialog.maskLow.value, high:dialog.maskHigh.value, keep:dialog.keepComparison.checked};
+            low:dialog.maskLow.value, high:dialog.maskHigh.value, keep:dialog.keepComparison.checked,
+            slope:dialog.slopeLimit ? dialog.slopeLimit.value : 15};
          ++pass;
       }
       finally { if (!accepted && dialog.candidate !== null) dialog.candidate.forceClose(); }
@@ -3444,6 +3634,9 @@ constructor(view, kind, pass)
    this.maskLow = new SpinBox(this); this.maskLow.minValue = 0; this.maskLow.maxValue = 999; this.maskLow.value = 50;
    this.maskHigh = new SpinBox(this); this.maskHigh.minValue = 1; this.maskHigh.maxValue = 1000; this.maskHigh.value = 850;
    this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0-1000):";
+   this.slopeLimit = new SpinBox(this); this.slopeLimit.minValue = 10; this.slopeLimit.maxValue = 100; this.slopeLimit.value = 15;
+   this.slopeLabel = new Label(this); this.slopeLabel.text = "Contrast limit (x10):";
+   this.slopeLimit.onValueUpdated = dirty;
    this.maskLow.onValueUpdated = dirty; this.maskHigh.onValueUpdated = dirty;
    this.maskOptions = new HorizontalSizer; this.maskOptions.spacing = 8;
    this.maskOptions.add(this.maskLabel); this.maskOptions.add(this.maskLow); this.maskOptions.add(this.maskHigh); this.maskOptions.addStretch();
@@ -3465,7 +3658,7 @@ constructor(view, kind, pass)
          self.differenceBitmap = null;
          self.displayMode.currentItem = 1;
          logLine(kind + " preview settings: " + self.strength.value + "% amount.");
-         self.candidate = buildFinishingCandidate(view, kind, self.strength.value, self.layers.value, self.maskLow.value/1000, self.maskHigh.value/1000);
+         self.candidate = buildFinishingCandidate(view, kind, self.strength.value, self.layers.value, self.maskLow.value/1000, self.maskHigh.value/1000, self.slopeLimit.value/10);
          self.candidate.mainView.image.resetSelections();
          self.afterBitmap = self.candidate.mainView.image.render(1, false);
          ++self.previewRevision;
@@ -3505,6 +3698,10 @@ constructor(view, kind, pass)
    this.sizer.add(this.preview, 100);
    this.sizer.add(this.comparisonOptions);
    this.sizer.add(this.options);
+   var slopeRow = new HorizontalSizer; slopeRow.spacing = 8;
+   slopeRow.add(this.slopeLabel); slopeRow.add(this.slopeLimit); slopeRow.addStretch();
+   this.sizer.add(slopeRow);
+   this.slopeLabel.visible = this.slopeLimit.visible = kind === "Local contrast";
    this.sizer.add(this.maskOptions);
    this.sizer.add(this.denoiseHint);
    this.sizer.add(this.previewStatus);
@@ -4044,7 +4241,7 @@ function executeWorkflow(self)
          {
             if (branches !== null && self.finishStarless.checked && !self.recombinedStarsApplied)
                logLine("Luminance skipped: Keep starless was chosen.");
-            else finalView = reviewLRGB(finalView, lrgbViews.L);
+            else finalView = reviewLRGB(finalView, lrgbViews.L, self.luminancePreparation && self.luminancePreparation.checked);
             finalView = reviewFinalHDR(finalView, self, branches);
          }
          completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);

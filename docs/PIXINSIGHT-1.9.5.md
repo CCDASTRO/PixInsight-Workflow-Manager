@@ -112,3 +112,21 @@ CodeSign sequence in `updates/README.md`. A packaging-only change does not
 require changing or re-signing the unchanged workflow script. Every regenerated
 repository manifest must be signed again. Never edit the existing signed XRI
 in place and retain its old signature.
+
+
+## Optional luminance preparation (v1.1.36)
+
+In either separate-linear-LRGB mode, enable Review luminance preparation. After RGB
+finishing, choose a single automatic L stretch or a HistogramTransformation icon
+named CCDASTRO_LuminanceStretch. Optional L-only reviews run in this order: HDR,
+repeatable local contrast, repeatable masked blends, and local contrast after blends.
+The prepared copy then enters Luminance combination review, followed by any selected
+final HDR. Original L and blend inputs remain unchanged.
+
+Open registered, compatibly stretched grayscale blend sources and matching grayscale
+masks beforehand. Choose source weight and mask inversion, Update Preview, then
+Apply blend and finish or Apply blend and add another. No alignment or automatic
+source stretching is performed. Skipping later passes keeps earlier accepted passes.
+LHE Contrast limit (x10) uses 12 for 1.2 and 14 for 1.4. Its automatic brightness mask
+is not a recreation of the external range masks in Lum Steps.xpsm. See the README
+for the full sequence and historical recipe. Native UI testing remains pending.

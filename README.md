@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.35
+# CCDASTRO PixInsight Workflow Manager v1.1.36
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -166,7 +166,7 @@ the final HDR review. The existing active-color-master mode is unchanged.
    review, then save. For M42, 6 layers, 50% blend and bright-core restriction
    550 / 150 / 8 px gave the preferred balance among the tested settings.
 
-L is cloned and stretched once with a zero-shadow HistogramTransformation to
+By default, L is cloned and stretched once with a zero-shadow HistogramTransformation to
 match its median to the processed RGB's mean of channel medians. This brightness
 match is not registration, PSF matching or a guarantee of optimal contrast. LRGB
 uses L only, neutral Lightness/Saturation transfer settings (0.5), and chrominance
@@ -175,6 +175,67 @@ automatically to L; prepare its linear master beforehand if needed. Original
 masters remain unchanged. Intrinsic star halos can remain or become more visible
 when luminance is added; use the preview to reduce its weight or keep RGB.
 
+
+## Optional luminance preparation before LRGB
+
+In either separate-LRGB input mode, enable **Review luminance preparation:
+stretch, HDR, local contrast and masked blends**. This option starts off and is
+session-only. The existing RGB processing order is unchanged. After RGB finishing
+and stars recombination, preparation runs on a copy of the selected linear L,
+before **Luminance combination review** and the final combined-image HDR review.
+Choosing Keep starless still skips L addition and its preparation.
+
+1. In **Luminance preparation options**, choose **Automatic median match to
+   processed RGB**, or **Configured HistogramTransformation icon**. For the latter,
+   configure native HistogramTransformation and create a workspace icon named
+   `CCDASTRO_LuminanceStretch`. Only one stretch runs: the configured stretch
+   replaces automatic matching. The input L must still be linear. Choosing
+   **Use automatic match only**, or cancelling these options, skips the optional
+   reviews and uses the normal automatic match.
+2. Enable the desired reviews: **HDR on luminance**, **local contrast**, **masked
+   source blends**, and optionally **local contrast again after masked blends**.
+   Each review has fresh Before/After previews and can be applied or skipped.
+3. Luminance HDR exposes Layers, Blend, optional bright-core restriction and
+   **Use HDR internal lightness mask**. The internal mask starts off in this
+   luminance review, matching the supplied Lum Steps recipe. It is independent
+   of the optional bright-core restriction. Deringing remains enabled at
+   small-scale 0.00 / large-scale 0.25. Start gently and inspect at 100%.
+4. Luminance local contrast uses native LHE, with Radius, Amount, **Contrast limit
+   (x10)** and automatic brightness protection. A value of 12 means 1.2; 14 means
+   1.4. **Add another local contrast pass** accepts the current preview and starts
+   a new pass from it. Contrast limit is also available in the normal RGB/starless
+   local contrast review. The automatic brightness mask differs from an externally
+   supplied range mask; identical LHE numbers do not guarantee the reference result.
+5. For each **Masked luminance blend**, select an open grayscale source and a
+   separate open grayscale mask. Both must match L dimensions, registration and
+   crop. Prepare the source with a compatible stretch beforehand: the workflow
+   does not align or stretch blend sources. Confirm this in the review. Select
+   **Source weight (%)**, optionally **Invert mask**, then **Update Preview**.
+   White allows the chosen blend; black preserves current L; gray blends partially.
+   Mask values are clamped to 0-1. The source and mask pixels are never modified.
+6. Choose **Apply blend and add another** for successive source/mask combinations,
+   **Apply blend and finish**, or Skip. Skipping a later pass retains earlier
+   accepted passes. Changing a setting requires a new preview before Apply.
+   The blend is `result = (1 - weight*mask)*currentL + weight*mask*source`;
+   Invert uses `1-mask`. Zero weight leaves L pixels unchanged.
+7. Inspect prepared L in **Luminance combination review**. Start at L weight 50%,
+   update the preview and adjust before Apply LRGB. Keep RGB skips L addition;
+   the prepared luminance remains open for inspection. Accepted preparation results
+   are separate views; original masters and blend inputs remain unchanged.
+
+The supplied Lum Steps recipe used a configured HT stretch (RGB/K shadows
+0.00477715, midtones 0.00247930), HDR with 8 layers, LHE 250 px / 75% / 1.2,
+an inverted-mask 40% source blend, another inverted-mask 35% source blend,
+and LHE 175 px / 75% / 1.4. Those are historical values, not recommended defaults
+for every master. This option provides the review sequence; it does not load an
+XPSM container or recreate missing masks/source images. In particular, the last
+recorded LHE used an external range mask, whereas this LHE review uses its automatic
+brightness mask. Exact duplication requires those source images and masks.
+
+No additional sharpening, gradient removal or denoising is automatically applied
+to L. Input/mask selections are not remembered. Automated checks cover blend math,
+input validation, cancellation, preview cleanup, stage order and single stretching;
+native PixInsight testing of the new preparation reviews remains pending.
 
 ## Select an object or image type
 
@@ -982,6 +1043,8 @@ node pixinsight/tools/validate-workflow.js
 ```
 
 ## Revision history
+
+- **v1.1.36:** Adds optional luminance preparation with a single automatic/configured HT stretch, separate HDR, repeatable LHE and repeated masked source blends before LRGB. Adds LHE contrast-limit controls and corrects the native HDR internal-mask property to `lightnessMask`.
 
 - **v1.1.35:** Adds repeatable local contrast review with explicit acceptance between passes, fresh previews and preservation of earlier accepted results.
 

@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.38
+# CCDASTRO PixInsight Workflow Manager v1.1.39
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -105,7 +105,7 @@ visible. It returns automatically when the run ends.**
 
 ## Quick start
 
-1. Select your original integrated, unstretched color master. For BlurXTerminator, load your configured **CCDASTRO_BlurX** workspace icon; its Correct Only and sharpening settings control the run. Run **Validate**,
+1. Select your original integrated, unstretched color master. For BlurXTerminator, use the workflow settings (Correct Only by default), or explicitly select the optional **CCDASTRO_BlurX** icon override. Run **Validate**,
    then **Run Workflow**. Processing uses a separate working copy; the original
    pixels and input file remain unchanged. Save an unsaved original separately
    if you need a permanent backup.
@@ -1039,13 +1039,40 @@ generate stars. For SyQon Starless, use Subtraction and rename its process icon
 `CCDASTRO_Starless`.
 
 
-### BlurXTerminator configured icon (v1.1.17)
+### BlurXTerminator workflow settings and optional icon (v1.1.39)
 
-Create a BlurXTerminator workspace icon named **CCDASTRO_BlurX** by dragging its New Instance triangle and renaming it. Save/reload your process icons between sessions. The workflow preserves all settings in that icon, including Correct Only, model, sharpening, PSF, overlap, and compute device. Changing the open process window alone does not update the saved icon.
+No BlurX workspace icon is required by default. Select BlurXTerminator in
+**4. Deblur / structure recovery**, then use **BlurXTerminator settings** in the
+Linear workflow section. The installed, licensed BlurXTerminator process is still
+required.
 
-For an initial conservative test: Latest ML model, Correct Only on, Automatic PSF on, star sharpening 0, nonstellar sharpening 0, halo adjustment 0, Lunar/Planetary Mode off, overlap 0.20, and your working GPU. Correct Only omits additional sharpening. Inspect at 100%; settings must be evaluated on your own data.
+- **Correct Only (no sharpening)** starts enabled. The workflow explicitly sets
+  star sharpening, nonstellar sharpening and halo adjustment to zero for this mode.
+- Uncheck Correct Only to enable **Sharpen stars (%)**, **Sharpen nonstellar (%)**
+  and **Adjust halos (%)**. Initial editable values are 25%, 50% and 0%, respectively;
+  these are starting points, not settings guaranteed suitable for every image.
+- Workflow mode enables **Automatic PSF** and retains the installed native defaults
+  for model, compute device and other advanced controls. Main settings are remembered
+  when Remember workflow settings is enabled. Reset Defaults restores Correct Only
+  and disables the icon override. Older saved configurations use these defaults.
+- To retain your custom model, PSF, device and other settings, check **Use
+  CCDASTRO_BlurX icon override (optional)**. Create a BlurXTerminator workspace icon
+  named **CCDASTRO_BlurX** by dragging its New Instance triangle and renaming it.
+  Save/reload icons between sessions. The workflow preserves every setting in that
+  icon and ignores its own Correct Only and sharpening controls. Changing the open
+  process window does not update the saved icon.
 
-Preflight requires the icon to contain BlurXTerminator. No fresh-instance fallback is used. The console records Correct Only and both sharpening settings. Processing remains before star separation, denoise, and stretch.
+An existing icon is not used automatically: explicitly enable its override.
+If the override is selected, a missing/wrong icon blocks validation rather than
+silently using different settings. Without the override, validation checks the
+installed process and required parameters, not workspace icons. Console output
+records which mode ran and the actual correction/sharpening/halo values. BlurX
+still runs on the linear working copy before star separation, denoise and stretching.
+Native execution/model/license requirements are checked by BlurX during execution.
+
+Mocked regression checks cover defaults, adjustable values, explicit overrides,
+settings preservation, validation, execution failures, controls and state hooks.
+Native PixInsight testing of the new no-icon mode remains pending.
 
 ### Crop preview and automatic return (v1.1.21)
 The Crop stage opens an internal preview on a separate linear working copy. Drag a rectangle, then Apply Crop. The script executes the native DynamicCrop process and automatically returns to the same workflow settings with the working copy selected and Crop unchecked. Skip Crop also returns. The preview uses a temporary stretched display copy; input pixels remain linear. This supports rectangular trimming without rotation. For advanced rotation, use native DynamicCrop manually before starting the workflow. The crop preview and automatic return were confirmed working in PixInsight v1.1.21.
@@ -1105,6 +1132,8 @@ node pixinsight/tools/validate-workflow.js
 ```
 
 ## Revision history
+
+- **v1.1.39:** Makes the BlurX icon optional; adds remembered Correct Only/sharpening/halo controls and an explicit icon override. Correct Only is the default.
 
 - **v1.1.38:** Adds optional registered nebula masks to LHE and Curves, repeatable Curves with individual RGB channels, and optional final contrast/color review after L addition and HDR.
 

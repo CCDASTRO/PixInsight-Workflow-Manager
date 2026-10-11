@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.38"
+#define VERSION "1.1.39"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -37,7 +37,7 @@ var adapterHelp = {
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
    spcc: "Use SpectrophotometricColorCalibration. The image must have an astrometric solution.",
    pcc: "Use PhotometricColorCalibration from the configured CCDASTRO_PCC process icon. Preserves catalog, white reference, and background settings; requires a solved image.",
-   blurXTerminator: "Use the configured CCDASTRO_BlurX process icon for linear deconvolution. Its Correct Only, sharpening, model, and device settings are preserved.",
+   blurXTerminator: "Use workflow BlurX settings (Correct Only by default), or explicitly select the optional CCDASTRO_BlurX icon override. Runs on linear data before denoise.",
    syqonParallax: "Run the configured CCDASTRO_Parallax process icon for structure recovery.",
    noiseXTerminator: "Use NoiseXTerminator for the main noise-reduction pass.",
    mlDenoise: "Use the configured CCDASTRO_MLDenoise process icon, including its neural network model path and denoise settings.",
@@ -135,7 +135,8 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 8,
+      schemaVersion: 9,
+      blurX: dialog.blurXValues ? dialog.blurXValues() : null,
       finishStarless: dialog.finishStarless.checked,
       starBrightness: dialog.starBrightness.value,
       resumeAfterCrop: resumeAfterCrop === true,
@@ -200,7 +201,7 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || ([4,5,6,7,8].indexOf(state.schemaVersion) < 0) || !state.steps)
+      if (!state || ([4,5,6,7,8,9].indexOf(state.schemaVersion) < 0) || !state.steps)
          return false;
       if (state.schemaVersion >= 5 && state.imageType >= 0 &&
           state.imageType < WORKFLOW_PROFILES.length)
@@ -249,6 +250,7 @@ function restoreWorkflowState(dialog)
          dialog.starReductionMethod.currentItem = state.starReductionMethod;
       if (state.starReductionIterations >= 1 && state.starReductionIterations <= 3)
          dialog.starReductionIterations.value = state.starReductionIterations;
+      if (dialog.restoreBlurX && state.blurX) dialog.restoreBlurX(state.blurX);
       dialog.refreshStarReductionControls();
       if (state.resumeAfterCrop && state.plateSolve)
       {
@@ -298,6 +300,7 @@ function resetWorkflowControls(dialog)
       row.refreshChoiceHelp();
       row.refreshStatus();
    }
+   if (dialog.restoreBlurX) dialog.restoreBlurX(defaultBlurXSettings());
    dialog.finishStarless.checked = false;
    dialog.starBrightness.value = 70;
    dialog.noisePlacement.currentItem = 1;
@@ -748,6 +751,25 @@ function linearStageOrder(rows)
       : ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
 }
 
+function defaultBlurXSettings()
+{
+   return {useIcon:false, correctOnly:true, stars:25, nonstellar:50, halos:0};
+}
+var blurXSettings = defaultBlurXSettings();
+
+function validateBlurXSettings(settings)
+{
+   if (!settings || typeof settings.useIcon !== "boolean" || typeof settings.correctOnly !== "boolean")
+      throw new Error("Invalid BlurX settings.");
+   for (var i=0, keys=["stars", "nonstellar", "halos"]; i<keys.length; ++i)
+   {
+      var value=settings[keys[i]], low=keys[i] === "halos" ? -100 : 0;
+      if (!finiteNumber(value) || value<low || value>100)
+         throw new Error("BlurX sharpening must be 0-100%; halo adjustment must be -100 to 100%.");
+   }
+   return settings;
+}
+
 function BlurXIconAdapter()
 {
    this.id = "blurXTerminator";
@@ -756,40 +778,98 @@ function BlurXIconAdapter()
 
 BlurXIconAdapter.prototype.configuredProcess = function()
 {
-   if (resolveProcessClass(["BlurXTerminator"]) === null)
-      throw new Error("Install the BlurXTerminator PixInsight process.");
-   if (ProcessInstance.icons().indexOf("CCDASTRO_BlurX") < 0)
-      throw new Error("Configure BlurXTerminator, drag its New Instance triangle to the workspace, and name the icon CCDASTRO_BlurX. Choose Correct Only explicitly.");
-   var process = ProcessInstance.fromIcon("CCDASTRO_BlurX");
-   if (process === null || process.processId() !== "BlurXTerminator")
-      throw new Error("CCDASTRO_BlurX must contain a BlurXTerminator process instance.");
+   var className=resolveProcessClass(["BlurXTerminator"]);
+   if (className === null) throw new Error("Install the BlurXTerminator PixInsight process.");
+   if (blurXSettings.useIcon)
+   {
+      if (ProcessInstance.icons().indexOf("CCDASTRO_BlurX") < 0)
+         throw new Error("Optional icon override is selected: create CCDASTRO_BlurX, or uncheck Use CCDASTRO_BlurX icon override.");
+      var icon=ProcessInstance.fromIcon("CCDASTRO_BlurX");
+      if (icon === null || icon.processId() !== "BlurXTerminator")
+         throw new Error("CCDASTRO_BlurX must contain a BlurXTerminator process instance.");
+      return icon;
+   }
+   var settings=validateBlurXSettings(blurXSettings), process=createProcess(className);
+   var required=["correct_only", "sharpen_stars", "sharpen_nonstellar", "adjust_star_halos", "auto_nonstellar_psf"];
+   for (var i=0;i<required.length;++i)
+      if (!(required[i] in process)) throw new Error("Installed BlurXTerminator does not expose " + required[i] + ". Update it or use a configured icon override.");
+   process.correct_only=settings.correctOnly;
+   process.sharpen_stars=settings.correctOnly ? 0 : settings.stars/100;
+   process.sharpen_nonstellar=settings.correctOnly ? 0 : settings.nonstellar/100;
+   process.adjust_star_halos=settings.correctOnly ? 0 : settings.halos/100;
+   process.auto_nonstellar_psf=true;
+   // Keep installed native defaults for model/device and other advanced controls.
    return process;
 };
 
 BlurXIconAdapter.prototype.available = function()
 {
-   try { this.configuredProcess(); return true; }
-   catch (e) { return false; }
+   try { this.configuredProcess(); return true; } catch (e) { return false; }
 };
-
 BlurXIconAdapter.prototype.requirement = function()
 {
-   try { this.configuredProcess(); return "Configured CCDASTRO_BlurX settings are ready."; }
+   try { this.configuredProcess(); return blurXSettings.useIcon ? "Configured CCDASTRO_BlurX settings are ready." : "Workflow BlurX settings are ready; no icon required."; }
    catch (e) { return errorMessage(e); }
 };
-
 BlurXIconAdapter.prototype.execute = function(view)
 {
-   var process = this.configuredProcess();
-   checkAbortRequested();
-   logLine("Running configured BlurXTerminator on " + view.fullId +
-      "; Correct Only=" + process.correct_only +
-      "; Sharpen Stars=" + process.sharpen_stars +
-      "; Sharpen Nonstellar=" + process.sharpen_nonstellar);
-   if (!process.executeOn(view))
-      throw new Error("Configured BlurXTerminator failed.");
+   var process = this.configuredProcess(); checkAbortRequested();
+   logLine("Running " + (blurXSettings.useIcon ? "icon-configured" : "workflow-configured") + " BlurXTerminator on " + view.fullId +
+      "; Correct Only=" + process.correct_only + "; Sharpen Stars=" + process.sharpen_stars +
+      "; Sharpen Nonstellar=" + process.sharpen_nonstellar + "; Adjust Star Halos=" + process.adjust_star_halos);
+   if (!process.executeOn(view)) throw new Error("BlurXTerminator failed.");
    checkAbortRequested();
 };
+
+function installBlurXControls(dialog)
+{
+   var box=new GroupBox(dialog.content); box.title="BlurXTerminator settings";
+   box.sizer=new VerticalSizer; box.sizer.margin=8; box.sizer.spacing=6;
+   dialog.blurXIcon=new CheckBox(box); dialog.blurXIcon.text="Use CCDASTRO_BlurX icon override (optional)";
+   dialog.blurXCorrectOnly=new CheckBox(box); dialog.blurXCorrectOnly.text="Correct Only (no sharpening)";
+   box.sizer.add(dialog.blurXIcon); box.sizer.add(dialog.blurXCorrectOnly);
+   var row=new HorizontalSizer; row.spacing=8;
+   var fields=["blurXStars", "blurXNonstellar", "blurXHalos"];
+   var labels=["Sharpen stars (%):", "Sharpen nonstellar (%):", "Adjust halos (%):"];
+   for(var i=0;i<fields.length;++i)
+   {
+      var label=new Label(box); label.text=labels[i]; row.add(label);
+      var value=new SpinBox(box); value.minValue=i===2 ? -100 : 0; value.maxValue=100;
+      dialog[fields[i]]=value; row.add(value);
+   }
+   row.addStretch(); box.sizer.add(row);
+   var hint=new Label(box); hint.wordWrapping=true;
+   hint.text="Automatic PSF is enabled. Model/device use installed defaults. Icon override preserves all icon settings and ignores these controls.";
+   box.sizer.add(hint);
+   dialog.blurXValues=function(){return {useIcon:dialog.blurXIcon.checked,correctOnly:dialog.blurXCorrectOnly.checked,
+      stars:dialog.blurXStars.value,nonstellar:dialog.blurXNonstellar.value,halos:dialog.blurXHalos.value};};
+   dialog.refreshBlurXControls=function()
+   {
+      var stage=dialog.rowsById.deconvolution;
+      var enabled=stage.enabled.checked && stage.adapterId()==="blurXTerminator";
+      box.enabled=enabled;
+      dialog.blurXCorrectOnly.enabled=enabled && !dialog.blurXIcon.checked;
+      for(var i=0;i<fields.length;++i) dialog[fields[i]].enabled=enabled && !dialog.blurXIcon.checked && !dialog.blurXCorrectOnly.checked;
+      blurXSettings=dialog.blurXValues(); stage.refreshStatus();
+   };
+   dialog.restoreBlurX=function(settings)
+   {
+      settings=validateBlurXSettings(settings);
+      dialog.blurXIcon.checked=settings.useIcon; dialog.blurXCorrectOnly.checked=settings.correctOnly;
+      dialog.blurXStars.value=settings.stars; dialog.blurXNonstellar.value=settings.nonstellar; dialog.blurXHalos.value=settings.halos;
+      dialog.refreshBlurXControls();
+   };
+   dialog.blurXIcon.onCheck=dialog.blurXCorrectOnly.onCheck=dialog.refreshBlurXControls;
+   for(var i=0;i<fields.length;++i) dialog[fields[i]].onValueUpdated=dialog.refreshBlurXControls;
+   var stage=dialog.rowsById.deconvolution;
+   var refresh=stage.refreshStatus;
+   // Stage changes and profile switches also update the relevant controls.
+   stage.refreshStatus=function(){refresh.call(stage); var enabled=stage.enabled.checked && stage.adapterId()==="blurXTerminator";
+      box.enabled=enabled; dialog.blurXCorrectOnly.enabled=enabled && !dialog.blurXIcon.checked;
+      for(var i=0;i<fields.length;++i) dialog[fields[i]].enabled=enabled && !dialog.blurXIcon.checked && !dialog.blurXCorrectOnly.checked;};
+   dialog.restoreBlurX(defaultBlurXSettings());
+   return box;
+}
 
 function MLDenoiseAdapter()
 {
@@ -2325,6 +2405,8 @@ constructor()
       this.stepsBox.sizer.add(row.sizer);
    }
 
+   this.blurXBox=installBlurXControls(this);
+   this.stepsBox.sizer.add(this.blurXBox);
    var noisePlacementControl = labeledCombo(this.content, "Noise placement:",
       ["Before star separation", "Starless branch"], 1,
       "Choose whether the main denoise pass affects the complete image or only the starless branch.");

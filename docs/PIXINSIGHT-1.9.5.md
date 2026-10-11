@@ -153,3 +153,14 @@ inputs offer a session-only final LHE/Curves review after accepted nonzero L add
 and optional final HDR. Keep RGB/Keep starless/zero L skip this sequence. No new
 stretch or automatic denoise is introduced. Regression checks use mocked pixel/API
 implementations; native PixInsight validation of these new controls remains pending.
+
+## v1.1.39: optional BlurX icon and workflow settings
+
+BlurX no longer requires an icon in default workflow mode. Correct Only is enabled,
+sharpening/halo values are zero during correction, and Automatic PSF is enabled.
+Uncheck Correct Only for adjustable star/nonstellar sharpening and halo settings.
+Model/device and other advanced controls retain installed native defaults. An
+explicit CCDASTRO_BlurX override preserves the icon settings; a missing/wrong icon
+blocks validation only when that override is selected. Settings are remembered,
+old saved configurations use the new defaults, and Reset Defaults clears the override.
+Mocked API regression checks pass; native no-icon execution remains pending.

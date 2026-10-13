@@ -215,3 +215,7 @@ The preflight warning now correctly describes preservation of original pixels.
 Removes dynamic third-party source execution; SyQon and AutoDBE selections are
 blocked pending a secure supported execution path. Native process integrations
 remain. See SECURITY-AND-DEPENDENCIES.md for disclosure and outstanding audits.
+
+## v1.1.44 syntax fix
+
+Uses a plain string-prefix HTTPS check to avoid PixInsight preprocessor parsing of regular-expression slashes.

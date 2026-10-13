@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.43",
+    "softwareVersion": "1.1.44",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.43">CCDASTRO PixInsight Workflow Manager v1.1.43</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.44">CCDASTRO PixInsight Workflow Manager v1.1.44</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
@@ -1296,6 +1296,8 @@ SyQon settings and selected override icons, and branch dependencies.</li>
 </code></pre>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.44:</strong> Fixes PixInsight preprocessing of the direct PCC HTTPS check by using a plain string prefix instead of a slash-containing regular expression.</p>
+</li>
 <li><p><strong>v1.1.43:</strong> Removes dynamic vendor-script source loaders and temporarily blocks
 SyQon/AutoDBE execution pending a supported secure integration. Adds security,
 dependency, network and storage disclosure; requires HTTPS for direct PCC server

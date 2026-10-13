@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.43"
+#define VERSION "1.1.44"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -741,7 +741,7 @@ function configuredNativeProcess(id)
    if(values.useIcon){if(!definition.icon || ProcessInstance.icons().indexOf(definition.icon)<0)throw new Error("Optional override selected: create "+definition.icon+", or disable its override in workflow setup.");
       var icon=ProcessInstance.fromIcon(definition.icon);if(!icon||icon.processId()!==definition.process)throw new Error(definition.icon+" must contain "+definition.process+".");return icon;}
    validateNativeSettings(id,values);
-   if(id==="pcc" && !/^https:\/\//i.test(values.serverURL.trim())) throw new Error("PCC catalog server must use HTTPS.");
+   if(id==="pcc" && values.serverURL.trim().toLowerCase().indexOf("https://")!==0) throw new Error("PCC catalog server must use HTTPS.");
    var p=createProcess(className);
    for(var i=0;i<definition.fields.length;++i){var f=definition.fields[i];
       if(["histogram","luminance","spfc","finalMLT"].indexOf(id)>=0 || f.key==="databaseFiles")continue;

@@ -5,19 +5,18 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.43.zip" sha1="93c7f0453afb7a73270ad2e647b694863e668ef5" type="script" releaseDate="20261013120328">
-         <title>CCDASTRO Workflow Manager 1.1.43</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.44.zip" sha1="de527b42b2dd1be5880cdcb2e9cc16eb0b9e52cc" type="script" releaseDate="20261013121612">
+         <title>CCDASTRO Workflow Manager 1.1.44</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
-               <li>v1.1.43 removes dynamic third-party source loaders. SyQon and AutoDBE automation are temporarily unavailable pending a supported secure execution path.</li>
-               <li>Native process choices remain available. Saved script selections and icon overrides cannot bypass the restriction.</li>
-               <li>Direct PCC server settings require HTTPS. SPFC setup explains the default installed filters.xspd library.</li>
-               <li>Security, network and storage disclosure is available in the project documentation. Dependency review and PTeam clarification remain open.</li>
-               <li>All 22 regression scripts and isolated native settings, setup-dialog and synthetic histogram checks passed.</li>
+               <li>v1.1.44 fixes the PixInsight script-loading syntax error in the PCC HTTPS check, using a plain string prefix instead of a regular expression.</li>
+               <li>The complete script loaded and constructed the workflow dialog in isolated native PixInsight testing. HTTPS acceptance, HTTP rejection, and all 22 regression scripts passed.</li>
+               <li>Retains the v1.1.43 security changes: dynamic third-party source loaders are removed; SyQon and AutoDBE automation remain temporarily unavailable pending a supported secure execution path.</li>
+               <li>Native process choices remain available. Security documentation is provided; dependency review and PTeam clarification remain open.</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-13T12:06:02.770Z" encoding="Base64">o/SrFkWfLMX/fq+WcnIHG1ZZI/RWUZJTH3jERaRMIHcVO46vlGbWyg1tNDr4EhAqLqe9gBqJqW5mCGPFZlDLDA==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-13T12:16:23.441Z" encoding="Base64">QE/FuVolVrNMd5yaDGLWzUuKZhEFjLDkTgTkvEE+iP8BIPEPw/u2esgEZ92kgumEhh+qnYAxfUDJ1if3UdTBAg==</Signature>

@@ -45,3 +45,6 @@ ctx.nativeSettings.pcc.serverURL='http://example.test/';
 assert.throws(()=>ctx.configuredNativeProcess('pcc'),/HTTPS/);
 ctx.nativeSettings.pcc.serverURL='https://vizier.cds.unistra.fr/';
 assert.equal(ctx.configuredNativeProcess('pcc').applyCalibration,true);
+
+// PixInsight's preprocessor can misread escaped URL slashes in regex literals.
+assert.ok(source.includes('values.serverURL.trim().toLowerCase().indexOf('));

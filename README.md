@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.43
+# CCDASTRO PixInsight Workflow Manager v1.1.44
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -1164,6 +1164,7 @@ node pixinsight/tools/validate-workflow.js
 
 ## Revision history
 
+- **v1.1.44:** Fixes PixInsight preprocessing of the direct PCC HTTPS check by using a plain string prefix instead of a slash-containing regular expression.
 - **v1.1.43:** Removes dynamic vendor-script source loaders and temporarily blocks
   SyQon/AutoDBE execution pending a supported secure integration. Adds security,
   dependency, network and storage disclosure; requires HTTPS for direct PCC server

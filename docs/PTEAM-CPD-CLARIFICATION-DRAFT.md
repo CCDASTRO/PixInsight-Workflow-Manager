@@ -54,4 +54,4 @@ without written guidance/authorization.
 Sincerely,
 Chuck Faranda / CCDASTRO
 
-Draft only — not sent. Confirm publication/testing status before sending.
+Historical request draft. Chuck supplied PTeam's response; see PTEAM-CPD-RESPONSE.md. The sending of the request occurred outside this assistant; no additional message has been sent.

@@ -1,86 +1,138 @@
-# Workflow security, network and storage disclosure
+# Security, network and storage disclosure — v1.1.46
 
-Applies to v1.1.43. A CPD signature establishes developer identity and file
-integrity; it does not imply Pleiades Astrophoto endorsement or quality approval.
+A CPD signature establishes developer identity and integrity, not PTeam product
+approval. This implementation follows the execution routes in PTeam's technical
+response supplied by Chuck; see PTEAM-CPD-RESPONSE.md. No exception for runtime
+script loading is assumed or needed for these routes.
 
-## Installation and execution
+## Distribution, settings and security
 
-Use the signed PixInsight Update Manager repository, or PixInsight's documented
-manual script installation procedure. The package deploys only our script and
-signature into src/scripts/CCDASTRO. The workflow has no installer, updater,
-package manager, privilege-elevation request, telemetry client or code downloader.
-It does not edit repositories, security preferences or other developers' files.
-Signing and release-building tools are developer tools, not shipped runtime code.
+Install through the signed PixInsight Update Manager repository or the standard
+manual Feature Script procedure. The package contains CCDASTROWorkflowManager.js,
+its XSGN signature and CCDASTROAutoDBEEngine.jsh under src/scripts/CCDASTRO. The
+engine is statically included and covered by the main script's signature.
+No executable, model, runtime or package manager is downloaded or installed by the
+workflow. It has no runtime updater, privilege-elevation request, telemetry client,
+image-upload service or advertising. It does not modify PixInsight's installation,
+repositories, security preferences, or other developers' code/settings.
 
-Native processes execute through PixInsight's process APIs. ImageSolver and PJSR
-astrometry libraries are referenced through normal preprocessor includes from
-the installed PixInsight distribution; they are not copied or dynamically rewritten.
-No general-purpose interpreter or external application's API emulation is provided.
+Preferences use the PJSR Settings interface under CCDASTROWorkflowManager/
+LastWorkflowState and /RememberWorkflowState. Paths and typed process settings
+are stored when Remember workflow settings is enabled. Reset Defaults clears our
+preferences. Optional vendor icons are read for allowlisted parameters; they are
+not modified or executed. Image output/export paths are chosen in save dialogs.
+Original images are processed through separate copies; the input-file overwrite
+guard remains. PixInsight's own swap/undo files use its user-configured locations.
 
-## Temporarily suspended script integrations
+## SyQon external programs
 
-The workflow previously read installed SyQon and AutoDBE JavaScript, rewrote it
-in memory and invoked it through new Function. v1.1.43 removes that mechanism
-and blocks these adapters in validation and execution, including icon overrides.
-It neither launches SyQon applications nor executes AutoDBE. Stored legacy
-configuration can remain but is inactive. Native execution and vendor/PTeam
-clarification must precede restoration. Version checks alone are not signatures.
+The selected stages launch independently installed parallax_cli (aberration
+correction/sharpening/reduction), prism_cli (denoising), or SyQonStarless (star
+removal). The user selects/reviews a path in setup and saves it; discovery alone
+cannot launch a program. ExternalProcess receives an executable and argument
+array directly, with no command shell. There is no nested Script instance,
+installed-script source loader, API emulation, or SyQon model/runtime loaded in
+PixInsight. Vendor scripts are not required to run these stages.
 
-## Network connections and third-party dependencies
+Supported contracts are the individual Parallax/Prism CLI and Starless Qt/C++
+interfaces used by the v1.5/v3.0.2 integrations. The current unified Studio CLI is
+a different contract; do not select it for these adapters.
 
-The workflow has no independent network client. Selected native processes and
-PixInsight-supplied ImageSolver can access catalog services or installed catalogs.
-PCC exposes a VizieR server URL, defaulting to https://vizier.cds.unistra.fr/.
-ImageSolver, SPCC and SPFC can query their configured catalog services; queries
-may disclose sky coordinates, search radius and observation-related parameters.
-They do not constitute workflow telemetry. User-supplied server URLs must use
-HTTPS in direct PCC settings. Advanced process overrides and dependency-specific
-connections remain governed by the selected installed component; do not assume
-all dependencies have been exhaustively audited by this release.
+Each run creates <system-temp>/CCDASTRO_SyQon_<random>/ with input.fits and
+output.fits for Parallax/Prism, or input.tif and output.tif for Starless. Images
+are exchanged as Float32 files. Windows system-temp is normally under
+%LOCALAPPDATA%/Temp; the actual complete path is printed in the Process Console.
+Parallax/Prism use a reversible zero-shadow transfer on the export copy and the
+inverse on import; no input-file stretch is written back. Starless operates on
+linear TIFF data and produces a subtraction stars view after successful import.
+Known files are deleted only after the child stops. Failed cleanup or an
+unstoppable child retains files for inspection; there is no recursive deletion.
 
-GraXpert is invoked as an installed native process, not an executable downloaded
-by this workflow. Its installed implementation may launch a separately installed
-GraXpert application and access models or services. Consult that integration's
-settings/documentation before enabling it. RC-Astro licensing/model access and
-MLDenoise model loading are handled by their installed processes. MARS and filter
-libraries are read from user-selected local paths. This workflow does not fetch
-executables, packages, models, catalogs or MARS databases. Any vendor-managed
-downloads, licensing connections, secure transport and integrity verification
-require confirmation in the dependency audit; these are not asserted compliant.
+A nonzero/crashed exit, missing or invalid output, shape/channel mismatch, timeout
+or cancellation stops import. Starless opens its own UI: the user generates the
+result and closes the application before import. Licensing and models must be
+installed/provisioned independently. The workflow neither accesses vendor
+credentials nor bypasses entitlement checks. Installed CLI models in this test
+installation are resolved by SyQon beneath the executable's _internal/models;
+other releases may use vendor-managed asset/cache directories. Those locations
+are chosen by SyQon, not the workflow.
 
-## File locations and settings
+SyQon applications may contact their vendor for sign-in, entitlement validation
+or model/runtime provisioning and updates. The current vendor developer guide
+at https://syqon.eu/develop describes account authentication, asset provisioning
+and local inference; these external activities remain in SyQon. The tested legacy
+executables processed local models, but we do not claim every installed vendor
+version is network-free. Consult its documentation/account settings before use.
+The workflow does not itself download executable code or manage these models.
 
-- Workflow preferences are written using the PJSR Settings interface under
-  CCDASTROWorkflowManager/LastWorkflowState and /RememberWorkflowState. This
-  includes selected paths and process parameters; no private licensing keys are
-  collected by our configuration code. Reset Defaults clears workflow preferences.
-- Images and retained comparison copies live in PixInsight windows. PixInsight
-  may create its normal swap/undo files in locations configured by the user.
-- XISF outputs and optional JPEG/TIFF/PNG sharing copies are written only to
-  paths chosen in save dialogs. Original input-file overwrite is guarded.
-- Native processes may create catalog caches, graphs, text reports or models
-  in their configured output/cache directories or the system temporary directory.
-  Those exact locations are controlled by each process, not by this workflow.
-- The default filter library is CoreApplication.srcDirPath/../library/filters.xspd
-  (normally C:/Program Files/PixInsight/library/filters.xspd on Windows).
-  It is read only. Models and MARS files are read from selected paths, not installed
-  or modified by the workflow.
-- Legacy SyQon path discovery reads existing config CSVs under the system temp
-  directory's SyQonParallaxCLI, SyQonPrismCLI and SyQonStarlessCLI folders.
-  It does not execute their contents. Prior integrations exchanged FITS and JSON
-  files there; v1.1.43 no longer runs those exchanges. Vendor-created files from
-  earlier runs are not deleted by the workflow.
+## Included AutoDBE engine
 
-No image upload, advertising, usage tracking or personal-data collection is
-implemented by CCDASTRO workflow code. Users must separately evaluate any
-third-party component they enable. Developer identification and factual tool/setup
-references are included solely to identify the product and its dependencies.
+CCDASTROAutoDBEEngine.jsh adapts Franklin Marek's AutoDBE 1.6 processing code under
+its public CC BY-NC 4.0 grant. Copyright, license, attribution and change notices
+are retained; see THIRD-PARTY-NOTICES.md. Noncommercial use only for this engine;
+commercial use requires separate author permission. It is a fixed signed-package
+copy, not a runtime call to installed AutoDBE.js. No vendor settings are written.
 
-## Remaining review
+Its engine uses installed BackgroundNeutralization, AutomaticBackgroundExtractor
+and DynamicBackgroundExtraction processes on a candidate image. The adapter
+forces replacement of that candidate and discards model output. Approved pixels
+are committed only after successful engine completion. Default settings need no
+icon; custom allowlisted numeric/boolean values may come from CCDASTRO_AutoDBE.
+The engine has no network client, external program launch or disk-image exchange.
+It creates temporary PixInsight views, not a separate catalog/model cache.
 
-Confirm dependency behavior under CPD rules 3.4, 5.3, 6.1 and 6.3, including
-external program launch, actual service endpoints and cache/output locations.
-PTeam clarification is requested for standard invocation of other CPDs' signed
-scripts and the supported safe replacement for the removed adapters. The notice's
-transition deadline is December 12, 2026. This document is a technical disclosure,
-not a statement of approval from PTeam.
+## RC-Astro and other installed native processes
+
+BlurXTerminator, NoiseXTerminator and StarXTerminator are independently installed
+and licensed signed modules. The workflow invokes their process instances. As
+PTeam clarified, their developer manages licensing, model downloads, connections,
+integrity verification and caches under the CPD rules. Refer to https://www.rc-astro.com/
+and the installed module documentation. MLDenoise loads the selected local model
+through PixInsight; this workflow does not download it. Other finishing processes
+(HDR, HT, MAS, Curves, LHE, ACDNR and MLT) run through installed native instances.
+
+## GraXpert external application through its installed process integration
+
+Selecting GraXpert invokes the installed GraXpert process integration, which
+launches the independently installed GraXpert application for gradient removal.
+Select/review its executable in that integration's Custom app. path settings.
+The integration controls its image-exchange files and temporary/cache paths;
+this workflow does not independently write or relocate those files, install the
+application or run its AI code/models inside PixInsight.
+
+GraXpert AI models marked remote in its installed process documentation are
+fetched before processing. Application preferences, logs and model caches are
+managed by GraXpert (Windows commonly %LOCALAPPDATA%/GraXpert/GraXpert); the
+integration may use its own GraXpert4PixInsight application-data/temp directories.
+Consult the installed GraXpert process help and its documentation at
+https://github.com/DeepSkyForge/GraXpert4PixInsight/wiki/ and
+https://github.com/Steffenhir/GraXpert for the exact paths and release behavior.
+The integration exchanges the input and corrected image through its application's
+file interface; detailed version-specific exchange filenames and any custom
+directory are owned by the installed bridge, not our direct SyQon adapter. We do
+not claim the wrapper's file paths or model-download host remain identical across
+versions. Its developer documentation is the reference for these external actions.
+
+## Catalog processes and included ImageSolver
+
+The workflow can invoke PCC, SPCC, SPFC, MGC and Gaia-assisted ImageSolver. Users
+must install the Gaia catalogs required by their selected calibration/solver
+method and the appropriate local MARS databases for MGC. Filter curves are read
+from the selected XSPD library or <PixInsight>/library/filters.xspd by default.
+Models, catalogs and MARS files are not downloaded by this workflow.
+
+PCC's direct server setting defaults to https://vizier.cds.unistra.fr/ and requires
+HTTPS. Native catalog-process behavior belongs to PTeam. Our included ImageSolver
+code can query its selected VizieR server, so those are our product's connections;
+the configured server must use HTTPS before solving. Queries include sky position,
+search area, magnitude/catalog criteria and related observation parameters.
+Catalog response handling/caches belong to the included PixInsight implementation;
+no executable response is evaluated by the workflow. Required services/catalogs
+and offline operation vary with the selected process and installed catalogs.
+
+PJSR astrometry includes are separately signed secure PixInsight code.
+ImageSolverEngine.js is included from the installed src/scripts/ImageSolver
+location and is covered by the workflow signature. Updating that engine can
+invalidate the signature and require a re-signed workflow release. Never modify
+PixInsight's engine to repair a signature. The deprecated AdP/ImageSolver.js is
+not used. No copy of ImageSolver is redistributed in this package.

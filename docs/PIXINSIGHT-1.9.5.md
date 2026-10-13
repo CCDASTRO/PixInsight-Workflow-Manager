@@ -225,3 +225,18 @@ Uses a plain string-prefix HTTPS check to avoid PixInsight preprocessor parsing 
 Suspended script tools appear as disabled informational labels below their stages,
 not selectable dropdown entries. Restoring a suspended choice disables that stage.
 Choose a native process and explicitly enable the stage to resume processing.
+
+## v1.1.46 supported integration routes
+
+SyQon uses user-selected external CLI/GUI executables and local files. AutoDBE
+uses a fixed licensed engine included in the signed script/package. The earlier
+source loaders remain removed. ImageSolverEngine.js updates can invalidate the
+workflow signature and require re-signing; secure PJSR includes carry their own
+signatures. See THIRD-PARTY-NOTICES.md and SECURITY-AND-DEPENDENCIES.md.
+
+Native restoration validation used synthetic images only: the complete dialog
+loaded; installed Parallax correction and Prism Mini denoising executed with
+image export/import and inverse transfer; the included AutoDBE corrected a
+512x512 synthetic gradient. Starless TIFF/subtraction mechanics use an external
+copy-only fixture test; interactive vendor neural inference still needs user
+validation. These checks do not establish image quality on astronomical targets.

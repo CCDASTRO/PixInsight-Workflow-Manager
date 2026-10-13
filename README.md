@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.45
+# CCDASTRO PixInsight Workflow Manager v1.1.46
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -41,25 +41,25 @@ If the `CCDASTRO` menu is missing after the first installation, open
 `src/scripts` directory. This forces PixInsight to scan and register newly
 installed script folders. Restart PixInsight after the scan.
 
-## Security and CPD execution policy (v1.1.43)
+## Security and CPD execution policy (v1.1.46)
 
-SyQon Parallax, Prism and Starless, and Seti Astro Automatic DBE are temporarily
-unavailable inside this workflow. Their previous source-loading adapters have
-been removed. Existing saved choices and optional icons cannot bypass this
-restriction: validation stops before processing and execution also fails closed.
-Select an installed native process instead. You may run vendor scripts separately
-through PixInsight, subject to its normal security checks and vendor instructions.
-Stored SyQon settings remain for possible future compatibility; they do not enable
-execution. Earlier sections describing automatic vendor-script integration apply
-to older releases only. This is a temporary restriction, not a finding that the
-vendor products themselves violate CPD rules.
+SyQon Parallax, Prism and Starless, and Seti Astro Automatic DBE are available
+again through the execution routes described in PTeam's clarification. The
+workflow never loads or rewrites installed vendor scripts at runtime.
 
-The installed native-process choices remain available, including GraXpert,
-RC-Astro tools, PCC/SPCC, SPFC/MGC, HistogramTransformation and MAS. A complete
-dependency audit and PTeam clarification remain pending; this release does not
-claim PTeam approval or comprehensive CPD certification.
+- SyQon runs independently installed, user-selected external executables through
+  argument arrays and image files. No SyQon models or runtime libraries are loaded
+  into PixInsight. Install and license the vendor programs separately.
+- AutoDBE uses an attributed, adapted AutoDBE 1.6 engine included in this signed
+  package under **CC BY-NC 4.0**. Its engine is for **noncommercial use**; commercial
+  use of that engine requires separate permission from its author. Other gradient
+  choices remain available. No installed AutoDBE script is required for defaults.
+- RC-Astro processes run as independently installed and licensed native process
+  instances. Refer to the vendor's documentation for their model/license behavior.
 
-See [Security, network and storage disclosure](SECURITY-AND-DEPENDENCIES.md).
+See [Security, network and storage disclosure](docs/SECURITY-AND-DEPENDENCIES.md)
+and [third-party notices](docs/THIRD-PARTY-NOTICES.md). A CPD signature identifies
+its developer and verifies integrity; it does not imply PTeam endorsement.
 
 ## Install manually as a Feature Script (advanced alternative)
 
@@ -69,7 +69,8 @@ this page. Manual installation is an alternative, not an additional required ste
 1. Download or clone this repository.
 2. Locate PixInsight's installed `src/scripts` directory.
 3. Create `src/scripts/CCDASTRO` and copy `CCDASTROWorkflowManager.js` and
-   its matching `CCDASTROWorkflowManager.xsgn` signature into it.
+   its matching `CCDASTROWorkflowManager.xsgn` signature and the included
+   `CCDASTROAutoDBEEngine.jsh` into it. All three files must be from the same release.
    This sibling location is required because the workflow uses PixInsight's installed
    `src/scripts/ImageSolver` library.
 4. Start PixInsight and choose **Script > Feature Scripts**.
@@ -341,24 +342,25 @@ and SPCC requires a plate-solved image.
 
 ## Gradient correction: Seti Astro Automatic DBE
 
-**Gradient correction** now offers **Seti Astro Automatic DBE** alongside
-GradientCorrection, GraXpert and MGC. Install **Automatic DBE 1.6** from
-[Seti Astro's PixInsight scripts](https://www.setiastro.com/pjsr-scripts).
-The workflow uses the installed AutoDBE.js; no vendor code is redistributed.
+Select **Seti Astro Automatic DBE (included engine)** for the adapted, included
+AutoDBE 1.6 processing engine by Franklin Marek. It is covered by the workflow's
+signature, not read from an installed AutoDBE.js. It runs its gradient sampling,
+background neutralization, ABE and DBE on a temporary working copy; the accepted
+pixels are imported only after successful completion. Models are discarded.
 
-In v1.1.43 this integration is suspended; the following describes earlier releases. No icon was required for vendor defaults. For custom settings, open Automatic DBE,
-configure it, drag its new-instance triangle to the workspace, and rename the
-Script icon **CCDASTRO_AutoDBE**. Keep that icon available when running the workflow.
-The gradient **Setup...** button provides these instructions. The selected tool
-runs before the normal plate-solving and color-calibration stages.
+No icon is required for defaults. Optional custom settings can be read from a
+Script icon named **CCDASTRO_AutoDBE**. Only recognized numeric and boolean
+parameters are accepted; the icon's script is never executed and its saved
+settings are not modified. Replace target and discard model are enforced on the
+working copy. Manually drawn exclusion regions are not used. The gradient
+**Setup...** button explains these choices.
 
-The adapter runs on the preserved master's working copy, forces **Replace target**
-on that copy and **Discard model**, and uses the icon's other saved parameters.
-Automatic execution uses no manually drawn exclusion regions. AutoDBE also performs
-its own background-neutralization/modeling operations. Inspect a manual trial for
-fields dominated by nebulosity before choosing it. Unsupported script versions,
-wrong icons, and correction failures stop preflight or processing rather than
-silently continuing. Native workflow testing of this new adapter remains pending.
+This included engine is licensed **CC BY-NC 4.0**, including attribution and
+noncommercial conditions. See [third-party notices](docs/THIRD-PARTY-NOTICES.md).
+It is a fixed adaptation, not a claim of endorsement or automatic vendor updates.
+Inspection remains necessary for fields dominated by nebulosity. Sampling,
+native-process failure or cancellation stops this stage without committing its
+candidate pixels. Full workflow originals remain unchanged.
 
 ## MultiscaleGradientCorrection (MGC)
 
@@ -458,64 +460,59 @@ calibration on top of the other. Calibration establishes color balance; stretchi
 curves, and saturation still determine the final appearance. PCC does not reproduce
 Photoshop Auto Color or HDR Toning automatically.
 
-## Configure SyQon choices (execution suspended in v1.1.43)
+## Configure SyQon choices
 
-SyQon tools no longer require workspace icons by default. Install the vendor
-application, its models/license as applicable, and its PixInsight integration.
-Supported script versions are Parallax v1.5, Prism v1.5, and Starless v3.0.2.
-Missing scripts and unsupported versions block preflight. The workflow calls the
-locally installed processing functions; vendor files are not modified or bundled.
+The workflow uses the independently installed **parallax_cli**, **prism_cli** and
+**SyQonStarless** executables directly. It does not execute their PixInsight scripts,
+load their models into PixInsight, install runtimes, or download software. This
+adapter targets the individual CLI contracts shipped with the Parallax/Prism
+v1.5 and Starless v3.0.2 integrations; the newer unified Studio `syqon-cli` has a
+different interface and is not interchangeable with these executables.
 
-1. Enable the relevant workflow stage and select its SyQon tool.
-2. In **SyQon settings**, click **Parallax setup**, **Prism setup**, or
-   **Starless setup**. The corresponding button is enabled for the selected tool.
-3. Confirm the executable path. The workflow can discover paths saved by the
-   vendor integration; otherwise click **Browse** and select the executable.
-4. Set the controls below and click **Save settings**, then **Validate**.
-   Enable **Remember workflow settings** to retain settings and paths between
-   sessions. Otherwise settings last for the current session.
+1. Install the selected SyQon application, required models and license separately.
+2. Select the workflow stage/tool, then click its **SyQon setup** button.
+3. Browse to the executable, or review the suggested path, and **Save settings**.
+   Discovery is a setup hint only; an empty saved path cannot launch a program.
+4. Adjust the controls and **Validate**. Remember workflow settings retains paths
+   and values if enabled. No workspace icon is required.
 
-| Tool | Workflow controls and starting defaults |
+| Tool | Controls |
 | --- | --- |
-| Parallax | Aberration correction on; sharpening 0%; star reduction 0; Classic mode; linked temporary stretch on; CPU off |
+| Parallax | Correction on; sharpening 0%; star reduction 0; Classic mode; linked temporary transfer on; CPU off |
 | Prism / DeepPrism | Strength 85%; DeepPrism model; CPU off |
-| Starless | Overlap 64 pixels; 128 is also available |
-| All three | Executable path and timeout, initially 20 minutes |
+| Starless | Overlap 64 or 128 pixels |
+| All three | Selected executable path and timeout, initially 20 minutes |
 
-Parallax and Prism use the vendor's reversible temporary stretch for linear
-input. Other advanced parameters retain the installed vendor defaults. Adjust
-strength to suit the data and inspect results; executable discovery does not
-verify model availability or licensing. Vendor execution checks these prerequisites.
+Parallax and Prism exchange Float32 FITS files. The workflow applies its own
+reversible zero-shadow midtones transfer to a temporary copy (median target 0.12
+for Parallax, 0.15 for Prism), then inverts the same transfer after processing.
+Parallax can use linked or separate channel transfers; Prism uses a linked
+transfer. This avoids clipping the input shadows, but differs from the older
+vendor-script adapter's preprocessing. CLI tiling uses 512 pixels, overlap 64
+and padding 96; inference/hardware behavior belongs to SyQon.
 
-For advanced settings, configure a vendor Script icon and explicitly enable
-**Use icon override** in that tool's setup dialog. The workflow then uses its
-saved parameters instead of the workflow controls; disable the override to return
-to the built-in settings. Merely having an icon in the workspace does not select it.
+Starless exchanges Float32 TIFF files with its graphical application. Click
+**Generate Starless**, wait for completion, then close the application window.
+The workflow imports its output and creates a linear subtraction stars layer.
+This step requires manual interaction. It uses SyQon's `pixinsight` license context.
 
-| Tool | Optional override icon |
-| --- | --- |
-| Parallax | `CCDASTRO_Parallax` |
-| Prism / DeepPrism | `CCDASTRO_Prism` |
-| Starless | `CCDASTRO_Starless` |
+Optional existing CCDASTRO_Parallax, CCDASTRO_Prism and CCDASTRO_Starless icons
+can provide allowlisted settings when **Use icon override** is selected. Their
+scripts are never run, and no vendor configuration is written. Other unsupported
+advanced fields are not imported; configure executable defaults with the vendor
+instead. A missing path/license/model, failed exit, invalid output, timeout or
+cancellation stops the stage before importing target pixels.
 
-Drag the vendor script's New Instance triangle to the workspace and rename it
-as above. A missing or wrong-type icon blocks validation only when its override
-is selected. Reset Defaults clears the overrides and restores the starting settings.
+Exchanged files are under the system temporary directory in a new
+**CCDASTRO_SyQon_<random>** folder per run: input/output FITS for Parallax/Prism,
+input/output TIFF for Starless. Known files are removed after the child stops;
+cleanup failures or a child that cannot be stopped leave the folder for inspection.
+The path is printed in the Process Console. No recursive deletion is used.
+SyQon may make vendor licensing/model-provisioning connections; management stays
+in its external application. See the security disclosure and vendor documentation.
 
-The workflow uses **Subtraction** for Starless stars-only generation on its
-linear input and verifies that a stars-only view was created before continuing.
-**SyQon Starless requires manual interaction; this stage cannot run unattended.**
-With the Starless v3.0.2 integration, the workflow waits while the Starless
-application window is open. Click **Generate Starless** and monitor PixInsight's
-**Process Console** for processing completion, rather than relying on the
-Starless window to announce it. Once processing has finished, close the Starless
-window. Only then can the workflow import the
-result and continue. Waiting at this step does not mean PixInsight is frozen.
-Cancellation, timeout, or an output import error stops the workflow.
-
-The workflow configuration dialog closes during processing so the Process
-Console and native progress windows remain accessible, including during GraXpert.
-The configuration dialog returns after completion or failure.
+The workflow dialog closes during processing and returns after completion or
+failure; use the Process Console to follow progress.
 
 ## Run a workflow
 
@@ -1040,7 +1037,7 @@ failure cleanup, denoise blending, preview controls, resize geometry and saving.
   stretch. Disable it when manual GHS or HistogramTransformation work is desired.
 - Native process adapters use conservative defaults. Unrecognized optional
   third-party parameters retain the installed process defaults.
-- SyQon choices require the vendor application, supported integration, executable,
+- SyQon choices require the vendor application, supported executable,
   and applicable models/license. Workspace icons are optional overrides.
 - SyQon Starless requires a manual **Generate Starless** click and closing its
   window after processing; workflows using this stage are not fully unattended.
@@ -1128,7 +1125,7 @@ The Crop stage opens an internal preview on a separate linear working copy. Drag
 - GradientCorrection, GraXpert, Seti Astro Automatic DBE, or MultiscaleGradientCorrection with SPFC.
 - Optional separate registered LRGB masters, matched luminance stretch and L-weight review.
 - BlurXTerminator or SyQon Parallax.
-- NoiseXTerminator, MLDenoise (installed process defaults), or SyQon Prism/DeepPrism.
+- NoiseXTerminator, MLDenoise (workflow settings), or SyQon Prism/DeepPrism.
   MLDenoise requires the process to be installed and available to scripts. It uses
   the same full-image or starless-branch placement as the other noise tools.
   The workflow reports it as unavailable if the process is missing.
@@ -1164,6 +1161,10 @@ node pixinsight/tools/validate-workflow.js
 
 ## Revision history
 
+- **v1.1.46:** Restores SyQon through direct user-selected external executable
+  file interfaces, and AutoDBE through an attributed CC BY-NC 4.0 engine included
+  at signing time. Restores choices/setup controls and documents dependencies,
+  file locations, model/licensing behavior and ImageSolver re-signing requirements.
 - **v1.1.45:** Removes suspended SyQon/AutoDBE tools from selectable dropdowns and
   displays their names in gray with temporarily-unavailable labels. Saved suspended
   selections disable the stage rather than silently running another tool. Hides

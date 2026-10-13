@@ -5,18 +5,18 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.45.zip" sha1="7cc4700c1703ba9aed50da4f7857947c4d4e6ab1" type="script" releaseDate="20261013124317">
-         <title>CCDASTRO Workflow Manager 1.1.45</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.46.zip" sha1="8af479e064d12413cc742f12ac394e4698b5f60e" type="script" releaseDate="20261013212245">
+         <title>CCDASTRO Workflow Manager 1.1.46</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
-               <li>v1.1.45 removes suspended SyQon and AutoDBE tools from selectable dropdowns and displays gray temporarily-unavailable notices below their stages.</li>
-               <li>Restoring a saved suspended selection disables its stage rather than silently executing a replacement. Inactive SyQon setup controls are hidden; stored settings are retained.</li>
-               <li>The complete native PixInsight dialog check and all 23 regression scripts passed.</li>
-               <li>Retains the script-loading fix and CPD transition safeguards. Native tools remain available; dependency review and PTeam clarification remain open.</li>
+               <li>v1.1.46 restores SyQon Parallax, Prism and Starless through independently installed, user-selected external executables and local image files. No vendor scripts or models are loaded into PixInsight.</li>
+               <li>Restores Seti Astro AutoDBE through a fixed, attributed engine included in the signed package under CC BY-NC 4.0 for noncommercial use.</li>
+               <li>Restores tool choices and setup controls; documents external programs, file locations, licensing and network behavior in line with PTeam clarification.</li>
+               <li>All 23 regression scripts passed. Native Parallax, Prism and AutoDBE synthetic-image checks passed; Float32 TIFF exchange and stars subtraction passed with a fixture. Interactive Starless inference remains a user test.</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-13T12:43:28.108Z" encoding="Base64">UXD042UKd1AYaXMAmlfL8gj9v67vSDeHdFgqd2Z34wYOw9ephP7eaUFdAYd5hL53eqP8HQ4pbfl/VfaMt/54Bw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-13T21:22:57.343Z" encoding="Base64">09Xzq6ECV+9qht1gA1I1vFBOFdkuT2UFWEKfFj3MHCK9M2djAo8IWl9MK3B2ciBgqRylhgaSHuQ7Kb/wFqa0Bg==</Signature>

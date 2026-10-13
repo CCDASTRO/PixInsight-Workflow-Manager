@@ -15,6 +15,7 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $sourceScript = Join-Path $repositoryRoot 'pixinsight\CCDASTROWorkflowManager.js'
 $sourceSignature = Join-Path $repositoryRoot 'pixinsight\CCDASTROWorkflowManager.xsgn'
+$sourceEngine = Join-Path $repositoryRoot 'pixinsight\CCDASTROAutoDBEEngine.jsh'
 $updatesDirectory = Join-Path $repositoryRoot 'updates'
 $stageRoot = Join-Path $PSScriptRoot '.stage'
 $stageScriptDirectory = Join-Path $stageRoot 'src\scripts\CCDASTRO'
@@ -31,6 +32,15 @@ if (-not (Test-Path -LiteralPath $sourceSignature -PathType Leaf)) {
     throw "Certified PixInsight signature not found: $sourceSignature. Sign the final script before building the release."
 }
 
+if (-not (Test-Path -LiteralPath $sourceEngine -PathType Leaf)) {
+    throw 'Included AutoDBE engine is missing. Restore the matching signed-release dependency.'
+}
+$engineBytes = [System.IO.File]::ReadAllBytes($sourceEngine)
+$engineText = [System.IO.File]::ReadAllText($sourceEngine)
+if ([regex]::IsMatch($engineText, '(?<!\r)\n') -or
+    ($engineBytes.Length -ge 3 -and $engineBytes[0] -eq 0xEF -and $engineBytes[1] -eq 0xBB -and $engineBytes[2] -eq 0xBF)) {
+    throw 'Included engine must use CRLF and UTF-8 without a BOM before signing.'
+}
 $sourceText = [System.IO.File]::ReadAllText($sourceScript)
 $versionMatches = [regex]::Matches($sourceText, '#define\s+VERSION\s+"([^"]+)"')
 if ($versionMatches.Count -eq 0) {
@@ -55,6 +65,7 @@ $stagedScriptPath = Join-Path $stageScriptDirectory 'CCDASTROWorkflowManager.js'
 $stagedSignaturePath = Join-Path $stageScriptDirectory 'CCDASTROWorkflowManager.xsgn'
 Copy-Item -LiteralPath $sourceScript -Destination $stagedScriptPath
 Copy-Item -LiteralPath $sourceSignature -Destination $stagedSignaturePath
+Copy-Item -LiteralPath $sourceEngine -Destination (Join-Path $stageScriptDirectory "CCDASTROAutoDBEEngine.jsh")
 $stagedSource = [System.IO.File]::ReadAllText($stagedScriptPath)
 if ([regex]::IsMatch($stagedSource, '(?<!\r)\n')) {
     throw 'Signed PixInsight script contains bare LF line endings. Normalize the final source before signing it.'
@@ -82,7 +93,8 @@ try {
     $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
     $requiredEntries = @(
         'src/scripts/CCDASTRO/CCDASTROWorkflowManager.js',
-        'src/scripts/CCDASTRO/CCDASTROWorkflowManager.xsgn'
+        'src/scripts/CCDASTRO/CCDASTROWorkflowManager.xsgn',
+        'src/scripts/CCDASTRO/CCDASTROAutoDBEEngine.jsh'
     )
     # PixInsight 1.9.5 protects distribution files. Ship only our script and
     # signature; never bundle ImageSolver, etc, modules, or runtime libraries.

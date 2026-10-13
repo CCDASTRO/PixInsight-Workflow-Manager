@@ -1,11 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const source=fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
-const ctx=vm.createContext({});
+const source=fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');const ctx=vm.createContext({});
 vm.runInContext(source.slice(source.indexOf('function selectableWorkflowStep('),source.indexOf('function WorkflowRow(')),ctx);
-const original={adapterIds:['gradientCorrection','graxpert','mgc','autoDBE'],defaultAdapter:'gradientCorrection'};
-assert.deepEqual(Array.from(ctx.selectableWorkflowStep(original).adapterIds),['gradientCorrection','graxpert','mgc']);
-assert.equal(original.adapterIds.length,4);
-for(const pair of [['blurXTerminator','syqonParallax'],['noiseXTerminator','syqonPrism'],['starXTerminator','syqonStarless']])assert.deepEqual(Array.from(ctx.selectableWorkflowStep({adapterIds:pair}).adapterIds),[pair[0]]);
-assert.ok(source.includes('row.suspendedSelection = true;'));
-assert.ok(source.includes('this.unavailableNotice.enabled = false;'));
-console.log('Suspended choices excluded without mutating stage definitions; gray notices and saved-choice handling present');
+const ids=['gradientCorrection','graxpert','mgc','autoDBE'];const step=ctx.selectableWorkflowStep({adapterIds:ids});assert.deepEqual(Array.from(step.adapterIds),ids);assert.notEqual(step.adapterIds,ids);
+for(const id of ['syqonParallax','syqonPrism','syqonStarless'])assert.equal(ctx.selectableWorkflowStep({adapterIds:[id]}).adapterIds[0],id);
+assert.ok(!source.includes('row.suspendedSelection = true;'));
+console.log('Restored tool choices and saved selections remain available');

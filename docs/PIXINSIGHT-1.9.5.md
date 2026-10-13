@@ -219,3 +219,9 @@ remain. See SECURITY-AND-DEPENDENCIES.md for disclosure and outstanding audits.
 ## v1.1.44 syntax fix
 
 Uses a plain string-prefix HTTPS check to avoid PixInsight preprocessor parsing of regular-expression slashes.
+
+## v1.1.45 suspended-tool UI
+
+Suspended script tools appear as disabled informational labels below their stages,
+not selectable dropdown entries. Restoring a suspended choice disables that stage.
+Choose a native process and explicitly enable the stage to resume processing.

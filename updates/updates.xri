@@ -5,18 +5,18 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.44.zip" sha1="de527b42b2dd1be5880cdcb2e9cc16eb0b9e52cc" type="script" releaseDate="20261013121612">
-         <title>CCDASTRO Workflow Manager 1.1.44</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.45.zip" sha1="7cc4700c1703ba9aed50da4f7857947c4d4e6ab1" type="script" releaseDate="20261013124317">
+         <title>CCDASTRO Workflow Manager 1.1.45</title>
          <description>
             <p>Configurable PixInsight post-processing workflow manager.</p>
             <ul>
-               <li>v1.1.44 fixes the PixInsight script-loading syntax error in the PCC HTTPS check, using a plain string prefix instead of a regular expression.</li>
-               <li>The complete script loaded and constructed the workflow dialog in isolated native PixInsight testing. HTTPS acceptance, HTTP rejection, and all 22 regression scripts passed.</li>
-               <li>Retains the v1.1.43 security changes: dynamic third-party source loaders are removed; SyQon and AutoDBE automation remain temporarily unavailable pending a supported secure execution path.</li>
-               <li>Native process choices remain available. Security documentation is provided; dependency review and PTeam clarification remain open.</li>
+               <li>v1.1.45 removes suspended SyQon and AutoDBE tools from selectable dropdowns and displays gray temporarily-unavailable notices below their stages.</li>
+               <li>Restoring a saved suspended selection disables its stage rather than silently executing a replacement. Inactive SyQon setup controls are hidden; stored settings are retained.</li>
+               <li>The complete native PixInsight dialog check and all 23 regression scripts passed.</li>
+               <li>Retains the script-loading fix and CPD transition safeguards. Native tools remain available; dependency review and PTeam clarification remain open.</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-13T12:16:23.441Z" encoding="Base64">QE/FuVolVrNMd5yaDGLWzUuKZhEFjLDkTgTkvEE+iP8BIPEPw/u2esgEZ92kgumEhh+qnYAxfUDJ1if3UdTBAg==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-13T12:43:28.108Z" encoding="Base64">UXD042UKd1AYaXMAmlfL8gj9v67vSDeHdFgqd2Z34wYOw9ephP7eaUFdAYd5hL53eqP8HQ4pbfl/VfaMt/54Bw==</Signature>

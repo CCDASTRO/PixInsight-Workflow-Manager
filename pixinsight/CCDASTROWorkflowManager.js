@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.44"
+#define VERSION "1.1.45"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -223,6 +223,11 @@ function restoreWorkflowState(dialog)
          if (!saved)
             continue;
          row.enabled.checked = saved.enabled === true;
+         if (["syqonParallax", "syqonPrism", "syqonStarless", "autoDBE"].indexOf(saved.adapterId) >= 0)
+         {
+            row.enabled.checked = false;
+            row.suspendedSelection = true;
+         }
          for (var a = 0; a < row.step.adapterIds.length; ++a)
             if (row.step.adapterIds[a] === saved.adapterId)
             {
@@ -499,7 +504,7 @@ ProcessAdapter.prototype.execute = function(view)
 function ProcessIconAdapter(id, label, iconId)
 {
    this.id = id;
-   this.label = label;
+   this.label = label + " (temporarily unavailable)";
    this.iconId = iconId;
 }
 
@@ -632,7 +637,7 @@ function installSyQonControls(dialog)
    dialog.restoreSyQon=function(settings){var copy=JSON.parse(JSON.stringify(settings));for(var i=0;i<definitions.length;++i)validateSyQonSettings(definitions[i][0],copy[definitions[i][0]]);syqonSettings=copy;dialog.refreshSyQonControls();};
    for(var i=0;i<definitions.length;++i)(function(index){var row=dialog.rowsById[definitions[index][1]], refresh=row.refreshStatus;
       row.refreshStatus=function(){refresh.call(row);buttons[index].enabled=row.enabled.checked && row.adapterId()===definitions[index][0];};})(i);
-   dialog.restoreSyQon(defaultSyQonSettings());return box;
+   dialog.restoreSyQon(defaultSyQonSettings());box.enabled=false;box.visible=false;return box;
 }
 
 // Vendor script execution is suspended until a supported secure path is established.
@@ -1939,8 +1944,18 @@ constructor(settings)
 }
 }
 
+function selectableWorkflowStep(step)
+{
+   var copy = Object.assign({}, step);
+   copy.adapterIds = step.adapterIds.filter(function(id) {
+      return ["syqonParallax", "syqonPrism", "syqonStarless", "autoDBE"].indexOf(id) < 0;
+   });
+   return copy;
+}
 function WorkflowRow(parent, step)
 {
+   var originalStep = step;
+   step = selectableWorkflowStep(step);
    this.step = step;
    this.enabled = new CheckBox(parent);
    this.enabled.text = step.label;
@@ -1970,6 +1985,7 @@ function WorkflowRow(parent, step)
    this.setVisible = function(visible)
    {
       this.enabled.visible = visible;
+      if (this.unavailableNotice) this.unavailableNotice.visible = visible;
       this.choice.visible = visible;
       this.status.visible = visible;
       if (this.setup !== null)
@@ -1985,8 +2001,8 @@ function WorkflowRow(parent, step)
          this.setup.enabled = this.enabled.checked && (this.adapterId() === "mgc" || this.adapterId() === "autoDBE");
       if (!this.enabled.checked)
       {
-         this.status.text = this.step.id === "crop" ? "Optional" : "Skipped";
-         this.status.toolTip = "This workflow stage is disabled.";
+         this.status.text = this.suspendedSelection ? "Unavailable saved choice" : (this.step.id === "crop" ? "Optional" : "Skipped");
+         this.status.toolTip = this.suspendedSelection ? "Saved suspended tool: stage disabled. Select a native tool and enable the stage to continue." : "This workflow stage is disabled.";
          return;
       }
       if (this.step.id === "plateSolve" && imageHasAstrometricSolution(ImageWindow.activeWindow))
@@ -2013,10 +2029,21 @@ function WorkflowRow(parent, step)
    if (this.setup !== null)
       this.sizer.add(this.setup);
    this.sizer.add(this.status);
+   var unavailable = originalStep.adapterIds.filter(function(id) { return step.adapterIds.indexOf(id) < 0; });
+   if (unavailable.length)
+   {
+      this.unavailableNotice = new Label(parent);
+      this.unavailableNotice.text = unavailable.map(function(id) { return adapters[id].label; }).join("; ");
+      this.unavailableNotice.enabled = false;
+      this.unavailableNotice.toolTip = thirdPartyScriptRestriction();
+      var line = this.sizer;
+      this.sizer = new VerticalSizer; this.sizer.spacing = 2;
+      this.sizer.add(line); this.sizer.add(this.unavailableNotice);
+   }
    this.refreshChoiceHelp();
    this.refreshStatus();
    var self = this;
-   this.enabled.onCheck = function() { self.refreshStatus(); };
+   this.enabled.onCheck = function() { self.suspendedSelection = false; self.refreshStatus(); };
    this.choice.onItemSelected = function()
    {
       self.refreshChoiceHelp();

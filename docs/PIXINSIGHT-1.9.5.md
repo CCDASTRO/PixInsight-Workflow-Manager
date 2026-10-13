@@ -209,3 +209,9 @@ constructor, causing preflight or review failures. Enum values are read from the
 resolved native class. Regression and native checks now use the workflow's actual
 resolver/factory rather than a substitute returning constructor functions.
 The preflight warning now correctly describes preservation of original pixels.
+
+## v1.1.43 CPD transition
+
+Removes dynamic third-party source execution; SyQon and AutoDBE selections are
+blocked pending a secure supported execution path. Native process integrations
+remain. See SECURITY-AND-DEPENDENCIES.md for disclosure and outstanding audits.

@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.42
+# CCDASTRO PixInsight Workflow Manager v1.1.43
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -40,6 +40,26 @@ If the `CCDASTRO` menu is missing after the first installation, open
 **Script > Feature Scripts**, click **Add**, and select PixInsight's installed
 `src/scripts` directory. This forces PixInsight to scan and register newly
 installed script folders. Restart PixInsight after the scan.
+
+## Security and CPD execution policy (v1.1.43)
+
+SyQon Parallax, Prism and Starless, and Seti Astro Automatic DBE are temporarily
+unavailable inside this workflow. Their previous source-loading adapters have
+been removed. Existing saved choices and optional icons cannot bypass this
+restriction: validation stops before processing and execution also fails closed.
+Select an installed native process instead. You may run vendor scripts separately
+through PixInsight, subject to its normal security checks and vendor instructions.
+Stored SyQon settings remain for possible future compatibility; they do not enable
+execution. Earlier sections describing automatic vendor-script integration apply
+to older releases only. This is a temporary restriction, not a finding that the
+vendor products themselves violate CPD rules.
+
+The installed native-process choices remain available, including GraXpert,
+RC-Astro tools, PCC/SPCC, SPFC/MGC, HistogramTransformation and MAS. A complete
+dependency audit and PTeam clarification remain pending; this release does not
+claim PTeam approval or comprehensive CPD certification.
+
+See [Security, network and storage disclosure](SECURITY-AND-DEPENDENCIES.md).
 
 ## Install manually as a Feature Script (advanced alternative)
 
@@ -326,7 +346,7 @@ GradientCorrection, GraXpert and MGC. Install **Automatic DBE 1.6** from
 [Seti Astro's PixInsight scripts](https://www.setiastro.com/pjsr-scripts).
 The workflow uses the installed AutoDBE.js; no vendor code is redistributed.
 
-No icon is required for vendor defaults. For custom settings, open Automatic DBE,
+In v1.1.43 this integration is suspended; the following describes earlier releases. No icon was required for vendor defaults. For custom settings, open Automatic DBE,
 configure it, drag its new-instance triangle to the workspace, and rename the
 Script icon **CCDASTRO_AutoDBE**. Keep that icon available when running the workflow.
 The gradient **Setup...** button provides these instructions. The selected tool
@@ -438,7 +458,7 @@ calibration on top of the other. Calibration establishes color balance; stretchi
 curves, and saturation still determine the final appearance. PCC does not reproduce
 Photoshop Auto Color or HDR Toning automatically.
 
-## Configure SyQon choices
+## Configure SyQon choices (execution suspended in v1.1.43)
 
 SyQon tools no longer require workspace icons by default. Install the vendor
 application, its models/license as applicable, and its PixInsight integration.
@@ -1131,7 +1151,7 @@ The Crop stage opens an internal preview on a separate linear working copy. Drag
 ## Files
 
 - `CCDASTROWorkflowManager.js` - installable PJSR script.
-- `CCDASTROWorkflowManager.xsgn` - certified signature generated for the final release script.
+- `CCDASTROWorkflowManager.xsgn` - CPD code signature generated for the final release script.
 - `workflows/color-master-v1.1.0.json` - version 3 profile-aware workflow definition.
 - `workflows/color-master-v1.1.0.schema.json` - JSON Schema.
 - `tools/validate-workflow.js` - dependency-free structure/order validator.
@@ -1144,6 +1164,11 @@ node pixinsight/tools/validate-workflow.js
 
 ## Revision history
 
+- **v1.1.43:** Removes dynamic vendor-script source loaders and temporarily blocks
+  SyQon/AutoDBE execution pending a supported secure integration. Adds security,
+  dependency, network and storage disclosure; requires HTTPS for direct PCC server
+  settings. Clarifies that a blank SPFC filter-library field uses the installed
+  filters.xspd library, with the default path in its tooltip.
 - **v1.1.42:** Fixes native direct-process construction and enumeration lookup using
   the workflow factory; corrects the outdated active-view preflight warning.
 - **v1.1.41:** Adds direct native setup for PCC, MLDenoise, SPFC/MGC, histogram/MAS

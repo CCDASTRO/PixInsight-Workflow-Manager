@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.42"
+#define VERSION "1.1.43"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -31,7 +31,7 @@ var SYQON_STARLESS_ICON = "CCDASTRO_Starless";
 var adapterHelp = {
    interactiveCrop: "Review a rectangular crop on a separate linear copy and return to workflow settings.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
-   autoDBE: "Runs installed Seti Astro Automatic DBE 1.6. Uses vendor defaults or an optional CCDASTRO_AutoDBE Script icon; corrects only the working copy. Setup explains configuration.",
+   autoDBE: "Temporarily unavailable pending a CPD-compliant script execution path. Choose a native gradient process.",
    graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
    mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Configure camera/filter curves and MARS files through gradient Setup; advanced icons are optional. SPCC remains separate.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
@@ -547,28 +547,7 @@ function discoverSyQonPath(id)
 
 ProcessIconAdapter.prototype.configuredProcess = function()
 {
-   var definition=syqonEngineDefinition(this.id);
-   var scriptPath=CoreApplication.srcDirPath + "/scripts/SyQon_" + definition.name + ".js";
-   if (!File.exists(scriptPath)) throw new Error("Install the SyQon " + definition.name + " PixInsight script.");
-   var settings=syqonSettings[this.id];
-   if (settings.useIcon)
-   {
-      if (ProcessInstance.icons().indexOf(this.iconId)<0) throw new Error("Optional SyQon icon override selected: create " + this.iconId + ", or disable its override in SyQon settings.");
-      var icon=ProcessInstance.fromIcon(this.iconId);
-      if (!icon || icon.processId()!=="Script" || !Array.isArray(icon.parameters)) throw new Error(this.iconId + " must be a configured SyQon Script icon.");
-      // Advanced icon values are preserved; native executable validation runs on execution.
-      return icon;
-   }
-   validateSyQonSettings(this.id,settings);
-   var path=settings.path.trim() || discoverSyQonPath(this.id);
-   if (!path || !File.exists(path)) throw new Error("Choose an existing " + definition.name + " executable in SyQon settings (no icon required).");
-   if (!settings.path.trim()) settings.path=path;
-   var rows=[[definition.name.toLowerCase()+"ExePath",path],["outputTimeoutMinutes",settings.timeout],["openDialogBox",false]];
-   if (this.id==="syqonParallax") rows=rows.concat([["correctAberration",settings.correct],["sharpen",settings.sharpen/100],
-      ["starReduction",settings.reduction],["mode",settings.mode],["useMTF",true],["linkedStretch",settings.linked],["useCPU",settings.cpu]]);
-   else if (this.id==="syqonPrism") rows=rows.concat([["strength",settings.strength/100],["modelKind",settings.model],["useMTF",true],["useCPU",settings.cpu]]);
-   else rows=rows.concat([["overlap",settings.overlap],["starsOnlyMode","Subtraction"]]);
-   return {processId:function(){return "Script";},parameters:rows};
+   throw new Error(thirdPartyScriptRestriction());
 };
 ProcessIconAdapter.prototype.available = function()
 {
@@ -641,7 +620,7 @@ function configureSyQon(dialog, id)
 
 function installSyQonControls(dialog)
 {
-   var box=new GroupBox(dialog.content);box.title="SyQon settings (no icons required)";box.sizer=new HorizontalSizer;box.sizer.margin=8;box.sizer.spacing=8;
+   var box=new GroupBox(dialog.content);box.title="SyQon settings (execution temporarily unavailable)";box.sizer=new HorizontalSizer;box.sizer.margin=8;box.sizer.spacing=8;
    var definitions=[["syqonParallax","deconvolution","Parallax setup..."],["syqonPrism","noiseReduction","Prism setup..."],["syqonStarless","starSeparation","Starless setup..."]];
    var buttons=[];
    for(var i=0;i<definitions.length;++i) {
@@ -656,10 +635,7 @@ function installSyQonControls(dialog)
    dialog.restoreSyQon(defaultSyQonSettings());return box;
 }
 
-// Script.executeOn() cannot be nested inside a running PixInsight script.
-// Load the locally installed vendor implementation in its own function scope,
-// without calling its main() or changing the workflow's global Parameters.
-// Do not redistribute or modify the installed SyQon source files.
+// Vendor script execution is suspended until a supported secure path is established.
 function syqonEngineDefinition(id)
 {
    var definitions = {
@@ -672,144 +648,24 @@ function syqonEngineDefinition(id)
    return definitions[id];
 }
 
-function syqonParameterBridge(rows, view)
+function thirdPartyScriptRestriction()
 {
-   if (!Array.isArray(rows))
-      throw new Error("The SyQon icon has no Script parameter table. Recreate the icon from SyQon.");
-   var values = Object.create(null);
-   for (var i = 0; i < rows.length; ++i)
-      values[rows[i][0]] = rows[i][1];
-   return {
-      isViewTarget: true, isGlobalTarget: false, targetView: view,
-      has: function(key) { return Object.prototype.hasOwnProperty.call(values, key); },
-      getString: function(key) { return String(values[key]); },
-      getBoolean: function(key) { return values[key] === true || values[key] === "true" || values[key] === "1"; },
-      getInteger: function(key) { return parseInt(values[key], 10); },
-      getReal: function(key) { return Number(values[key]); },
-      set: function(key, value) { values[key] = value; }
-   };
+   return "This script integration is temporarily unavailable pending a CPD-compliant execution path. " +
+      "The workflow no longer loads or rewrites third-party script source. " +
+      "Choose an installed native process instead, or run the vendor script separately through PixInsight.";
 }
-
-function compileSyQonEngine(source, definition)
-{
-   // Keep the macro name inside strings: PixInsight's preprocessor expands
-   // identifier tokens even inside JavaScript regular-expression literals.
-   var versionDirective = new RegExp('^#define\\s+' + 'VER' + 'SION' +
-      '\\s+"([^"\\r\\n]+)"[^\\r\\n]*', 'm');
-   var version = source.match(versionDirective);
-   if (!version || version[1] !== definition.version)
-      throw new Error("Unsupported SyQon " + definition.name + " script version. " +
-         "Found " + (version ? version[1] : "no version declaration") +
-         "; this integration supports " + definition.version + ".");
-   // Refuse unknown preprocessor constructs rather than silently miscompile them.
-   source = source.replace(/^#(?:engine|feature-id|feature-icon|feature-info)\b[^\r\n]*/gm, "")
-      .replace(versionDirective, "");
-   if (/^\s*#/m.test(source) || !/\bmain\(\);\s*$/.test(source))
-      throw new Error("Unsupported SyQon script layout: " + definition.name);
-   source = source.replace(/\bmain\(\);\s*$/, "");
-   var name = definition.name;
-   // Mark success only after output import (including inverse stretch) returns.
-   // Vendor controllers also set 'completed' on timeout, so it is not sufficient.
-   var bridge = "\nvar imported = false;\n" +
-      "var importOutput = process" + name + "Output;\n" +
-      "process" + name + "Output = function() { " +
-      "var result = importOutput.apply(this, arguments); imported = true; return result; };\n" +
-      "return function(view) {\n" +
-      "SyQon" + name + "Parameters.load();\n" +
-      "SyQon" + name + "Parameters.openDialogBox = false;\n" +
-      (name === "Starless" ? "SyQonStarlessParameters.starsOnlyMode = 'Subtraction';\n" : "") +
-      "execute" + name + "OnWindow(view.window);\n" +
-      "if (!imported) throw new Error('SyQon " + name +
-      " did not import a result (failed, cancelled, or timed out). See the Process Console.');\n" +
-      "};\n";
-   return new Function("Parameters", "VERSION", source + bridge);
-}
-
-function prepareSyQonEngine(id, process, view)
-{
-   if (!process || process.processId() !== "Script")
-      throw new Error("The SyQon icon must be a configured Script instance.");
-   if (!view.isMainView)
-      throw new Error("SyQon workflow stages require a main image view, not a preview.");
-   var definition = syqonEngineDefinition(id);
-   var scriptPath = CoreApplication.srcDirPath + "/scripts/SyQon_" + definition.name + ".js";
-   if (!File.exists(scriptPath))
-      throw new Error("Install the SyQon " + definition.name + " PixInsight script: " + scriptPath);
-   var factory = compileSyQonEngine(File.readTextFile(scriptPath), definition);
-   var parameters = syqonParameterBridge(process.parameters, view);
-   return function() { factory(parameters, definition.version)(view); };
-}
-
-function executeSyQonEngine(id, process, view)
-{
-   var run = prepareSyQonEngine(id, process, view);
-   var definition = syqonEngineDefinition(id);
-   logLine("Running SyQon " + definition.name + " on " + view.fullId +
-      ". Its progress window will remain open while processing.");
-   run();
-   logLine("SyQon " + definition.name + " completed on " + view.fullId);
-}
-
-// Seti Astro AutoDBE is loaded from the user's installation, never bundled.
-function compileAutoDBEEngine(source)
-{
-   var directive = new RegExp('^#define\\s+'+'VER'+'SION'+'\\s+"([^"\\r\\n]+)"[^\\r\\n]*','m');
-   var version = source.match(directive);
-   if (!version || version[1] !== "1.6")
-      throw new Error("Seti Astro AutoDBE integration supports version 1.6. Update or review the installed script before using this adapter.");
-   source = source.replace(/^#(?:engine|feature-id|feature-icon|feature-info)\b[^\r\n]*/gm, "").replace(directive, "");
-   if (/^\s*#/m.test(source) || !/\bmain\(\);\s*$/.test(source))
-      throw new Error("Unsupported AutoDBE script layout.");
-   source = source.replace(/\bmain\(\);\s*$/, "");
-   var start = source.indexOf("function executeDBEWithEndPoints(");
-   var call = start < 0 ? -1 : source.indexOf("P.executeOn( targetView );", start);
-   if (call < 0) throw new Error("AutoDBE correction completion guard could not be installed.");
-   source = source.substring(0,call) +
-      "if (!P.executeOn(targetView)) throw new Error('AutoDBE correction failed.'); ccAutoDBECorrected = true;" +
-      source.substring(call+"P.executeOn( targetView );".length);
-   return new Function("Parameters", "VERSION", source +
-      "\nvar ccAutoDBECorrected = false; return function(view) {"+
-      "GradientDescentParameters.load(); GradientDescentParameters.targetView=view;"+
-      "GradientDescentParameters.replaceTarget=true; GradientDescentParameters.discardModel=true;"+
-      "executeGradientDescent(view, []); if (!ccAutoDBECorrected) throw new Error('AutoDBE did not complete correction.'); };"
-   );
-}
-
+function prepareSyQonEngine(id, process, view) { throw new Error(thirdPartyScriptRestriction()); }
+function executeSyQonEngine(id, process, view) { throw new Error(thirdPartyScriptRestriction()); }
 function AutoDBEAdapter()
 {
-   this.id = "autoDBE"; this.label = "Seti Astro Automatic DBE";
+   this.id = "autoDBE"; this.label = "Seti Astro Automatic DBE (temporarily unavailable)";
    this.iconId = "CCDASTRO_AutoDBE";
 }
-AutoDBEAdapter.prototype.scriptPath = function() { return CoreApplication.srcDirPath + "/scripts/AutoDBE.js"; };
-AutoDBEAdapter.prototype.available = function() { return File.exists(this.scriptPath()); };
-AutoDBEAdapter.prototype.requirement = function() { return "Install Seti Astro Automatic DBE 1.6 (AutoDBE.js). Optional custom Script icon: CCDASTRO_AutoDBE."; };
-AutoDBEAdapter.prototype.prepare = function(view)
-{
-   if (!this.available()) throw new Error(this.requirement());
-   if (!view.isMainView) throw new Error("Automatic DBE requires a main image view.");
-   var rows = [];
-   if (ProcessInstance.icons().indexOf(this.iconId) >= 0)
-   {
-      var process = ProcessInstance.fromIcon(this.iconId);
-      if (!process || process.processId() !== "Script" || !/AutoDBE\.js$/i.test(String(process.filePath)))
-         throw new Error("CCDASTRO_AutoDBE must be a Script icon created from Seti Astro Automatic DBE.");
-      rows = process.parameters;
-   }
-   var factory = compileAutoDBEEngine(File.readTextFile(this.scriptPath()));
-   var parameters = syqonParameterBridge(rows, view);
-   parameters.get = parameters.getString;
-   return function() { factory(parameters, "1.6")(view); };
-};
-AutoDBEAdapter.prototype.validateSetup = function(view) { this.prepare(view); };
-AutoDBEAdapter.prototype.execute = function(view)
-{
-   var run = this.prepare(view);
-   logLine("Running Seti Astro Automatic DBE on " + view.fullId + "; replacing workflow working copy, discarding gradient model.");
-   run(); checkAbortRequested();
-   logLine("Seti Astro Automatic DBE completed on " + view.fullId);
-};
+AutoDBEAdapter.prototype.available = function() { return false; };
+AutoDBEAdapter.prototype.requirement = function() { return thirdPartyScriptRestriction(); };
+AutoDBEAdapter.prototype.validateSetup = function(view) { throw new Error(thirdPartyScriptRestriction()); };
+AutoDBEAdapter.prototype.execute = function(view) { throw new Error(thirdPartyScriptRestriction()); };
 
-// A composite gradient adapter: never apply MGC without fresh flux calibration.
 // Native workflow settings: only typed, allowlisted parameters are restored.
 function nativeControlDefinitions()
 {
@@ -884,7 +740,9 @@ function configuredNativeProcess(id)
    var className=resolveProcessClass([definition.process]);if(className===null)throw new Error("Install/update PixInsight to provide "+definition.process+".");
    if(values.useIcon){if(!definition.icon || ProcessInstance.icons().indexOf(definition.icon)<0)throw new Error("Optional override selected: create "+definition.icon+", or disable its override in workflow setup.");
       var icon=ProcessInstance.fromIcon(definition.icon);if(!icon||icon.processId()!==definition.process)throw new Error(definition.icon+" must contain "+definition.process+".");return icon;}
-   validateNativeSettings(id,values);var p=createProcess(className);
+   validateNativeSettings(id,values);
+   if(id==="pcc" && !/^https:\/\//i.test(values.serverURL.trim())) throw new Error("PCC catalog server must use HTTPS.");
+   var p=createProcess(className);
    for(var i=0;i<definition.fields.length;++i){var f=definition.fields[i];
       if(["histogram","luminance","spfc","finalMLT"].indexOf(id)>=0 || f.key==="databaseFiles")continue;
       var value=values[f.key];if(f.type==="enum"){value=eval(className+"."+value);if(typeof value!=="number")throw new Error("Installed "+definition.process+" does not support "+values[f.key]);}
@@ -945,7 +803,8 @@ function configureNativeProcess(id)
          c.currentItem=Math.max(0,c.values.indexOf(current[f.key]));
       } else if(f.type==="files"){c=new TextBox(content);c.text=current[f.key];c.setMinHeight(85);}
       else{c=new Edit(content);c.text=String(current[f.key]);}
-      c.toolTip=(f.type==="number"||f.type==="integer")?"Allowed range: "+f.low+" to "+f.high:"";
+      if(id==="spfc" && f.key==="library") { label.text="Filter library (.xspd; blank = installed default):"; c.toolTip="Blank uses "+CoreApplication.srcDirPath+"/../library/filters.xspd"; }
+      else c.toolTip=(f.type==="number"||f.type==="integer")?"Allowed range: "+f.low+" to "+f.high:"";
       row.add(c,100);controls[f.key]={control:c,field:f};
       if(f.type==="file"||f.type==="files"){var browse=new PushButton(content);browse.text=f.type==="files"?"Add files...":"Browse...";browse.onClick=function(){var file=new OpenFileDialog;file.caption=f.label;file.multipleSelections=f.type==="files";if(file.execute()){if(f.type==="files")c.text+=(c.text.trim()?"\n":"")+file.fileNames.join("\n");else c.text=file.fileName;if(id==="spfc"&&f.key==="library")reloadSPFC();}};row.add(browse);controls[f.key].browse=browse;}
       content.sizer.add(row);
@@ -2170,7 +2029,7 @@ function WorkflowRow(parent, step)
          {
             if (self.step.id === "gradient" && self.adapterId() === "autoDBE")
             {
-               (new MessageBox("Seti Astro Automatic DBE setup:\n\nInstall Automatic DBE 1.6 from Seti Astro. No icon is needed for vendor defaults.\n\nFor custom settings, open Automatic DBE, configure it, and drag its new-instance triangle to the workspace. Rename the Script icon CCDASTRO_AutoDBE. Keep the icon in the workspace.\n\nThe workflow always replaces only its working copy and discards the gradient model. Automatic execution does not use manually drawn exclusion regions. For crowded nebulosity, inspect a manual result before choosing these settings.", "Automatic DBE Setup", StdIcon.Information, StdButton.Ok)).execute();
+               (new MessageBox(thirdPartyScriptRestriction(), "Automatic DBE Setup", StdIcon.Information, StdButton.Ok)).execute();
                self.refreshStatus(); return;
             }
             if (self.step.id === "gradient")
@@ -2626,7 +2485,7 @@ constructor()
    this.help.wordWrapping = true;
    this.help.text = "Choose the desired tools. Plate Solve if needed uses metadata-derived " +
       "seed values and skips an image that already has an astrometric solution. " +
-      "SyQon settings are available below; icons are optional overrides.";
+      "SyQon execution is temporarily unavailable pending CPD review; saved settings do not enable it.";
    this.inputLabel = new Label(this.content);
    this.inputLabel.frameStyle = FrameStyle.Box;
    this.inputLabel.margin = 6;

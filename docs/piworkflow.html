@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.42",
+    "softwareVersion": "1.1.43",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.42">CCDASTRO PixInsight Workflow Manager v1.1.42</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.43">CCDASTRO PixInsight Workflow Manager v1.1.43</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
@@ -198,6 +198,22 @@ The release downloads are not the normal installation route for users.</p>
 <strong>Script &gt; Feature Scripts</strong>, click <strong>Add</strong>, and select PixInsight's installed
 <code>src/scripts</code> directory. This forces PixInsight to scan and register newly
 installed script folders. Restart PixInsight after the scan.</p>
+<h2 id="security-and-cpd-execution-policy-v1.1.43">Security and CPD execution policy (v1.1.43)</h2>
+<p>SyQon Parallax, Prism and Starless, and Seti Astro Automatic DBE are temporarily
+unavailable inside this workflow. Their previous source-loading adapters have
+been removed. Existing saved choices and optional icons cannot bypass this
+restriction: validation stops before processing and execution also fails closed.
+Select an installed native process instead. You may run vendor scripts separately
+through PixInsight, subject to its normal security checks and vendor instructions.
+Stored SyQon settings remain for possible future compatibility; they do not enable
+execution. Earlier sections describing automatic vendor-script integration apply
+to older releases only. This is a temporary restriction, not a finding that the
+vendor products themselves violate CPD rules.</p>
+<p>The installed native-process choices remain available, including GraXpert,
+RC-Astro tools, PCC/SPCC, SPFC/MGC, HistogramTransformation and MAS. A complete
+dependency audit and PTeam clarification remain pending; this release does not
+claim PTeam approval or comprehensive CPD certification.</p>
+<p>See <a href="SECURITY-AND-DEPENDENCIES.md">Security, network and storage disclosure</a>.</p>
 <h2 id="install-manually-as-a-feature-script-advanced-alternative">Install manually as a Feature Script (advanced alternative)</h2>
 <p>Most users should use <strong>Install with PixInsight Update Manager</strong> at the top of
 this page. Manual installation is an alternative, not an additional required step.</p>
@@ -497,7 +513,7 @@ and SPCC requires a plate-solved image.</p>
 GradientCorrection, GraXpert and MGC. Install <strong>Automatic DBE 1.6</strong> from
 <a href="https://www.setiastro.com/pjsr-scripts">Seti Astro's PixInsight scripts</a>.
 The workflow uses the installed AutoDBE.js; no vendor code is redistributed.</p>
-<p>No icon is required for vendor defaults. For custom settings, open Automatic DBE,
+<p>In v1.1.43 this integration is suspended; the following describes earlier releases. No icon was required for vendor defaults. For custom settings, open Automatic DBE,
 configure it, drag its new-instance triangle to the workspace, and rename the
 Script icon <strong>CCDASTRO_AutoDBE</strong>. Keep that icon available when running the workflow.
 The gradient <strong>Setup...</strong> button provides these instructions. The selected tool
@@ -594,7 +610,7 @@ and PCC, using identical <strong>Linked Auto Histogram</strong> settings. Do not
 calibration on top of the other. Calibration establishes color balance; stretching,
 curves, and saturation still determine the final appearance. PCC does not reproduce
 Photoshop Auto Color or HDR Toning automatically.</p>
-<h2 id="configure-syqon-choices">Configure SyQon choices</h2>
+<h2 id="configure-syqon-choices-execution-suspended-in-v1.1.43">Configure SyQon choices (execution suspended in v1.1.43)</h2>
 <p>SyQon tools no longer require workspace icons by default. Install the vendor
 application, its models/license as applicable, and its PixInsight integration.
 Supported script versions are Parallax v1.5, Prism v1.5, and Starless v3.0.2.
@@ -1270,7 +1286,7 @@ SyQon settings and selected override icons, and branch dependencies.</li>
 <h2 id="files">Files</h2>
 <ul>
 <li><code>CCDASTROWorkflowManager.js</code> - installable PJSR script.</li>
-<li><code>CCDASTROWorkflowManager.xsgn</code> - certified signature generated for the final release script.</li>
+<li><code>CCDASTROWorkflowManager.xsgn</code> - CPD code signature generated for the final release script.</li>
 <li><code>workflows/color-master-v1.1.0.json</code> - version 3 profile-aware workflow definition.</li>
 <li><code>workflows/color-master-v1.1.0.schema.json</code> - JSON Schema.</li>
 <li><code>tools/validate-workflow.js</code> - dependency-free structure/order validator.</li>
@@ -1280,6 +1296,12 @@ SyQon settings and selected override icons, and branch dependencies.</li>
 </code></pre>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.43:</strong> Removes dynamic vendor-script source loaders and temporarily blocks
+SyQon/AutoDBE execution pending a supported secure integration. Adds security,
+dependency, network and storage disclosure; requires HTTPS for direct PCC server
+settings. Clarifies that a blank SPFC filter-library field uses the installed
+filters.xspd library, with the default path in its tooltip.</p>
+</li>
 <li><p><strong>v1.1.42:</strong> Fixes native direct-process construction and enumeration lookup using
 the workflow factory; corrects the outdated active-view preflight warning.</p>
 </li>

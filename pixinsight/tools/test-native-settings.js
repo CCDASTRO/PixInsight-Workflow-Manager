@@ -40,3 +40,8 @@ controls=[];action=()=>{const fields=controls.filter(c=>c instanceof C&&typeof c
 controls=[];action=()=>{const c=controls.find(c=>c.text&&c.text.includes('icon override'));c.checked=true;c.onCheck();assert.equal(controls.find(c=>c.text==='Custom').enabled,false);controls.find(c=>c.text==='Cancel').onClick();};ctx.configureNativeProcess('pcc');assert.equal(ctx.nativeSettings.pcc.useIcon,false);
 assert.match(source,/schemaVersion: 11/);assert.match(source,/dialog\.restoreNative\(state\.native\)/);assert.match(source,/restoreNative\(defaultNativeSettings\(\)\)/);
 console.log('Direct PCC/MLD/HT/MAS/SPFC/MGC/final-denoise controls, validation, file paths, explicit overrides, masks/layers, Save/Cancel and state restoration passed.');
+
+ctx.nativeSettings.pcc.serverURL='http://example.test/';
+assert.throws(()=>ctx.configuredNativeProcess('pcc'),/HTTPS/);
+ctx.nativeSettings.pcc.serverURL='https://vizier.cds.unistra.fr/';
+assert.equal(ctx.configuredNativeProcess('pcc').applyCalibration,true);

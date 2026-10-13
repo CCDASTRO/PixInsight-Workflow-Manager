@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
 new vm.Script(source.replace(/^#.*$/gm,''));
-const code=source.slice(source.indexOf('// Direct SyQon file-interface adapter.'),source.indexOf('// Fixed licensed engine included'));
+const code=source.slice(source.indexOf('// Normalize only paths'),source.indexOf('// Fixed licensed engine included'));
 function fixture(outcome='success') {
  let files=new Set(['/tools/chosen.exe']),calls=[],closed=[],time=0,targetChanges=0,aborts=0;
  const img=()=>({width:32,height:32,numberOfChannels:3,isColor:true,minimum:()=>.01,maximum:()=>.9,assign(){targetChanges++;}});
@@ -16,11 +16,13 @@ function fixture(outcome='success') {
  const defaults={useIcon:false,path:'/tools/chosen.exe',timeout:1,correct:true,sharpen:25,reduction:2,mode:'classic',linked:true,cpu:false,strength:85,model:'prism_deep',overlap:64};
  const ctx=vm.createContext({JSON,Date:{now:()=>time},Math:Object.assign(Object.create(Math),{mtf:()=>.2}),finiteNumber:Number.isFinite,
  syqonSettings:{syqonParallax:{...defaults},syqonPrism:{...defaults},syqonStarless:{...defaults}},validateSyQonSettings(){},adapters:{syqonParallax:{iconId:'icon'}},ProcessInstance:{icons:()=>[],fromIcon:()=>null},
- File:{systemTempDirectory:'/temp',uniqueFileName:()=>'/temp/owned-run',exists:p=>files.has(p),createDirectory(){},remove:p=>files.delete(p),removeDirectory:p=>calls.push('remove-directory')},
+ syqonEngineDefinition:id=>({name:id==='syqonParallax'?'Parallax':id==='syqonPrism'?'Prism':'Starless'}),
+ File:{directoryExists:p=>p==='/tools',readTextFile:()=>'/tools/chosen.exe',systemTempDirectory:'/temp',uniqueFileName:()=>'/temp/owned-run',exists:p=>files.has(p),createDirectory(){},remove:p=>files.delete(p),removeDirectory:p=>calls.push('remove-directory')},
  cloneHDRView:clone,HistogramTransformation:class{executeOn(){calls.push({H:this.H});return true;}},PixelMath:class{executeOn(){return outcome!=='stars-failure';}},
  ImageDescription:class{},FileFormat:class{},FileFormatInstance:class{setOptions(d){assert.equal(d.bitsPerSample,32);assert.equal(d.ieeefpSampleFormat,true);return true;}create(p){files.add(p);return true;}writeImage(){return true;}close(){}},
  ImageWindow:{open:()=>{const w=clone(view,'output');if(outcome==='wrong-size')w.mainView.image.width=31;return [w];}},
  UndoFlag:{NoSwapFile:0},logLine(){},checkAbortRequested(){if(outcome==='abort'&&++aborts>0)throw Error('aborted');},ExternalProcess});
+ vm.runInContext(source.slice(source.indexOf("function discoverSyQonPath("),source.indexOf("ProcessIconAdapter.prototype.configuredProcess")),ctx);
  vm.runInContext(code,ctx);return {ctx,view,calls,closed,files,changes:()=>targetChanges};
 }
 for(const id of ['syqonParallax','syqonPrism','syqonStarless']){
@@ -34,7 +36,7 @@ for(const outcome of ['failed','start-failure','missing','wrong-size','timeout',
  if(['start-failure','timeout','abort'].includes(outcome))assert.ok(f.calls.includes('terminate'));
 }
 let f=fixture('stars-failure');assert.throws(()=>f.ctx.executeSyQonEngine('syqonStarless',f.ctx.configuredSyQonExecutable('syqonStarless'),f.view));assert.equal(f.changes(),0);
-f=fixture();f.ctx.syqonSettings.syqonPrism.path='';assert.throws(()=>f.ctx.configuredSyQonExecutable('syqonPrism'),/Select/);
+f=fixture();f.ctx.syqonSettings.syqonPrism.path='';assert.throws(()=>f.ctx.configuredSyQonExecutable('syqonPrism'),/executable not found/);
 assert.ok(!source.includes('new Function('));assert.ok(!source.includes('compileSyQonEngine'));
 console.log('Direct SyQon argument, file exchange, reversible transfer, stars, cancellation, timeout and failure-preservation tests passed');
 
@@ -42,3 +44,10 @@ f=fixture();f.ctx.syqonSettings.syqonParallax.useIcon=true;
 f.ctx.ProcessInstance.icons=()=>['icon'];
 f.ctx.ProcessInstance.fromIcon=()=>({processId:()=> 'Script',parameters:[['parallaxExePath','/tools/chosen.exe'],['outputTimeoutMinutes','20'],['correctAberration','false'],['linkedStretch','1'],['sharpen','0.3']]});
 const override=f.ctx.configuredSyQonExecutable('syqonParallax');assert.equal(override.timeout,20);assert.equal(override.correct,false);assert.equal(override.linked,true);assert.equal(override.sharpen,30);
+
+// Existing vendor configuration is read only and used only when the workflow path is empty.
+f=fixture();f.ctx.syqonSettings.syqonPrism.path='';f.files.add('/temp/SyQonPrismCLI/syqon_prism_config.csv');assert.equal(f.ctx.configuredSyQonExecutable('syqonPrism').path,'/tools/chosen.exe');
+f.ctx.syqonSettings.syqonPrism.path='/explicit/missing.exe';assert.throws(()=>f.ctx.configuredSyQonExecutable('syqonPrism'),/explicit\/missing/);
+f.ctx.syqonSettings.syqonPrism.path='"/tools/chosen.exe"';assert.equal(f.ctx.configuredSyQonExecutable('syqonPrism').path,'/tools/chosen.exe');
+f.files.add('/tools/prism_cli.exe');f.ctx.syqonSettings.syqonPrism.path='/tools';assert.equal(f.ctx.configuredSyQonExecutable('syqonPrism').path,'/tools/prism_cli.exe');
+assert.equal(f.ctx.normalizeSyQonPath('syqonPrism','"C:\\Tools\\prism_cli.exe"'),'C:/Tools/prism_cli.exe');

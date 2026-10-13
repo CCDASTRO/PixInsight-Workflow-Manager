@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.1.46",
+    "softwareVersion": "1.1.47",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.46">CCDASTRO PixInsight Workflow Manager v1.1.46</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.1.47">CCDASTRO PixInsight Workflow Manager v1.1.47</h1>
 <p>This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage and setup guide</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
@@ -625,7 +625,10 @@ different interface and is not interchangeable with these executables.</p>
 <li>Install the selected SyQon application, required models and license separately.</li>
 <li>Select the workflow stage/tool, then click its <strong>SyQon setup</strong> button.</li>
 <li>Browse to the executable, or review the suggested path, and <strong>Save settings</strong>.
-Discovery is a setup hint only; an empty saved path cannot launch a program.</li>
+An empty workflow path uses the executable you previously selected in the vendor
+configuration. The workflow only reads that configuration; it does not change
+vendor settings. An explicitly saved workflow path takes priority. Quotes are
+stripped, and an executable folder is resolved to its known program file.</li>
 <li>Adjust the controls and <strong>Validate</strong>. Remember workflow settings retains paths
 and values if enabled. No workspace icon is required.</li>
 </ol>
@@ -1279,6 +1282,10 @@ SyQon settings and selected override icons, and branch dependencies.</li>
 </code></pre>
 <h2 id="revision-history">Revision history</h2>
 <ul>
+<li><p><strong>v1.1.47:</strong> Detects vendor-configured SyQon executables when workflow paths are
+empty; explicitly saved workflow paths take priority. Accepts quoted paths and
+known executable folders. Missing-path errors show the actual resolved value.</p>
+</li>
 <li><p><strong>v1.1.46:</strong> Restores SyQon through direct user-selected external executable
 file interfaces, and AutoDBE through an attributed CC BY-NC 4.0 engine included
 at signing time. Restores choices/setup controls and documents dependencies,

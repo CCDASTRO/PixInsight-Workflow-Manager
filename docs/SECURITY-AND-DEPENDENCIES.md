@@ -1,4 +1,4 @@
-# Security, network and storage disclosure — v1.1.46
+# Security, network and storage disclosure — v1.1.47
 
 A CPD signature establishes developer identity and integrity, not PTeam product
 approval. This implementation follows the execution routes in PTeam's technical
@@ -28,8 +28,12 @@ guard remains. PixInsight's own swap/undo files use its user-configured location
 
 The selected stages launch independently installed parallax_cli (aberration
 correction/sharpening/reduction), prism_cli (denoising), or SyQonStarless (star
-removal). The user selects/reviews a path in setup and saves it; discovery alone
-cannot launch a program. ExternalProcess receives an executable and argument
+removal). The user selects the SyQon tool in the workflow. An explicitly saved workflow
+path takes priority; when it is empty, the path previously selected in the vendor
+configuration is read from the corresponding system-temp SyQon*CLI config CSV.
+Vendor settings are never written. Setup displays the resolved path and permits
+an override; launching still requires Run Workflow. Installed-location guesses
+are setup suggestions only and are not used as an automatic launch fallback. ExternalProcess receives an executable and argument
 array directly, with no command shell. There is no nested Script instance,
 installed-script source loader, API emulation, or SyQon model/runtime loaded in
 PixInsight. Vendor scripts are not required to run these stages.

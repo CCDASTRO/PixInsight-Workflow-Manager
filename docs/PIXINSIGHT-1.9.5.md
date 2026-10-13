@@ -240,3 +240,9 @@ image export/import and inverse transfer; the included AutoDBE corrected a
 512x512 synthetic gradient. Starless TIFF/subtraction mechanics use an external
 copy-only fixture test; interactive vendor neural inference still needs user
 validation. These checks do not establish image quality on astronomical targets.
+
+## v1.1.47 SyQon path resolution
+
+An empty workflow path now reads the existing vendor configuration without
+modifying it. Explicit paths retain priority. Known executable folders and
+quoted paths are normalized; missing-path diagnostics include the resolved path.

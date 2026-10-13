@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.46"
+#define VERSION "1.1.47"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -532,15 +532,16 @@ function validateSyQonSettings(id, settings)
    return settings;
 }
 
-function discoverSyQonPath(id)
+function discoverSyQonPath(id, configuredOnly)
 {
    var name=syqonEngineDefinition(id).name;
    var config=File.systemTempDirectory + "/SyQon" + name + "CLI/syqon_" + name.toLowerCase() + "_config.csv";
    if (File.exists(config))
    {
-      var path=File.readTextFile(config).split(/\r?\n/)[0].trim();
-      if (path && File.exists(path)) return path;
+      var path=normalizeSyQonPath(id,File.readTextFile(config).split(/\r?\n/)[0]);
+      if (path && File.exists(path) && !File.directoryExists(path)) return path;
    }
+   if (configuredOnly) return "";
    if (id === "syqonStarless")
    {
       var candidates=["C:/Program Files/SyQon/Starless/SyQonStarless.exe", "/Applications/SyQonStarless.app/Contents/MacOS/SyQonStarless"];
@@ -577,7 +578,7 @@ function configureSyQon(dialog, id)
    var icon=new CheckBox(d); icon.text="Use " + adapters[id].iconId + " icon override (optional)"; icon.checked=current.useIcon;
    d.sizer.add(icon);
    var hint=new Label(d); hint.wordWrapping=true;
-   hint.text="Configure the executable once. Workflow settings are remembered when Remember workflow settings is enabled. Icon override ignores these fields.";
+   hint.text="Uses the workflow executable path first; an empty path uses your existing vendor configuration (read only). Browse to override it. Remember workflow settings retains your selection. Icon override ignores these fields.";
    d.sizer.add(hint);
    var pathRow=new HorizontalSizer; pathRow.spacing=8;
    var path=new Edit(d); path.text=current.path || discoverSyQonPath(id); path.setMinWidth(440);
@@ -612,7 +613,7 @@ function configureSyQon(dialog, id)
          else if(id==="syqonPrism") {v.strength=controls.strength.value;v.model=controls.model.currentItem===0?"prism_mini":"prism_deep";v.cpu=controls.cpu.checked;}
          else v.overlap=controls.overlap.currentItem===0?64:128;
          validateSyQonSettings(id,v);
-         if(!v.useIcon && (!v.path || !File.exists(v.path))) throw new Error("Select an existing executable before saving these settings.");
+         if(!v.useIcon){v.path=resolveSyQonPath(id,v.path);if(!v.path||!File.exists(v.path)||File.directoryExists(v.path))throw new Error("Executable not found: "+(v.path||"<empty>")+". Select the .exe file or its containing folder.");}
          accepted=v;d.ok();
       } catch(e) {(new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok)).execute();}
    };
@@ -636,7 +637,7 @@ function installSyQonControls(dialog)
    dialog.restoreSyQon(defaultSyQonSettings());return box;
 }
 
-// Vendor script execution is suspended until a supported secure path is established.
+// Tool names only; installed vendor scripts are never executed.
 function syqonEngineDefinition(id)
 {
    var definitions = {
@@ -647,6 +648,24 @@ function syqonEngineDefinition(id)
    if (!definitions[id])
       throw new Error("Unsupported SyQon adapter: " + id);
    return definitions[id];
+}
+
+// Normalize only paths, never commands or executable code.
+function normalizeSyQonPath(id,path)
+{
+   path=String(path||"").trim();
+   if(path.length>1 && ((path.charAt(0)==='"' && path.charAt(path.length-1)==='"') || (path.charAt(0)==="'" && path.charAt(path.length-1)==="'")))path=path.substring(1,path.length-1).trim();
+   path=path.split("\\").join("/");
+   if(path && File.directoryExists(path)) {
+      var names=id==="syqonParallax"?["parallax_cli.exe","parallax_cli"]:id==="syqonPrism"?["prism_cli.exe","prism_cli"]:["SyQonStarless.exe","SyQonStarless","Contents/MacOS/SyQonStarless"];
+      for(var i=0;i<names.length;++i){var candidate=path+"/"+names[i];if(File.exists(candidate)&&!File.directoryExists(candidate))return candidate;}
+   }
+   return path;
+}
+function resolveSyQonPath(id,path)
+{
+   var selected=normalizeSyQonPath(id,path);
+   return selected || discoverSyQonPath(id,true);
 }
 
 // Direct SyQon file-interface adapter. No vendor script code is loaded at runtime.
@@ -667,9 +686,10 @@ function configuredSyQonExecutable(id)
          if(key==="sharpen")values.sharpen=Number(value)*100;if(key==="starReduction")values.reduction=Number(value);if(key==="strength")values.strength=Number(value)*100;}
       validateSyQonSettings(id,values);
    }
-   // Discovery is a setup hint only. Saving a chosen path is required before launch.
-   if(!values.path.trim()||!File.exists(values.path.trim()))throw new Error("Select the installed SyQon executable in its setup dialog and Save settings.");
-   values.path=values.path.trim();return values;
+   // A previously selected vendor path is allowed for an explicitly selected workflow tool.
+   values.path=resolveSyQonPath(id,values.path);
+   if(!values.path||!File.exists(values.path)||File.directoryExists(values.path))throw new Error("SyQon "+syqonEngineDefinition(id).name+" executable not found: "+(values.path||"<empty; no saved vendor executable found>")+". Browse to its executable in workflow setup and Save settings.");
+   return values;
 }
 function syqonCommandArguments(id,values,input,output)
 {

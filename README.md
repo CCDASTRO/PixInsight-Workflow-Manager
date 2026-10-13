@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.1.46
+# CCDASTRO PixInsight Workflow Manager v1.1.47
 
 This directory contains a native PixInsight JavaScript Runtime (PJSR) workflow
 manager for an integrated linear color master or separate registered LRGB masters.
@@ -472,7 +472,10 @@ different interface and is not interchangeable with these executables.
 1. Install the selected SyQon application, required models and license separately.
 2. Select the workflow stage/tool, then click its **SyQon setup** button.
 3. Browse to the executable, or review the suggested path, and **Save settings**.
-   Discovery is a setup hint only; an empty saved path cannot launch a program.
+   An empty workflow path uses the executable you previously selected in the vendor
+   configuration. The workflow only reads that configuration; it does not change
+   vendor settings. An explicitly saved workflow path takes priority. Quotes are
+   stripped, and an executable folder is resolved to its known program file.
 4. Adjust the controls and **Validate**. Remember workflow settings retains paths
    and values if enabled. No workspace icon is required.
 
@@ -1161,6 +1164,9 @@ node pixinsight/tools/validate-workflow.js
 
 ## Revision history
 
+- **v1.1.47:** Detects vendor-configured SyQon executables when workflow paths are
+  empty; explicitly saved workflow paths take priority. Accepts quoted paths and
+  known executable folders. Missing-path errors show the actual resolved value.
 - **v1.1.46:** Restores SyQon through direct user-selected external executable
   file interfaces, and AutoDBE through an attributed CC BY-NC 4.0 engine included
   at signing time. Restores choices/setup controls and documents dependencies,

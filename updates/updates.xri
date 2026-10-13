@@ -5,18 +5,17 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.1.46.zip" sha1="8af479e064d12413cc742f12ac394e4698b5f60e" type="script" releaseDate="20261013212245">
-         <title>CCDASTRO Workflow Manager 1.1.46</title>
+      <package fileName="CCDASTROWorkflowManager-1.1.47.zip" sha1="d217f2c91244851715981ac2b79d2d7bbe197d88" type="script" releaseDate="20261013214558">
+         <title>CCDASTRO Workflow Manager 1.1.47</title>
          <description>
-            <p>Configurable PixInsight post-processing workflow manager.</p>
+            <p>v1.1.47 fixes SyQon executable setup detection for Prism, Starless and Parallax.</p>
             <ul>
-               <li>v1.1.46 restores SyQon Parallax, Prism and Starless through independently installed, user-selected external executables and local image files. No vendor scripts or models are loaded into PixInsight.</li>
-               <li>Restores Seti Astro AutoDBE through a fixed, attributed engine included in the signed package under CC BY-NC 4.0 for noncommercial use.</li>
-               <li>Restores tool choices and setup controls; documents external programs, file locations, licensing and network behavior in line with PTeam clarification.</li>
-               <li>All 23 regression scripts passed. Native Parallax, Prism and AutoDBE synthetic-image checks passed; Float32 TIFF exchange and stars subtraction passed with a fixture. Interactive Starless inference remains a user test.</li>
+               <li>Uses the previously selected executable from existing vendor configuration when the workflow path is empty, without modifying vendor settings.</li>
+               <li>Explicit workflow paths take priority; quoted paths and executable folders are accepted, and failures report the resolved path.</li>
+               <li>23 regression checks and native PixInsight readiness checks passed. Interactive Starless inference remains subject to user testing.</li>
             </ul>
          </description>
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-13T21:22:57.343Z" encoding="Base64">09Xzq6ECV+9qht1gA1I1vFBOFdkuT2UFWEKfFj3MHCK9M2djAo8IWl9MK3B2ciBgqRylhgaSHuQ7Kb/wFqa0Bg==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-13T21:46:22.940Z" encoding="Base64">dGAslvjYP/DmV7EPRawI/YzsUCT4WSOQXZtTVxTVOItNgGRRakJU2XesEiS4BN2DEa7eTWGVphWLK3KwQ6HyDQ==</Signature>

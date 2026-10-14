@@ -1,3 +1,4 @@
+require("./advanced-test-context.cjs");
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync(require('node:path').join(__dirname,fs.existsSync(__dirname+'/CCDASTROWorkflowManager.js')?'CCDASTROWorkflowManager.js':'../CCDASTROWorkflowManager.js'),'utf8');
 const feature=source.slice(source.indexOf('// LRGB inputs are session-only'),source.indexOf('class WorkflowDialog extends Dialog'));
@@ -25,6 +26,7 @@ assert.throws(()=>ctx.buildLRGBCandidate(views.RGB,views.L,1.1),/weight/);
 // Exercise full routing with both input modes; HDR must follow RGB finishing and L review.
 Object.assign(ctx,{Console:{show(){},criticalln(s){throw Error(s);}},checkAbortRequested(){},workflowSourcePath:()=>'',workflowSourceId:()=>'',cloneWorkflowInput:v=>mk('working',true),combineLinearRGB:()=>mk('combined',true),linearStageOrder:()=>[],adapters:{},applySelectedAutoHistogram:()=>calls.push('stretch'),reviewAdaptive:v=>{calls.push('curves');return v;},inspectFinalImage(){},reviewFinishing:(v,k)=>{calls.push(k);return v;},reviewLRGB:(v,l,prepare)=>{if(d.luminancePreparation)assert.equal(prepare,true);calls.push('L');return v;},reviewFinalHDR:v=>{calls.push('HDR');return v;},saveFinalImage:()=>{calls.push('save');return '';},exportSharingImage:()=>'',MessageBox:function(){this.execute=()=>{};},TITLE:'test',StdIcon:{Information:0,Error:1},StdButton:{Ok:0}});
 vm.runInContext(source.slice(source.indexOf('function reviewPostLuminance('),source.indexOf('function inspectFinalImage(')),ctx);
+Object.assign(ctx,{VERSION:'1.2.0',captureWorkflowState:()=>({}),errorMessage:String});ctx.advancedWorkflowSettings.reports=false;
 vm.runInContext(source.slice(source.indexOf('function executeWorkflow('),source.indexOf('function applyWorkflowCrop(')),ctx);
 d.luminancePreparation={checked:true};
 for(const mode of [1,2]){

@@ -1,0 +1,6 @@
+Opening calibrated linear LDN1510 working checkpoint.
+512x512 linear crop: 512x512
+PASS actual native BlurX → NoiseX → StarX → StarX linear sequence; stars=Image01_BlurXTerminatorPass1_NoiseXTerminatorPass2_StarXTerminatorPass3_stars_2
+PASS controlled stars generated from accumulated linear star layers.
+PASS actual native post-stretch StarX → NoiseX; finite sampled output {"width":512,"height":512,"channels":3,"sampleStep":1,"bitsPerSample":32,"floatSamples":true,"rgb":[{"samples":262144,"minimum":0,"maximum":0.3255265951156616,"median":0.17827067524194717,"zeroFraction":0.000019073486328125,"saturatedFraction":0},{"samples":262144,"minimum":0.0330134853720665,"maximum":0.29843461513519287,"median":0.17804671823978424,"zeroFraction":0,"saturatedFraction":0},{"samples":262144,"minimum":0.016929350793361664,"maximum":0.2851593792438507,"median":0.17825298011302948,"zeroFraction":0,"saturatedFraction":0}]}
+DONE

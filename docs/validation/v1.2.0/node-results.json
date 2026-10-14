@@ -1,0 +1,122 @@
+[
+  {
+    "test": "test-adaptive.js",
+    "passed": true,
+    "output": "Native curves channels, identity, amount, input validation, cleanup, editable controls, presets, Apply/Skip and comparison retention passed (mocked APIs).\nRepeated Curves keeps accepted passes when a later pass is skipped.\n"
+  },
+  {
+    "test": "test-advanced-workflow.js",
+    "passed": true,
+    "output": "Advanced pass constraints, native property mapping, settings migration, starless target, separation output and repair safety passed.\n"
+  },
+  {
+    "test": "test-autodbe.js",
+    "passed": true,
+    "output": "Signed included AutoDBE engine, parameter allowlist, default execution and license tests passed\n"
+  },
+  {
+    "test": "test-blurx.js",
+    "passed": true,
+    "output": "BlurX no-icon defaults, adjustable sharpening, explicit icon override, native-setting preservation, validation, failures, controls and state hooks passed (mocked APIs).\n"
+  },
+  {
+    "test": "test-combined-hdr.js",
+    "passed": true,
+    "output": "Combined HDR optional routing, starless Keep/Apply, duplicate avoidance, saved setting and preflight checks passed.\n"
+  },
+  {
+    "test": "test-final-save.js",
+    "passed": true,
+    "output": "Final filename and save safety tests passed (mocked PixInsight APIs).\n"
+  },
+  {
+    "test": "test-final-stretch.js",
+    "passed": true,
+    "output": "Configured HT/MAS selection, saved settings, identity/missing/wrong-icon checks, availability, failure propagation and setup status passed.\n"
+  },
+  {
+    "test": "test-finishing.js",
+    "passed": true,
+    "output": "Finishing masks, failure cleanup, optional denoise blend, controls, inspection, sharing export, dimensions, metadata and input preservation passed (mocked APIs).\nRepeated local contrast tests passed\n"
+  },
+  {
+    "test": "test-hdr-core.js",
+    "passed": true,
+    "output": "HDR core mask selection, protected pixels, blend, cleanup, and review control tests passed (mocked APIs).\n"
+  },
+  {
+    "test": "test-hdr-paint.js",
+    "passed": true,
+    "output": "HDR preview painting regression passed: Brush argument and same-position Before/After rendering.\n"
+  },
+  {
+    "test": "test-hdr.js",
+    "passed": true,
+    "output": "HDR processing, blend, failure cleanup, skip and comparison tests passed (mocked APIs).\n"
+  },
+  {
+    "test": "test-lrgb.js",
+    "passed": true,
+    "output": "LRGB validation, automatic matching, neutral combination, zero weight, cleanup and finishing/HDR order passed.\nFull workflow post-L contrast/color order and Keep RGB skip passed.\n"
+  },
+  {
+    "test": "test-luminance-preparation.js",
+    "passed": true,
+    "output": "Luminance blend pixels, inverted/clamped masks, zero weight, input preservation, failures, configured stretch, single-stretch routing and preview cleanup passed.\nRepeated masked blends use the accepted prior pass; Skip cleans up only the unaccepted candidate.\nMissing/wrong/failing L stretch recovery, fresh retries, no double stretch, Keep RGB continuation and abort propagation passed.\n"
+  },
+  {
+    "test": "test-mgc.js",
+    "passed": true,
+    "output": "PASS unsolved image: solve > SPFC > MGC\nPASS solved image skips solve\nPASS invalid setup blocked: {\"missing\":\"CCDASTRO_SPFC\"}\nPASS invalid setup blocked: {\"missing\":\"CCDASTRO_MGC\"}\nPASS invalid setup blocked: {\"wrongType\":true}\nPASS invalid setup blocked: {\"missingProcess\":true}\nPASS invalid setup blocked: {\"command\":\"set-default-database-files\"}\nPASS invalid setup blocked: {\"referenceMode\":true}\nPASS failure stops before MGC: {\"fail\":\"spfc\"}\nPASS failure stops before MGC: {\"throwAt\":\"spfc\"}\nPASS failure stops before MGC: {\"abort\":true}\nPASS failure stops before MGC: {\"solveFails\":true}\nPASS MGC failure propagates without fallback\nPASS incomplete solver settings blocked even with solve checkbox off\nPASS solved image does not need solver settings\nPASS unavailable solver blocked for unsolved MGC\nPASS mapped palette blocked\nPASS MGC solves before SPCC when solve checkbox off\nPASS other gradients and disabled MGC preserve old order\nPASS HDR requires a stretch and recombined final image\nPASS Curves preflight requires stretch, recombination and CurvesTransformation\n21 tests passed. These use mocked PixInsight APIs, not real image processing.\nPASS final finishing requires a stretch and recombination\nPASS post-luminance review validates its tools with earlier finishing disabled\n"
+  },
+  {
+    "test": "test-mldenoise.js",
+    "passed": true,
+    "output": "MLDenoise configured-model, preflight and execution tests passed (mocked APIs).\n"
+  },
+  {
+    "test": "test-native-settings.js",
+    "passed": true,
+    "output": "Direct PCC/MLD/HT/MAS/SPFC/MGC/final-denoise controls, validation, file paths, explicit overrides, masks/layers, Save/Cancel and state restoration passed.\n"
+  },
+  {
+    "test": "test-nebula-masks.js",
+    "passed": true,
+    "output": "Nebula mask black/gray/white weighting, inversion, brightness combination, validation, input preservation, cleanup and post-L routing passed (mocked pixel APIs).\n"
+  },
+  {
+    "test": "test-pcc.js",
+    "passed": true,
+    "output": "PCC settings preservation, missing/wrong icon, disabled calibration, unsolved image, execution failures and script syntax passed (mocked APIs).\n"
+  },
+  {
+    "test": "test-preview-refresh.js",
+    "passed": true,
+    "output": "Both preview refresh callbacks, changed settings, fresh bitmaps, repaint and change metrics passed (mocked APIs).\n"
+  },
+  {
+    "test": "test-starless-enhancement.js",
+    "passed": true,
+    "output": "Matched reference stretch, screen reconstruction, no sparse statistics, temporary cleanup, recombination Apply/Skip/failure and syntax passed (mocked APIs).\n"
+  },
+  {
+    "test": "test-stars-halo.js",
+    "passed": true,
+    "output": "Synthetic broad halo reduced, bright core/isolated faint stars protected, radius coverage, smooth annulus and native-process failure cleanup passed (mocked pixel APIs).\n"
+  },
+  {
+    "test": "test-suspended-ui.js",
+    "passed": true,
+    "output": "Restored tool choices and saved selections remain available\n"
+  },
+  {
+    "test": "test-syqon-settings.js",
+    "passed": true,
+    "output": "SyQon settings delegate to explicit executable selection\n"
+  },
+  {
+    "test": "test-syqon.js",
+    "passed": true,
+    "output": "Direct SyQon argument, file exchange, reversible transfer, stars, cancellation, timeout and failure-preservation tests passed\n"
+  }
+]

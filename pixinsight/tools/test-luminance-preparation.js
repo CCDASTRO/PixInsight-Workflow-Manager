@@ -1,3 +1,4 @@
+require("./advanced-test-context.cjs");
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const path=require('node:path');
 const repo=path.resolve(__dirname,'../..');

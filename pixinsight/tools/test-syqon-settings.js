@@ -1,3 +1,4 @@
+require("./advanced-test-context.cjs");
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
 let received;const ctx=vm.createContext({ProcessIconAdapter:function(){},configuredSyQonExecutable:id=>{received=id;return {path:'chosen'};},errorMessage:String});

@@ -1,0 +1,19 @@
+PASS workflow GUI constructs with advanced controls
+PASS legacy defaults retained, settings schema upgraded
+PASS native parameters accepted for BlurXTerminator
+PASS native parameters accepted for NoiseXTerminator
+PASS native parameters accepted for StarXTerminator
+PASS BlurX rejected after stretch
+PASS starless output disables conflicting branch stretch/recombination
+PASS pass settings round-trip
+PASS identity reference RGB matching
+PASS local repairs preserve pixels outside masks exactly
+PASS local repairs use correct RGB channels and offsets
+PASS sampled final statistics
+PASS two StarX passes accumulate every removed stars layer
+PASS skipped pass restores prior working pixels exactly
+PASS original input pixels preserved
+PASS native full-resolution TIFF export
+PASS JSON and text run report export
+PASS custom linear queue and starless final pass preflight: 
+DONE

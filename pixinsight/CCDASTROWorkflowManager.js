@@ -19,7 +19,8 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.1.47"
+#define VERSION "1.2.0"
+#include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
@@ -135,7 +136,8 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 11,
+      schemaVersion: 12,
+      advanced: advancedCopy(advancedWorkflowSettings),
       native: dialog.nativeValues ? dialog.nativeValues() : null,
       syqon: dialog.syqonValues ? dialog.syqonValues() : null,
       blurX: dialog.blurXValues ? dialog.blurXValues() : null,
@@ -203,7 +205,7 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || ([4,5,6,7,8,9,10,11].indexOf(state.schemaVersion) < 0) || !state.steps)
+      if (!state || ([4,5,6,7,8,9,10,11,12].indexOf(state.schemaVersion) < 0) || !state.steps)
          return false;
       if (state.schemaVersion >= 5 && state.imageType >= 0 &&
           state.imageType < WORKFLOW_PROFILES.length)
@@ -255,7 +257,9 @@ function restoreWorkflowState(dialog)
       if (dialog.restoreNative && state.native) dialog.restoreNative(state.native);
       if (dialog.restoreSyQon && state.syqon) dialog.restoreSyQon(state.syqon);
       if (dialog.restoreBlurX && state.blurX) dialog.restoreBlurX(state.blurX);
+      restoreAdvancedWorkflowSettings(state.advanced);
       dialog.refreshStarReductionControls();
+      if(dialog.refreshAdvancedControls) dialog.refreshAdvancedControls();
       if (state.resumeAfterCrop && state.plateSolve)
       {
          var savedPlateSolve = state.plateSolve;
@@ -285,6 +289,7 @@ function restoreWorkflowState(dialog)
 
 function resetWorkflowControls(dialog)
 {
+   restoreAdvancedWorkflowSettings(null);
    Settings.remove(WORKFLOW_STATE_KEY);
    Settings.remove(WORKFLOW_REMEMBER_KEY);
    dialog.rememberSettings.checked = true;
@@ -322,6 +327,7 @@ function resetWorkflowControls(dialog)
    dialog.starReductionMethod.currentItem = 1;
    dialog.starReductionIterations.value = 1;
    dialog.refreshStarReductionControls();
+   if(dialog.refreshAdvancedControls) dialog.refreshAdvancedControls();
 }
 
 function PlateSolveSettings()
@@ -429,6 +435,7 @@ function logLine(text)
 {
    Console.show();
    Console.writeln("<end><cbr><b>[CCDASTRO]</b> " + text);
+   if(advancedRunAudit) {if(!advancedRunAudit.messages) advancedRunAudit.messages=[]; advancedRunAudit.messages.push(String(text));}
    Console.flush();
 }
 
@@ -1526,6 +1533,7 @@ function applyLinkedAutoHistogram(view, targetBackground)
    var row = [shadows, midtones, 1.0, 0.0, 1.0];
    var process = new HistogramTransformation;
    process.H = [row, row, row, [0, 0.5, 1, 0, 1], [0, 0.5, 1, 0, 1]];
+   advancedRecord("Linked histogram stretch",{targetMedian:targetBackground,curve:row});
    logLine("Applying linked automatic histogram stretch to " + view.fullId);
    if (!process.executeOn(view))
       throw new Error("Histogram stretch failed on " + view.fullId + ".");
@@ -1553,6 +1561,7 @@ function applyUnlinkedAutoHistogram(view, targetBackground)
    }
    var process = new HistogramTransformation;
    process.H = [rows[0], rows[1], rows[2], [0, 0.5, 1, 0, 1], [0, 0.5, 1, 0, 1]];
+   advancedRecord("Unlinked histogram stretch",{targetMedian:targetBackground,curves:process.H});
    logLine("Applying unlinked automatic histogram stretch to " + view.fullId);
    if (!process.executeOn(view))
       throw new Error("Unlinked histogram stretch failed on " + view.fullId + ".");
@@ -1785,6 +1794,7 @@ function PreflightValidator(dialog)
 
 PreflightValidator.prototype.validate = function()
 {
+   if(this.dialog.refreshAdvancedControls) this.dialog.refreshAdvancedControls();
    var result = new PreflightResult;
    var window = ImageWindow.activeWindow;
    if (window.isNull)
@@ -1823,10 +1833,11 @@ PreflightValidator.prototype.validate = function()
       try { configuredFinalStretch(this.dialog.finalStretch.currentItem); }
       catch(e) { result.errors.push("Final image stretch: " + errorMessage(e)); }
 
-   var anyEnabled = false;
+   var anyEnabled = advancedWorkflowSettings.useLinearPasses;
    for (var i = 0; i < this.dialog.rows.length; ++i)
    {
       var row = this.dialog.rows[i];
+      if(advancedWorkflowSettings.useLinearPasses && ["deconvolution","noiseReduction","starSeparation"].indexOf(row.step.id)>=0) continue;
       if (!row.enabled.checked)
          continue;
       anyEnabled = true;
@@ -1860,7 +1871,7 @@ PreflightValidator.prototype.validate = function()
          "Catalog coverage and preprocessing provenance are checked by the native processes during execution, not certified by this preflight.");
    }
 
-   var separationEnabled = this.dialog.rowsById.starSeparation.enabled.checked;
+   var separationEnabled = advancedSeparationEnabled(this.dialog);
    if (this.dialog.finishStarless && this.dialog.finishStarless.checked)
    {
       if (!separationEnabled || !this.dialog.recombine.checked)
@@ -1877,7 +1888,7 @@ PreflightValidator.prototype.validate = function()
         this.dialog.starsStretch.currentItem > 0 ||
         this.dialog.recombine.checked) && !separationEnabled)
       result.errors.push("Branch stretching and recombination require star separation.");
-   if (separationEnabled && this.dialog.finalStretch.currentItem > 0 && !this.dialog.recombine.checked)
+   if (separationEnabled && this.dialog.finalStretch.currentItem > 0 && !this.dialog.recombine.checked && !advancedStarlessFinal(this.dialog))
       result.errors.push("Final recombined stretch requires automatic branch recombination.");
    if (this.dialog.finalStretch.currentItem > 0 &&
        (this.dialog.starlessStretch.currentItem > 0 || this.dialog.starsStretch.currentItem > 0))
@@ -1889,7 +1900,7 @@ PreflightValidator.prototype.validate = function()
    {
       if (resolveProcessClass(["HDRMultiscaleTransform"]) === null)
          result.errors.push("HDRMultiscaleTransform is unavailable.");
-      if (separationEnabled && !this.dialog.recombine.checked)
+      if (separationEnabled && !this.dialog.recombine.checked && !advancedStarlessFinal(this.dialog))
          result.errors.push("HDR review requires a recombined final image.");
       if (this.dialog.finalStretch.currentItem === 0 &&
           this.dialog.starlessStretch.currentItem === 0)
@@ -1903,7 +1914,7 @@ PreflightValidator.prototype.validate = function()
    {
       if (resolveProcessClass(["CurvesTransformation"]) === null)
          result.errors.push("Curves review requires CurvesTransformation.");
-      if (separationEnabled && !this.dialog.recombine.checked)
+      if (separationEnabled && !this.dialog.recombine.checked && !advancedStarlessFinal(this.dialog))
          result.errors.push("Curves review requires a recombined final image.");
       if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
          result.errors.push("Curves review requires an image stretch in this workflow.");
@@ -1912,7 +1923,7 @@ PreflightValidator.prototype.validate = function()
    {
       if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
          result.errors.push("Post-luminance contrast/color review requires a workflow RGB stretch.");
-      if (separationEnabled && !this.dialog.recombine.checked)
+      if (separationEnabled && !this.dialog.recombine.checked && !advancedStarlessFinal(this.dialog))
          result.errors.push("Post-luminance review requires automatic stars recombination.");
       for (var j=0, names=["LocalHistogramEqualization", "Convolution", "PixelMath", "CurvesTransformation"]; j<names.length; ++j)
          if (resolveProcessClass([names[j]]) === null) result.errors.push("Post-luminance review requires " + names[j] + ".");
@@ -1921,7 +1932,7 @@ PreflightValidator.prototype.validate = function()
    {
       if (this.dialog.finalStretch.currentItem === 0 && this.dialog.starlessStretch.currentItem === 0)
          result.errors.push("Final finishing requires a workflow stretch.");
-      if (separationEnabled && !this.dialog.recombine.checked)
+      if (separationEnabled && !this.dialog.recombine.checked && !advancedStarlessFinal(this.dialog))
          result.errors.push("Final finishing requires a recombined image.");
       for (var f = 0, required = ["LocalHistogramEqualization", "Convolution", "PixelMath", "CurvesTransformation", "Resample"]; f < required.length; ++f)
          if (resolveProcessClass([required[f]]) === null)
@@ -1940,6 +1951,7 @@ PreflightValidator.prototype.validate = function()
    if (profile.id === "emissionMapped")
       result.warnings.push("Mapped narrowband assumes the active image is already combined into the intended color palette; broadband SPCC is intentionally skipped.");
 
+   advancedPreflight(this.dialog,result,window);
    result.warnings.push("The workflow processes a separate working copy; original input pixels are preserved.");
    return result;
 };
@@ -2881,6 +2893,7 @@ constructor()
       self.noisePlacement.visible = profileContainsStep(profile, "noiseReduction");
       self.stepsSection.title = profile.label + " - linear workflow";
       if (self.refreshFinalStretchSetup) self.refreshFinalStretchSetup();
+      if (self.refreshAdvancedControls) self.refreshAdvancedControls();
       if (self.refreshScrollableLayout !== undefined)
          self.refreshScrollableLayout();
    };
@@ -2918,6 +2931,7 @@ constructor()
    this.buttonSizer.add(this.runButton);
    this.buttonSizer.add(this.closeButton);
 
+   this.advancedBox = installAdvancedWorkflowControls(this);
    this.content.sizer = new VerticalSizer;
    this.content.sizer.margin = 10;
    this.content.sizer.spacing = 8;
@@ -2934,6 +2948,7 @@ constructor()
    this.content.sizer.add(this.stepsBox);
    this.content.sizer.add(this.branchesSection);
    this.content.sizer.add(this.branchesBox);
+   this.content.sizer.add(this.advancedBox);
    this.content.sizer.add(this.statusSection);
    this.content.sizer.add(this.statusBox);
 
@@ -3487,6 +3502,7 @@ function reviewHDR(view, luminance)
       }
       dialog.candidate.show();
       accepted = true;
+      advancedRecord("HDR review applied",{layers:dialog.layers.value,blend:dialog.strength.value});
       logLine("HDR applied: " + dialog.layers.value + " layers, " + dialog.strength.value + "% blend. Original view retained.");
       return dialog.candidate.mainView;
    }
@@ -3853,6 +3869,7 @@ function reviewAdaptivePass(view, state)
       accepted = true;
       state.another = dialog.anotherPassRequested;
       state.mask = dialog.nebulaMaskSettings ? dialog.nebulaMaskSettings() : null;
+      advancedRecord("Curves review applied",{amount:dialog.strength.value,points:curvesReviewPoints(dialog),mask:state.mask});
       logLine("CurvesTransformation applied: " + dialog.strength.value + "% curve amount. Original view retained.");
       return dialog.candidate.mainView;
    }
@@ -4017,6 +4034,7 @@ function reviewFinishing(view, kind, luminance)
             var before = cloneHDRView(current, "_Before" + kind.replace(/ /g, "")); before.show();
          }
          dialog.candidate.show(); accepted = true;
+         advancedRecord(kind+" finishing pass",{pass:pass,amount:dialog.strength.value,radius:dialog.layers.value,maskLow:dialog.maskLow.value/1000,maskHigh:dialog.maskHigh.value/1000,slopeLimit:dialog.slopeLimit.value/10,mask:dialog.nebulaMaskSettings?dialog.nebulaMaskSettings():null});
          logLine(kind + " pass " + pass + " applied: " + dialog.strength.value +
             "% amount, radius=" + dialog.layers.value + "; original view retained.");
          current = dialog.candidate.mainView;
@@ -4626,6 +4644,7 @@ function enhanceStarlessAndRecombine(self, branches)
    applySelectedAutoHistogram(nebula, self.finalStretch.currentItem, 0.18);
    if (self.hdrEnabled.checked) nebula = reviewHDR(nebula);
    if (self.adaptiveEnabled.checked) nebula = reviewAdaptive(nebula);
+   nebula=reviewAdvancedTone(nebula);
    if (self.finishingEnabled.checked)
    {
       inspectFinalImage(nebula);
@@ -4633,6 +4652,7 @@ function enhanceStarlessAndRecombine(self, branches)
       nebula = reviewFinishing(nebula, "Noise cleanup");
       nebula = reviewFinishing(nebula, "Saturation");
    }
+   nebula = reviewAdvancedRepairs(nebula);
    checkAbortRequested();
    nebula.window.show();
    return reviewStarRecombination(nebula, branches.controlledStarsView, self);
@@ -4655,7 +4675,7 @@ function reviewFinalHDR(view, self, branches)
    return view;
 }
 
-function executeWorkflow(self)
+function executeWorkflow(self, quiet)
 {
    Console.show();
    Console.abortEnabled = true;
@@ -4666,6 +4686,7 @@ function executeWorkflow(self)
       var view = lrgbViews !== null && lrgbViews.R ? lrgbViews.R : ImageWindow.activeWindow.currentView;
       var sourcePath = workflowSourcePath(view);
       var sourceId = workflowSourceId(view);
+      advancedRunAudit={version:VERSION,started:new Date().toISOString(),sourcePath:sourcePath,sourceId:sourceId,configuration:captureWorkflowState(self,false),steps:[]};
       view = lrgbViews !== null && lrgbViews.R ? combineLinearRGB(lrgbViews) : cloneWorkflowInput(view);
       if (lrgbViews !== null && !imageHasAstrometricSolution(view.window)) plateSolveSettings.autofill(view.window);
       clearDisplaySTF(view);
@@ -4674,31 +4695,40 @@ function executeWorkflow(self)
       for (var i = 0; i < linearOrder.length; ++i)
       {
          var linearRow = self.rowsById[linearOrder[i]];
-         if (linearRow.enabled.checked)
+         if (linearRow.enabled.checked && !(advancedWorkflowSettings.useLinearPasses && linearOrder[i]==="deconvolution"))
          {
             checkAbortRequested();
             adapters[linearRow.adapterId()].execute(view);
+            advancedRecord("Linear workflow stage",{stage:linearOrder[i],adapter:linearRow.adapterId()});
             checkAbortRequested();
          }
       }
 
       var noiseRow = self.rowsById.noiseReduction;
       var separationRow = self.rowsById.starSeparation;
-      if (noiseRow.enabled.checked && self.noisePlacement.currentItem === 0)
+      if (!advancedWorkflowSettings.useLinearPasses && noiseRow.enabled.checked && self.noisePlacement.currentItem === 0)
       {
          checkAbortRequested();
          adapters[noiseRow.adapterId()].execute(view);
+         advancedRecord("Linear noise reduction before separation",{adapter:noiseRow.adapterId()});
          checkAbortRequested();
       }
 
       var branches = null;
       var starsFullReference = null;
-      if (separationRow.enabled.checked)
+      if (advancedWorkflowSettings.useLinearPasses)
+      {
+         var sequence=runRCPassSequence(view,advancedWorkflowSettings.linearPasses,"linear");
+         view=sequence.view; branches=sequence.branches;
+         if(branches && self.finishStarless.checked) branches.controlledStarsView=advancedControlledStars(branches).mainView;
+      }
+      else if (separationRow.enabled.checked)
       {
          checkAbortRequested();
          if (self.finishStarless.checked)
             starsFullReference = cloneHDRView(view, "_LinearStarsReference");
          branches = executeStarSeparation(adapters[separationRow.adapterId()], view);
+         advancedRecord("Linear star separation",{adapter:separationRow.adapterId()});
          if (self.finishStarless.checked)
          {
             var controlledStars = buildControlledStars(starsFullReference.mainView, branches.starlessView);
@@ -4710,15 +4740,23 @@ function executeWorkflow(self)
          checkAbortRequested();
       }
 
+      if(advancedWorkflowSettings.keepStarless && branches===null) throw new Error("No StarX separation was kept. Disable starless output or keep a StarX pass.");
       if (branches !== null)
       {
-         if (noiseRow.enabled.checked && self.noisePlacement.currentItem === 1)
+         if (!advancedWorkflowSettings.useLinearPasses && noiseRow.enabled.checked && self.noisePlacement.currentItem === 1)
          {
             checkAbortRequested();
             adapters[noiseRow.adapterId()].execute(branches.starlessView);
+            advancedRecord("Linear starless noise reduction",{adapter:noiseRow.adapterId()});
             checkAbortRequested();
          }
-         if (self.finishStarless.checked)
+         if (advancedStarlessFinal(self))
+         {
+            clearDisplaySTF(branches.starlessView);
+            applySelectedAutoHistogram(branches.starlessView,self.finalStretch.currentItem,advancedWorkflowSettings.starlessTarget);
+            advancedRecord("Starless final stretch",{selection:self.finalStretch.currentItem,targetMedian:advancedWorkflowSettings.starlessTarget});
+         }
+         else if (self.finishStarless.checked)
             branches.starlessView = enhanceStarlessAndRecombine(self, branches);
          else
          {
@@ -4790,12 +4828,13 @@ function executeWorkflow(self)
       }
 
       var completion = "Workflow completed successfully.";
-      if (branches === null || self.recombine.checked)
+      if (branches === null || self.recombine.checked || advancedStarlessFinal(self))
       {
          var finalView = branches === null ? view : branches.starlessView;
          if (lrgbViews === null) finalView = reviewFinalHDR(finalView, self, branches);
          if (!self.finishStarless.checked && self.adaptiveEnabled.checked)
             finalView = reviewAdaptive(finalView);
+         if(!self.finishStarless.checked) finalView=reviewAdvancedTone(finalView);
          checkAbortRequested();
          if (self.finishingEnabled.checked)
          {
@@ -4807,6 +4846,8 @@ function executeWorkflow(self)
                finalView = reviewFinishing(finalView, "Saturation");
             }
          }
+         if(!self.finishStarless.checked) finalView=reviewAdvancedRepairs(finalView);
+         if(branches) branches.starlessView=finalView;
          if (lrgbViews !== null)
          {
             var luminanceState = {added:false};
@@ -4817,6 +4858,8 @@ function executeWorkflow(self)
             finalView = reviewPostLuminance(finalView, self, luminanceState);
          }
          completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);
+         if(advancedWorkflowSettings.tiff) completion += "\n\n" + exportAdvancedTIFF(finalView);
+         if(advancedWorkflowSettings.reports) completion += "\n\n" + saveAdvancedRunReport(finalView);
          if (self.finishingEnabled.checked)
             completion += "\n\n" + exportSharingImage(finalView, sourcePath, sourceId);
          completion += "\n\nOriginal unstretched input remains unchanged and open.";
@@ -4825,7 +4868,7 @@ function executeWorkflow(self)
          completion += "\n\nSeparate branches remain open; no final image was saved.";
       self.statusText.text = completion;
       logLine(completion);
-      (new MessageBox(completion, TITLE,
+      if(!quiet) (new MessageBox(completion, TITLE,
          StdIcon.Information, StdButton.Ok)).execute();
    }
    catch (e)
@@ -4833,7 +4876,8 @@ function executeWorkflow(self)
       var message = "Workflow stopped: " + errorMessage(e);
       self.statusText.text = message;
       Console.criticalln("<end><cbr><b>[CCDASTRO] " + message + "</b>");
-      (new MessageBox(message, TITLE, StdIcon.Error, StdButton.Ok)).execute();
+      if(!quiet) (new MessageBox(message, TITLE, StdIcon.Error, StdButton.Ok)).execute();
+      else throw e;
    }
    finally
    {

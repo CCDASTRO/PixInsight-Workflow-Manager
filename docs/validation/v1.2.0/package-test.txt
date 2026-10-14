@@ -1,0 +1,2 @@
+PASS packaged Advanced workflow opens with its own settings namespace.
+DONE

@@ -1,3 +1,4 @@
+require("./advanced-test-context.cjs");
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');const code=source.slice(source.indexOf('function reviewFinalHDR('),source.indexOf('function executeWorkflow('));
 for(const enhance of [false,true])for(const old of [false,true])for(const enabled of [false,true])for(const applied of [false,true])for(const branches of [null,{}]){

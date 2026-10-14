@@ -1,3 +1,4 @@
+require("./advanced-test-context.cjs");
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const src=fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');new vm.Script(src.replace(/^#.*$/gm,''));
 const code=src.slice(src.indexOf('function dilateHaloMask('),src.indexOf('function reviewStarRecombination('));

@@ -1,3 +1,4 @@
+require("./advanced-test-context.cjs");
 const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),vm=require('vm');
 const source=fs.readFileSync(process.argv[2] || path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
 new vm.Script(source.replace(/^#.*$/gm,''));
@@ -46,7 +47,7 @@ d.channel.currentItem=1;d.channel.onItemSelected();assert.equal(d.applyButton.en
 d.curveInputs[1].value=50;d.curveInputs[1].onValueUpdated();d.updateButton.onClick();assert.equal(d.applyButton.enabled,false);assert.equal(d.candidate,null);assert.equal(d.afterBitmap,null);
 for(const apply of [false,true]){
  const w={mainView:{},show(){},forceClose(){this.closed=true;}};
- ctx.testDialog=function(){this.execute=()=>apply;this.candidate=w;this.applyButton={enabled:true};this.keepComparison={checked:true};this.strength={value:100};};
+ ctx.testDialog=function(){this.execute=()=>apply;this.candidate=w;this.applyButton={enabled:true};this.keepComparison={checked:true};this.strength={value:100};this.curveInputs=[{value:0},{value:1000}];this.curveOutputs=[{value:0},{value:1000}];};
  vm.runInContext('AdaptiveReviewDialog = testDialog;',ctx);
  assert.equal(ctx.reviewAdaptive(view),apply?w.mainView:view);
  assert.equal(w.closed,apply?undefined:true);
@@ -62,7 +63,7 @@ ctx.testDialog=function(){
   const n=passNumber++; const w={mainView:{pass:n},show(){},forceClose(){this.closed=true;}};
   if(n===1)skipped=w;
   this.execute=()=>n===0;this.candidate=w;this.applyButton={enabled:true};this.keepComparison={checked:false};
-  this.strength={value:100};this.anotherPassRequested=true;
+  this.strength={value:100};this.curveInputs=[{value:0},{value:1000}];this.curveOutputs=[{value:0},{value:1000}];this.anotherPassRequested=true;
 };
 vm.runInContext('AdaptiveReviewDialog = testDialog;',ctx);
 const accepted=ctx.reviewAdaptive(view);assert.equal(accepted.pass,0);assert.equal(passNumber,2);assert.ok(skipped.closed);

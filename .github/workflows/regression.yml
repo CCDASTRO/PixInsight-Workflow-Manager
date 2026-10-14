@@ -1,0 +1,15 @@
+name: Workflow regression checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run workflow regression suites
+        run: node pixinsight/tools/run-tests.js
+      - name: Validate workflow definition
+        run: node pixinsight/tools/validate-workflow.js

@@ -1,3 +1,4 @@
+require("./advanced-test-context.cjs");
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'../CCDASTROWorkflowManager.js'),'utf8');new vm.Script(source.replace(/^#.*$/gm,''));
 const code=source.slice(source.indexOf('// Native workflow settings:'),source.indexOf('// End native workflow settings.'));
@@ -38,7 +39,7 @@ const original=constructors.MLDenoise;constructors.MLDenoise=function(){const p=
 const before=JSON.stringify(ctx.nativeSettings);controls=[];action=()=>controls.find(c=>c.text==='Cancel').onClick();ctx.configureNativeProcess('pcc');assert.equal(JSON.stringify(ctx.nativeSettings),before);
 controls=[];action=()=>{const fields=controls.filter(c=>c instanceof C&&typeof c.text==='string');fields.find(c=>c.text==='Average Spiral Galaxy').text='Custom';controls.find(c=>c.text==='Save settings').onClick();};ctx.configureNativeProcess('pcc');assert.equal(ctx.nativeSettings.pcc.whiteReferenceName,'Custom');
 controls=[];action=()=>{const c=controls.find(c=>c.text&&c.text.includes('icon override'));c.checked=true;c.onCheck();assert.equal(controls.find(c=>c.text==='Custom').enabled,false);controls.find(c=>c.text==='Cancel').onClick();};ctx.configureNativeProcess('pcc');assert.equal(ctx.nativeSettings.pcc.useIcon,false);
-assert.match(source,/schemaVersion: 11/);assert.match(source,/dialog\.restoreNative\(state\.native\)/);assert.match(source,/restoreNative\(defaultNativeSettings\(\)\)/);
+assert.match(source,/schemaVersion: 12/);assert.match(source,/dialog\.restoreNative\(state\.native\)/);assert.match(source,/restoreNative\(defaultNativeSettings\(\)\)/);
 console.log('Direct PCC/MLD/HT/MAS/SPFC/MGC/final-denoise controls, validation, file paths, explicit overrides, masks/layers, Save/Cancel and state restoration passed.');
 
 ctx.nativeSettings.pcc.serverURL='http://example.test/';

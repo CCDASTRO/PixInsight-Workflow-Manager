@@ -1,0 +1,15 @@
+Starting editor/controller checks.
+Synthetic image created.
+PASS linear pass editor constructs and cancels
+PASS linear sequence editor constructs and cancels
+PASS post-stretch sequence editor constructs and cancels
+PASS local repair editor constructs and cancels
+PASS local repair preview can enable Apply
+PASS local repair review cancels without changing target
+PASS reference review constructs and cancels
+PASS pass review enables Keep
+PASS linear pass review cancels
+PASS saved ordered passes restore
+PASS starless final reaches save with workflow stretch
+PASS entire starless controller finishes and saves
+DONE

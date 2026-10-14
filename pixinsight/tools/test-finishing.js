@@ -1,3 +1,4 @@
+require("./advanced-test-context.cjs");
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),path=require('path');
 const source=fs.readFileSync(process.argv[2] || path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
 new vm.Script(source.replace(/^#.*$/gm,''));
@@ -78,6 +79,7 @@ let working,processingFailure=false;
 ctx.adapters={test:{execute:v=>{assert.notEqual(v,view);working=v;v.image.value=.4;if(processingFailure)throw Error('processing failed');}}};
 ctx.applySelectedAutoHistogram=v=>{assert.equal(v,working);v.image.value=.8;};
 ctx.saveFinalImage=v=>{assert.equal(v,working);return 'saved';};
+Object.assign(ctx,{VERSION:'1.2.0',captureWorkflowState:()=>({}),errorMessage:String});ctx.advancedWorkflowSettings.reports=false;
 vm.runInContext(source.slice(source.indexOf('function executeWorkflow('),source.indexOf('function main()')),ctx);
 const workflow={finishStarless:{checked:false},enabled:true,statusText:{},rowsById:{gradient:{enabled:{checked:true},adapterId:()=> 'test'},noiseReduction:{enabled:{checked:false}},starSeparation:{enabled:{checked:false}}},noisePlacement:{currentItem:0},finalStretch:{currentItem:1},hdrEnabled:{checked:false},adaptiveEnabled:{checked:false},finishingEnabled:{checked:false},recombine:{checked:true}};
 ctx.executeWorkflow(workflow);assert.match(workflow.statusText.text,/completed successfully/);assert.equal(working.image.value,.8);assert.equal(view.image.value,undefined);assert.equal(view.stf,undefined);

@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.1.16',
+    [string] $Version = '1.2.0',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -16,9 +16,15 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $sourceScript = Join-Path $repositoryRoot 'pixinsight\CCDASTROWorkflowManager.js'
 $sourceSignature = Join-Path $repositoryRoot 'pixinsight\CCDASTROWorkflowManager.xsgn'
 $sourceEngine = Join-Path $repositoryRoot 'pixinsight\CCDASTROAutoDBEEngine.jsh'
+$sourceAdvanced = Join-Path $repositoryRoot 'pixinsight\CCDASTROAdvancedWorkflow.jsh'
 $updatesDirectory = Join-Path $repositoryRoot 'updates'
 $stageRoot = Join-Path $PSScriptRoot '.stage'
 $stageScriptDirectory = Join-Path $stageRoot 'src\scripts\CCDASTRO'
+$resolvedStageRoot = [System.IO.Path]::GetFullPath($stageRoot)
+$expectedStageRoot = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot 'packaging\.stage'))
+if ($resolvedStageRoot -ne $expectedStageRoot) {
+    throw 'Refusing staging operations outside this repository packaging/.stage.'
+}
 $packageName = "CCDASTROWorkflowManager-$Version.zip"
 $packagePath = Join-Path $updatesDirectory $packageName
 $manifestPath = Join-Path $updatesDirectory 'updates.xri'
@@ -40,6 +46,14 @@ $engineText = [System.IO.File]::ReadAllText($sourceEngine)
 if ([regex]::IsMatch($engineText, '(?<!\r)\n') -or
     ($engineBytes.Length -ge 3 -and $engineBytes[0] -eq 0xEF -and $engineBytes[1] -eq 0xBB -and $engineBytes[2] -eq 0xBF)) {
     throw 'Included engine must use CRLF and UTF-8 without a BOM before signing.'
+}
+if (-not (Test-Path -LiteralPath $sourceAdvanced -PathType Leaf)) {
+    throw 'Included advanced workflow engine is missing.'
+}
+$advancedBytes = [System.IO.File]::ReadAllBytes($sourceAdvanced)
+if ([regex]::IsMatch([System.IO.File]::ReadAllText($sourceAdvanced), '(?<!\r)\n') -or
+    ($advancedBytes.Length -ge 3 -and $advancedBytes[0] -eq 0xEF -and $advancedBytes[1] -eq 0xBB -and $advancedBytes[2] -eq 0xBF)) {
+    throw 'Advanced engine must use CRLF and UTF-8 without a BOM before signing.'
 }
 $sourceText = [System.IO.File]::ReadAllText($sourceScript)
 $versionMatches = [regex]::Matches($sourceText, '#define\s+VERSION\s+"([^"]+)"')
@@ -66,6 +80,7 @@ $stagedSignaturePath = Join-Path $stageScriptDirectory 'CCDASTROWorkflowManager.
 Copy-Item -LiteralPath $sourceScript -Destination $stagedScriptPath
 Copy-Item -LiteralPath $sourceSignature -Destination $stagedSignaturePath
 Copy-Item -LiteralPath $sourceEngine -Destination (Join-Path $stageScriptDirectory "CCDASTROAutoDBEEngine.jsh")
+Copy-Item -LiteralPath $sourceAdvanced -Destination (Join-Path $stageScriptDirectory "CCDASTROAdvancedWorkflow.jsh")
 $stagedSource = [System.IO.File]::ReadAllText($stagedScriptPath)
 if ([regex]::IsMatch($stagedSource, '(?<!\r)\n')) {
     throw 'Signed PixInsight script contains bare LF line endings. Normalize the final source before signing it.'
@@ -94,7 +109,8 @@ try {
     $requiredEntries = @(
         'src/scripts/CCDASTRO/CCDASTROWorkflowManager.js',
         'src/scripts/CCDASTRO/CCDASTROWorkflowManager.xsgn',
-        'src/scripts/CCDASTRO/CCDASTROAutoDBEEngine.jsh'
+        'src/scripts/CCDASTRO/CCDASTROAutoDBEEngine.jsh',
+        'src/scripts/CCDASTRO/CCDASTROAdvancedWorkflow.jsh'
     )
     # PixInsight 1.9.5 protects distribution files. Ship only our script and
     # signature; never bundle ImageSolver, etc, modules, or runtime libraries.
@@ -129,8 +145,10 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>Configurable PixInsight post-processing workflow manager.</p>
+        <p>v1.2.0 adds ordered linear RC Astro passes and complete starless finishing.</p>
         <ul>
+          <li>v1.2.0 adds independent multipass BlurX/NoiseX/StarX, accumulated stars, post-stretch cleanup, reference RGB matching, reviewed repairs, TIFF and run reports.</li>
+          <li>Actual native RC Astro execution passed on a calibrated LDN1510 crop; all pass and repair settings remain optional.</li>
           <li>v1.1.16 provides setup instructions for a missing optional final denoise icon</li>
           <li>v1.1.15 simplifies inspection to one Continue button and displays Before until a preview result exists</li>
           <li>v1.1.14 preserves the original input and adds optional finishing reviews plus separate resized sharing export</li>
@@ -147,7 +165,7 @@ $manifest = @"
           <li>v1.1.3 adds MLDenoise to noise reduction, using installed process defaults and the selected denoise placement</li>
           <li>v1.1.2 targets PixInsight 1.9.4 through 1.9.5 and enforces a script-only package layout</li>
           <li>1.9.5 build 1702: plate solving, new astrometric properties, XISF save/reopen, SPFC/MGC, and SPCC tested successfully</li>
-          <li>RC Astro integration testing remains pending; BlurXTerminator, NoiseXTerminator, and StarXTerminator were unavailable in the test installation</li>
+          <li>v1.2.0 native RC Astro crop execution passed; full-image outcomes depend on selected settings and review.</li>
           <li>v1.1.1 fixes recursive SyQon execution and keeps the Process Console accessible during processing</li>
           <li>SyQon Starless requires clicking Generate Starless, monitoring the Process Console for completion, and closing its window before the workflow continues</li>
           <li>v1.1.0 adds optional MGC with prerequisite plate solving, SPFC, configured process icons, and preflight checks</li>

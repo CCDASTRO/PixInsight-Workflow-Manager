@@ -28,9 +28,11 @@ $body = (ConvertFrom-Markdown -InputObject $markdown).Html
 $imageBase64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($imagePath))
 $body = $body.Replace('src="docs/images/workflow-manager.png"', "src=`"data:image/png;base64,$imageBase64`"")
 $outputDirectoryUri = [Uri] ((Split-Path -Parent $resolvedOutput) + [IO.Path]::DirectorySeparatorChar)
-$compatibilityUri = [Uri] (Join-Path $repositoryRoot 'docs\PIXINSIGHT-1.9.5.md')
-$body = $body.Replace('href="docs/PIXINSIGHT-1.9.5.md"',
-    ('href="' + $outputDirectoryUri.MakeRelativeUri($compatibilityUri).ToString() + '"'))
+foreach ($document in @('PIXINSIGHT-1.9.5.md', 'SECURITY-AND-DEPENDENCIES.md', 'THIRD-PARTY-NOTICES.md')) {
+    $documentUri = [Uri] (Join-Path $repositoryRoot ('docs\' + $document))
+    $body = $body.Replace(('href="docs/' + $document + '"'),
+        ('href="' + $outputDirectoryUri.MakeRelativeUri($documentUri).ToString() + '"'))
+}
 
 $template = @'
 <!doctype html>

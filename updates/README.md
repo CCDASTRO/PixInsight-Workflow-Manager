@@ -17,7 +17,7 @@ directory to force registration of newly installed script folders.
 The package and `updates.xri` are generated from the repository root with:
 
 ```powershell
-.\packaging\build-pixinsight-package.ps1 -Version 1.2.0 -MaximumPixInsightVersion 1.9.5
+.\packaging\build-pixinsight-package.ps1 -Version 1.2.1 -MaximumPixInsightVersion 1.9.5
 ```
 
 The builder validates the source version, ZIP layout, SHA-1, XML, release date,
@@ -35,7 +35,7 @@ For a release with script or included ImageSolver dependency changes, use this o
    save the generated signature as
    `pixinsight/CCDASTROWorkflowManager.xsgn`.
 3. Run the package builder shown above. It creates
-   `updates/CCDASTROWorkflowManager-1.2.0.zip`, calculates its SHA-1, and
+   `updates/CCDASTROWorkflowManager-1.2.1.zip`, calculates its SHA-1, and
    regenerates `updates/updates.xri`.
 4. Sign the newly generated `updates/updates.xri` with PixInsight CodeSign.
 5. Commit and publish the script, `.xsgn`, ZIP, and signed manifest together.

@@ -5,11 +5,13 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.2.0.zip" sha1="96d520ed77acc2a30637020c85b0fd50dd0493c5" type="script" releaseDate="20261014215846">
-         <title>CCDASTRO Workflow Manager 1.2.0</title>
+      <package fileName="CCDASTROWorkflowManager-1.2.1.zip" sha1="b0520d5096eca3b8a281c3264d5a50f0876edbd8" type="script" releaseDate="20261014231343">
+         <title>CCDASTRO Workflow Manager 1.2.1</title>
          <description>
-            <p>v1.2.0 adds ordered linear RC Astro passes and complete starless finishing.</p>
+            <p>v1.2.1 adds separate final starless and recombined saves from the same run.</p>
             <ul>
+               <li>v1.2.1 saves independent starless and recombined finals, protects their filenames and exports/reports each result.</li>
+               <li>Native paired save/reopen and starless/original pixel-preservation checks passed.</li>
                <li>v1.2.0 adds independent multipass BlurX/NoiseX/StarX, accumulated stars, post-stretch cleanup, reference RGB matching, reviewed repairs, TIFF and run reports.</li>
                <li>Actual native RC Astro execution passed on a calibrated LDN1510 crop; all pass and repair settings remain optional.</li>
                <li>v1.1.16 provides setup instructions for a missing optional final denoise icon</li>
@@ -74,4 +76,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-14T21:58:47.047Z" encoding="Base64">W1MwRTaYw680Jgb+HUW/G7D0Gt6aEce1iE8hzzOEa4s8QYg6qM4sTKtDWKbj5pPzcKpd3q/0RgdB0N8wawC9DA==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-14T23:13:43.705Z" encoding="Base64">HndeguLmDpTfbb8Y2X1JeIvXsChUmWkG7b/oOlv/oslMAUvW8SMu3NTC3WBc6Rdh9s6Ytgb9JG167kQ5PhpyBw==</Signature>

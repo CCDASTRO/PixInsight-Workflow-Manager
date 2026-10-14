@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.2.0',
+    [string] $Version = '1.2.1',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -145,8 +145,10 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.2.0 adds ordered linear RC Astro passes and complete starless finishing.</p>
+        <p>v1.2.1 adds separate final starless and recombined saves from the same run.</p>
         <ul>
+          <li>v1.2.1 saves independent starless and recombined finals, protects their filenames and exports/reports each result.</li>
+          <li>Native paired save/reopen and starless/original pixel-preservation checks passed.</li>
           <li>v1.2.0 adds independent multipass BlurX/NoiseX/StarX, accumulated stars, post-stretch cleanup, reference RGB matching, reviewed repairs, TIFF and run reports.</li>
           <li>Actual native RC Astro execution passed on a calibrated LDN1510 crop; all pass and repair settings remain optional.</li>
           <li>v1.1.16 provides setup instructions for a missing optional final denoise icon</li>

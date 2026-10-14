@@ -1,0 +1,18 @@
+"use strict";
+require("./advanced-test-context.cjs");
+const assert=require("node:assert/strict"),vm=require("node:vm");
+let accepted=true,hdr=0,saved=[],exported=[];
+const starless={fullId:"nebula",window:{filePath:"/out/nebula_Starless.xisf"},pixel:.25};
+const combined={fullId:"combined",window:{filePath:""},pixel:.5};
+const stars={fullId:"controlledStars"};
+const ctx=vm.createContext({finiteNumber:Number.isFinite,reviewStarRecombination(n,s,d){assert.equal(n,starless);assert.equal(s,stars);d.recombinedStarsApplied=accepted;return accepted?combined:n;},reviewHDR(v){++hdr;return v;},saveFinalImage(v,path,id,kind,protectedPath){saved.push({v,path,id,kind,protectedPath});v.window.filePath="/out/nebula_Recombined.xisf";return "saved";},exportAdvancedTIFF:v=>{exported.push(v);return "TIFF";},saveAdvancedRunReport:()=>"report",exportSharingImage:()=>"sharing"});
+ctx.advancedWorkflowSettings.reports=false;
+ctx.exportAdvancedTIFF=v=>{exported.push(v);return "TIFF";};
+const dialog={combinedHDREnabled:{checked:false},starBrightness:{value:70},finishingEnabled:{checked:false}};
+ctx.saveRecombinedCompanion(starless,{controlledStarsView:stars},dialog,"/master.xisf","master");
+assert.equal(saved.length,1);assert.equal(saved[0].kind,"Recombined");assert.equal(saved[0].protectedPath,starless.window.filePath);assert.equal(starless.pixel,.25);assert.equal(hdr,0);
+accepted=false;saved=[];assert.match(ctx.saveRecombinedCompanion(starless,{controlledStarsView:stars},dialog,"/master.xisf","master"),/skipped/);assert.equal(saved.length,0);
+accepted=true;dialog.combinedHDREnabled.checked=true;ctx.advancedWorkflowSettings.tiff=true;ctx.saveRecombinedCompanion(starless,{controlledStarsView:stars},dialog,"/master.xisf","master");assert.equal(hdr,1);assert.equal(exported[0],combined);
+assert.throws(()=>ctx.saveRecombinedCompanion(starless,{},dialog,"/master.xisf","master"),/missing/);
+const settings=JSON.parse(JSON.stringify(ctx.defaultAdvancedWorkflowSettings()));settings.saveBoth=true;settings.keepStarless=true;ctx.restoreAdvancedWorkflowSettings(settings);assert.equal(ctx.advancedWorkflowSettings.saveBoth,true);assert.equal(ctx.advancedWorkflowSettings.keepStarless,false);
+console.log("Dual output preserves starless, saves a distinct recombined companion, respects skip/HDR/TIFF and restores exclusive output options.");

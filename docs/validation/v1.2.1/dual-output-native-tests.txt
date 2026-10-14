@@ -1,0 +1,11 @@
+PASS dual mode finishes starless before recombination
+PASS dual mode passes native preflight
+PASS dual setting survives capture/restore
+PASS recombined save protects starless file path
+PASS complete controller writes two separately named native XISF files
+PASS final images remain independent views
+PASS recombination leaves final starless pixels unchanged
+PASS recombined output actually contains stars contribution
+PASS original linear input unchanged
+PASS saved starless reopens with original final samples
+DONE

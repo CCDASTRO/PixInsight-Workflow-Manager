@@ -1,4 +1,4 @@
-# v1.2.0 — Ordered RC Astro passes and starless finishing
+# v1.2.1 — Ordered RC Astro passes and paired final outputs
 
 ## What was added
 
@@ -32,3 +32,24 @@ Native PixInsight checks cover GUI construction, process parameter mapping, defa
 
 The update preserves the existing workflow's native process/model availability requirements. Reports sample the image for statistics and nonfinite values; they are not exhaustive pixel-by-pixel science validation. The verification used small crops rather than a new full-resolution final.
 
+
+## Save both final versions
+
+Enable **Save both final starless and recombined images** in **Pass sequences and
+optional finishing**. It replaces the starless-only selection and the ordinary
+automatic recombination setting for this run. Star separation and a final stretch
+are required. Stars brightness and the recombination preview still control the
+stars-added version.
+
+The workflow creates controlled stars before stretching, finishes the starless
+image, then saves it with a suggested `_Starless.xisf` suffix. It next opens the
+stars recombination review. Apply keeps an independent image and opens a second
+save dialog suggesting `_Recombined.xisf` in the same output folder. The second
+save refuses the first image's path. Skip keeps the starless result and skips the
+companion. Existing optional HDR after combination applies to the recombined
+image. Selected TIFF, report and sharing exports run separately for both finals.
+
+Native checks verified separate XISF files, reopened starless samples, a real stars
+contribution in the companion, unchanged final-starless pixels and unchanged
+original input. The deterministic separation test exercises the full production
+controller and native PixelMath/recombination/save operations.

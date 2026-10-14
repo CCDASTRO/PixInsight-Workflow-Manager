@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.2.0",
+    "softwareVersion": "1.2.1",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,11 +160,20 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.2.0">CCDASTRO PixInsight Workflow Manager v1.2.0</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.2.1">CCDASTRO PixInsight Workflow Manager v1.2.1</h1>
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage</a> · <a href="https://youtu.be/0G-PI8F51rE">Short video</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
+<h2 id="new-in-v1.2.1">New in v1.2.1</h2>
+<p>Enable <strong>Save both final starless and recombined images</strong> under <strong>Pass sequences
+and optional finishing</strong>. The workflow finishes and saves starless first, then
+reviews stars recombination and saves a separate companion. Default filenames
+end in <code>_Starless.xisf</code> and <code>_Recombined.xisf</code>; the second save cannot overwrite
+the first. Each selected TIFF/report/sharing export is available for both outputs.
+Skipping the recombination review keeps the finished starless result.</p>
+<p>The v1.2.1 signed update package is being prepared; the live updater remains at
+v1.2.0 until its fresh signatures and package are published.</p>
 <h2 id="new-in-v1.2.0">New in v1.2.0</h2>
 <p>Ordered linear BlurX/NoiseX/StarX passes, full starless finishing, optional
 post-stretch cleanup, reference RGB matching, reviewed background repairs,
@@ -1011,6 +1020,7 @@ its developer and verifies integrity; it does not imply PTeam endorsement.</p>
 <p>Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.</p>
 <ul>
+<li><strong>v1.2.1:</strong> Adds paired final starless/recombined saves from one run, distinct suggested filenames, companion overwrite protection and independent output exports/reports. Native two-file save/reopen and pixel-preservation checks passed.</li>
 <li><strong>v1.2.0:</strong> Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. The script and update manifest are signed for the CCDASTRO identity.</li>
 <li><strong>v1.1.47:</strong> Detects vendor-configured SyQon executables when workflow paths are
 empty; explicitly saved workflow paths take priority. Accepts quoted paths and

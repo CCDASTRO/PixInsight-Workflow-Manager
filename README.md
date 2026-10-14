@@ -1,10 +1,22 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.0
+# CCDASTRO PixInsight Workflow Manager v1.2.1
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.2.1
+
+Enable **Save both final starless and recombined images** under **Pass sequences
+and optional finishing**. The workflow finishes and saves starless first, then
+reviews stars recombination and saves a separate companion. Default filenames
+end in `_Starless.xisf` and `_Recombined.xisf`; the second save cannot overwrite
+the first. Each selected TIFF/report/sharing export is available for both outputs.
+Skipping the recombination review keeps the finished starless result.
+
+The v1.2.1 signed update package is being prepared; the live updater remains at
+v1.2.0 until its fresh signatures and package are published.
 
 ## New in v1.2.0
 
@@ -863,6 +875,7 @@ node pixinsight/tools/validate-workflow.js
 Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.
 
+- **v1.2.1:** Adds paired final starless/recombined saves from one run, distinct suggested filenames, companion overwrite protection and independent output exports/reports. Native two-file save/reopen and pixel-preservation checks passed.
 - **v1.2.0:** Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. The script and update manifest are signed for the CCDASTRO identity.
 - **v1.1.47:** Detects vendor-configured SyQon executables when workflow paths are
   empty; explicitly saved workflow paths take priority. Accepts quoted paths and

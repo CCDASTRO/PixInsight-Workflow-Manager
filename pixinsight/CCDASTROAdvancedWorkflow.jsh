@@ -18,7 +18,7 @@ function defaultRCPass(tool) {
 function defaultAdvancedWorkflowSettings() {
    return {useLinearPasses:false,
       linearPasses:[defaultRCPass("BlurXTerminator"), defaultRCPass("StarXTerminator"), defaultRCPass("NoiseXTerminator")],
-      keepStarless:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
+      keepStarless:false, saveBoth:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
       referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
       reports:true, tiff:false};
 }
@@ -59,7 +59,7 @@ function restoreAdvancedWorkflowSettings(value) {
    var candidate=defaultAdvancedWorkflowSettings();
    if (value) {
       for (var k in candidate) if (Object.prototype.hasOwnProperty.call(value,k)) candidate[k]=advancedCopy(value[k]);
-      for (var i=0, flags=["useLinearPasses","keepStarless","postEnabled","referenceEnabled","repairsEnabled","reports","tiff"];i<flags.length;i++)
+      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","reports","tiff"];i<flags.length;i++)
          if(typeof candidate[flags[i]]!=="boolean") throw new Error("Invalid advanced workflow flag: "+flags[i]);
       if(!finiteNumber(candidate.referenceStrength)||candidate.referenceStrength<0||candidate.referenceStrength>100) throw new Error("Invalid reference match strength.");
       if(!finiteNumber(candidate.starlessTarget)||candidate.starlessTarget<0.01||candidate.starlessTarget>0.50) throw new Error("Starless histogram target must be 1-50 percent.");
@@ -67,13 +67,14 @@ function restoreAdvancedWorkflowSettings(value) {
       if(candidate.postEnabled) validateRCPasses(candidate.postPasses,"stretched");
       if(!Array.isArray(candidate.repairs)||candidate.repairs.length>32) throw new Error("Invalid repair list.");
    }
+   if(candidate.saveBoth)candidate.keepStarless=false;
    advancedWorkflowSettings=candidate;
 }
 function advancedSeparationEnabled(dialog) {
    if(!advancedWorkflowSettings.useLinearPasses) return dialog.rowsById.starSeparation.enabled.checked;
    return advancedWorkflowSettings.linearPasses.some(function(p){return p.enabled && p.tool==="StarXTerminator";});
 }
-function advancedStarlessFinal(dialog) {return advancedWorkflowSettings.keepStarless && advancedSeparationEnabled(dialog);}
+function advancedStarlessFinal(dialog) {return (advancedWorkflowSettings.keepStarless || advancedWorkflowSettings.saveBoth) && advancedSeparationEnabled(dialog);}
 function advancedRecord(kind, data) {
    if(advancedRunAudit) advancedRunAudit.steps.push({time:new Date().toISOString(),kind:kind,data:advancedCopy(data)});
 }
@@ -369,6 +370,8 @@ function installAdvancedWorkflowControls(dialog) {
    var summary=new Label(box);summary.wordWrapping=true;box.sizer.add(summary);
    var edit=new PushButton(box);edit.text="Edit linear pass sequence...";box.sizer.add(edit);
    var keep=advancedCheck(box,box.sizer,"Finish and save the starless branch",false);
+   var both=advancedCheck(box,box.sizer,"Save both final starless and recombined images",false);
+   both.toolTip="Finish/save starless first, then review stars recombination and save a separate final. The starless file is protected from overwrite by its companion.";
    var target=advancedIntegerRow(box,box.sizer,"Starless auto-histogram median target (%)",1,50,23);
    target.toolTip="Used for linked/unlinked automatic histogram stretching. Histogram/MAS workflows use their own Setup parameters.";
    var post=advancedCheck(box,box.sizer,"Enable post-stretch NoiseX / StarX cleanup passes",false);
@@ -379,16 +382,16 @@ function installAdvancedWorkflowControls(dialog) {
    var tiff=advancedCheck(box,box.sizer,"Also export a full-resolution 16-bit TIFF",false);
    var note=new Label(box);note.wordWrapping=true;note.text="Gradients and color calibration run first. The custom linear sequence replaces the ordinary deblur, denoise and separation rows. Every pass has its own settings. Reference matching and local repairs are optional, previewed edits.";box.sizer.add(note);
    dialog.advancedValues=function(){return advancedCopy(advancedWorkflowSettings);};
-   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
+   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
       summary.text=a.linearPasses.filter(function(p){return p.enabled;}).map(function(p,i){return (i+1)+". "+p.label;}).join(" → ");edit.enabled=a.useLinearPasses;postEdit.enabled=a.postEnabled;
       ["deconvolution","noiseReduction","starSeparation"].forEach(function(id){dialog.rowsById[id].enabled.enabled=!a.useLinearPasses;dialog.rowsById[id].choice.enabled=!a.useLinearPasses;});
-      target.value=Math.round(a.starlessTarget*100);target.enabled=a.keepStarless;
+      target.value=Math.round(a.starlessTarget*100);target.enabled=a.keepStarless||a.saveBoth;
       if(dialog.blurXBox)dialog.blurXBox.enabled=!a.useLinearPasses;if(dialog.noisePlacement){dialog.noisePlacement.enabled=!a.useLinearPasses;}
-      if(a.keepStarless){dialog.recombine.checked=false;dialog.finishStarless.checked=false;dialog.starlessStretch.currentItem=0;dialog.starsStretch.currentItem=0;dialog.starReduction.checked=false;}dialog.recombine.enabled=dialog.finishStarless.enabled=dialog.starlessStretch.enabled=dialog.starsStretch.enabled=!a.keepStarless;
+      if(a.keepStarless||a.saveBoth){dialog.recombine.checked=false;dialog.finishStarless.checked=false;dialog.starlessStretch.currentItem=0;dialog.starsStretch.currentItem=0;if(a.keepStarless)dialog.starReduction.checked=false;}dialog.recombine.enabled=dialog.finishStarless.enabled=dialog.starlessStretch.enabled=dialog.starsStretch.enabled=!(a.keepStarless||a.saveBoth);
    };
    function changed(){dialog.refreshAdvancedControls();saveWorkflowState(dialog,false);}
    target.onValueUpdated=function(v){advancedWorkflowSettings.starlessTarget=v/100;saveWorkflowState(dialog,false);};
-   use.onCheck=function(v){advancedWorkflowSettings.useLinearPasses=v;changed();};keep.onCheck=function(v){advancedWorkflowSettings.keepStarless=v;changed();};post.onCheck=function(v){advancedWorkflowSettings.postEnabled=v;changed();};ref.onCheck=function(v){advancedWorkflowSettings.referenceEnabled=v;changed();};repairs.onCheck=function(v){advancedWorkflowSettings.repairsEnabled=v;changed();};reports.onCheck=function(v){advancedWorkflowSettings.reports=v;changed();};tiff.onCheck=function(v){advancedWorkflowSettings.tiff=v;changed();};
+   use.onCheck=function(v){advancedWorkflowSettings.useLinearPasses=v;changed();};keep.onCheck=function(v){advancedWorkflowSettings.keepStarless=v;if(v)advancedWorkflowSettings.saveBoth=false;changed();};both.onCheck=function(v){advancedWorkflowSettings.saveBoth=v;if(v)advancedWorkflowSettings.keepStarless=false;changed();};post.onCheck=function(v){advancedWorkflowSettings.postEnabled=v;changed();};ref.onCheck=function(v){advancedWorkflowSettings.referenceEnabled=v;changed();};repairs.onCheck=function(v){advancedWorkflowSettings.repairsEnabled=v;changed();};reports.onCheck=function(v){advancedWorkflowSettings.reports=v;changed();};tiff.onCheck=function(v){advancedWorkflowSettings.tiff=v;changed();};
    edit.onClick=function(){var p=editRCPassSequence(advancedWorkflowSettings.linearPasses,"linear");if(p){advancedWorkflowSettings.linearPasses=p;changed();}};
    postEdit.onClick=function(){var p=editRCPassSequence(advancedWorkflowSettings.postPasses,"stretched");if(p){advancedWorkflowSettings.postPasses=p;changed();}};
    return box;
@@ -398,9 +401,25 @@ function advancedPreflight(dialog,result,window) {
    try{
       if(a.useLinearPasses){validateRCPasses(a.linearPasses,"linear");a.linearPasses.filter(function(p){return p.enabled;}).forEach(function(p){advancedProcessForPass(p,"linear");});}
       if(a.postEnabled){validateRCPasses(a.postPasses,"stretched");a.postPasses.filter(function(p){return p.enabled;}).forEach(function(p){advancedProcessForPass(p,"stretched");});}
-      if(a.keepStarless&&!advancedSeparationEnabled(dialog))throw new Error("Starless output requires an enabled StarX / star-separation pass.");
+      if((a.keepStarless||a.saveBoth)&&!advancedSeparationEnabled(dialog))throw new Error("Starless output requires an enabled StarX / star-separation pass.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&dialog.finalStretch.currentItem===0&&dialog.starlessStretch.currentItem===0)throw new Error("Post-stretch cleanup, reference matching and local repairs require a workflow stretch.");
-      if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&advancedSeparationEnabled(dialog)&&!dialog.recombine.checked&&!a.keepStarless)throw new Error("Enable Finish and save the starless branch, or recombine, for advanced finishing.");
+      if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&advancedSeparationEnabled(dialog)&&!dialog.recombine.checked&&!a.keepStarless&&!a.saveBoth)throw new Error("Enable Finish and save the starless branch, or recombine, for advanced finishing.");
+      if(a.saveBoth&&dialog.finalStretch.currentItem===0)throw new Error("Saving both final images requires a final stretch before stars recombination.");
       if(a.referenceEnabled&&(!window.currentView.image.isColor||window.currentView.image.numberOfNominalChannels!==3))throw new Error("Reference RGB matching requires an RGB working image.");
    }catch(e){result.errors.push("Pass sequences / finishing: "+errorMessage(e));}
+}
+
+// Called after the independent final-starless save; review never edits that image.
+function saveRecombinedCompanion(starless,branches,dialog,sourcePath,sourceId) {
+   if(!branches || !branches.controlledStarsView)throw new Error("The controlled stars layer is missing for dual output.");
+   var combined=reviewStarRecombination(starless,branches.controlledStarsView,dialog);
+   if(!dialog.recombinedStarsApplied){advancedRecord("Recombined companion skipped",{starlessView:starless.fullId});return "Recombined image skipped; final starless remains open.";}
+   if(dialog.combinedHDREnabled.checked)combined=reviewHDR(combined);
+   advancedRecord("Recombined companion accepted",{starBrightness:dialog.starBrightness.value,starlessView:starless.fullId,recombinedView:combined.fullId});
+   if(advancedRunAudit)advancedRunAudit.outputKind="Recombined";
+   var result=saveFinalImage(combined,sourcePath,sourceId,"Recombined",starless.window.filePath||"");
+   if(advancedWorkflowSettings.tiff)result+="\n\n"+exportAdvancedTIFF(combined);
+   if(advancedWorkflowSettings.reports)result+="\n\n"+saveAdvancedRunReport(combined);
+   if(dialog.finishingEnabled.checked)result+="\n\n"+exportSharingImage(combined,sourcePath,sourceId);
+   return result;
 }

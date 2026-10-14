@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.0"
+#define VERSION "1.2.1"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -1893,7 +1893,7 @@ PreflightValidator.prototype.validate = function()
    if (this.dialog.finalStretch.currentItem > 0 &&
        (this.dialog.starlessStretch.currentItem > 0 || this.dialog.starsStretch.currentItem > 0))
       result.errors.push("Use either the final recombined stretch or the advanced branch stretches, not both.");
-   if (this.dialog.starReduction.checked && !this.dialog.recombine.checked)
+   if (this.dialog.starReduction.checked && !this.dialog.recombine.checked && !advancedWorkflowSettings.saveBoth)
       result.errors.push("Bill Blanshan star reduction requires automatic branch recombination.");
    if ((this.dialog.hdrEnabled && this.dialog.hdrEnabled.checked) ||
        (this.dialog.combinedHDREnabled && this.dialog.combinedHDREnabled.checked))
@@ -1908,7 +1908,7 @@ PreflightValidator.prototype.validate = function()
    }
    if (this.dialog.combinedHDREnabled && this.dialog.combinedHDREnabled.checked &&
        (!this.dialog.lrgbMode || this.dialog.lrgbMode.currentItem === 0) &&
-       (!separationEnabled || !this.dialog.recombine.checked))
+       (!separationEnabled || (!this.dialog.recombine.checked && !advancedWorkflowSettings.saveBoth)))
       result.errors.push("HDR after stars recombination requires star separation and automatic recombination.");
    if (this.dialog.adaptiveEnabled && this.dialog.adaptiveEnabled.checked)
    {
@@ -4324,11 +4324,17 @@ function finalOutputPath(sourcePath, sourceId)
    return directory + name + "_CCDASTROWorkflow_Final.xisf";
 }
 
-function saveFinalImage(view, sourcePath, sourceId)
+function saveFinalImage(view, sourcePath, sourceId, outputKind, protectedPath)
 {
    var save = new SaveFileDialog;
-   save.caption = "Save workflow final image";
+   save.caption = outputKind ? "Save final " + outputKind.toLowerCase() + " image" : "Save workflow final image";
    save.initialPath = finalOutputPath(sourcePath, sourceId);
+   if(outputKind)save.initialPath=save.initialPath.replace(/\.xisf$/i,"_"+outputKind+".xisf");
+   if(outputKind==="Recombined" && protectedPath)
+   {
+      save.initialPath=protectedPath.replace(/_Starless\.xisf$/i,"_Recombined.xisf");
+      if(save.initialPath===protectedPath)save.initialPath=protectedPath.replace(/\.xisf$/i,"_Recombined.xisf");
+   }
    save.filters = [["XISF images", "*.xisf"]];
    save.overwritePrompt = true;
    for (;;)
@@ -4344,6 +4350,11 @@ function saveFinalImage(view, sourcePath, sourceId)
       {
          (new MessageBox("Choose a different filename to preserve the original input file.",
             TITLE, StdIcon.Warning, StdButton.Ok)).execute();
+         continue;
+      }
+      if(protectedPath && path.replace(/\\/g,"/").toLowerCase()===protectedPath.replace(/\\/g,"/").toLowerCase())
+      {
+         (new MessageBox("Choose a different filename to preserve the other final image.",TITLE,StdIcon.Warning,StdButton.Ok)).execute();
          continue;
       }
       // Confirm overwrites here too, including when the extension was added.
@@ -4661,7 +4672,7 @@ function enhanceStarlessAndRecombine(self, branches)
 function reviewFinalHDR(view, self, branches)
 {
    var existingFinalHDR = !self.finishStarless.checked && self.hdrEnabled.checked;
-   var combinedHDR = self.combinedHDREnabled.checked && (branches !== null || (self.lrgbMode && self.lrgbMode.currentItem > 0));
+   var combinedHDR = !advancedWorkflowSettings.saveBoth && self.combinedHDREnabled.checked && (branches !== null || (self.lrgbMode && self.lrgbMode.currentItem > 0));
    if (combinedHDR && branches !== null && self.finishStarless.checked && !self.recombinedStarsApplied)
    {
       logLine("HDR after recombination skipped: Keep starless was chosen.");
@@ -4740,7 +4751,7 @@ function executeWorkflow(self, quiet)
          checkAbortRequested();
       }
 
-      if(advancedWorkflowSettings.keepStarless && branches===null) throw new Error("No StarX separation was kept. Disable starless output or keep a StarX pass.");
+      if((advancedWorkflowSettings.keepStarless||advancedWorkflowSettings.saveBoth) && branches===null) throw new Error("No StarX separation was kept. Disable starless output or keep a StarX pass.");
       if (branches !== null)
       {
          if (!advancedWorkflowSettings.useLinearPasses && noiseRow.enabled.checked && self.noisePlacement.currentItem === 1)
@@ -4749,6 +4760,10 @@ function executeWorkflow(self, quiet)
             adapters[noiseRow.adapterId()].execute(branches.starlessView);
             advancedRecord("Linear starless noise reduction",{adapter:noiseRow.adapterId()});
             checkAbortRequested();
+         }
+         if(advancedWorkflowSettings.saveBoth)
+         {
+            var dualStars=advancedControlledStars(branches);branches.controlledStarsView=dualStars.mainView;dualStars.show();
          }
          if (advancedStarlessFinal(self))
          {
@@ -4857,11 +4872,13 @@ function executeWorkflow(self, quiet)
             finalView = reviewFinalHDR(finalView, self, branches);
             finalView = reviewPostLuminance(finalView, self, luminanceState);
          }
-         completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId);
+         if(advancedRunAudit)advancedRunAudit.outputKind=advancedWorkflowSettings.saveBoth?"Starless":"Final";
+         completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId,advancedWorkflowSettings.saveBoth?"Starless":undefined);
          if(advancedWorkflowSettings.tiff) completion += "\n\n" + exportAdvancedTIFF(finalView);
          if(advancedWorkflowSettings.reports) completion += "\n\n" + saveAdvancedRunReport(finalView);
          if (self.finishingEnabled.checked)
             completion += "\n\n" + exportSharingImage(finalView, sourcePath, sourceId);
+         if(advancedWorkflowSettings.saveBoth)completion += "\n\n"+saveRecombinedCompanion(finalView,branches,self,sourcePath,sourceId);
          completion += "\n\nOriginal unstretched input remains unchanged and open.";
       }
       else

@@ -15,8 +15,7 @@ end in `_Starless.xisf` and `_Recombined.xisf`; the second save cannot overwrite
 the first. Each selected TIFF/report/sharing export is available for both outputs.
 Skipping the recombination review keeps the finished starless result.
 
-The v1.2.1 signed update package is being prepared; the live updater remains at
-v1.2.0 until its fresh signatures and package are published.
+The workflow script and update manifest are signed for the CCDASTRO identity.
 
 ## New in v1.2.0
 

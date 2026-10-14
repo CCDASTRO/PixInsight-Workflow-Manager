@@ -1,0 +1,14 @@
+{
+  "version": "1.2.1",
+  "package": "CCDASTROWorkflowManager-1.2.1.zip",
+  "sha1": "b0520d5096eca3b8a281c3264d5a50f0876edbd8",
+  "packageFiles": [
+    "CCDASTROWorkflowManager.js",
+    "CCDASTROWorkflowManager.xsgn",
+    "CCDASTROAutoDBEEngine.jsh",
+    "CCDASTROAdvancedWorkflow.jsh"
+  ],
+  "manifestSigned": true,
+  "scriptSignatureValidatedInPixInsight": true,
+  "validation": "25 Node regression suites; native paired XISF save/reopen, controlled-stars recombination and original/starless preservation"
+}

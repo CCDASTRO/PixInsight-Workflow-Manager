@@ -11,6 +11,11 @@ $installedDirectory = Join-Path $PixInsightRoot 'src\scripts\ImageSolver'
 $installedEngine = Join-Path $installedDirectory 'ImageSolverEngine.js'
 $localDirectory = Join-Path $repositoryRoot 'ImageSolver'
 $localEngine = Join-Path $localDirectory 'ImageSolverEngine.js'
+$resolvedLocalDirectory = [System.IO.Path]::GetFullPath($localDirectory)
+$expectedLocalDirectory = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot 'ImageSolver'))
+if ($resolvedLocalDirectory -ne $expectedLocalDirectory) {
+    throw 'Refusing dependency staging outside this repository ImageSolver directory.'
+}
 $workflowScript = Join-Path $repositoryRoot 'pixinsight\CCDASTROWorkflowManager.js'
 
 if (-not (Test-Path -LiteralPath $installedEngine -PathType Leaf)) {

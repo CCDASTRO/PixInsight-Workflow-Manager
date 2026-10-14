@@ -1,0 +1,14 @@
+{
+  "version": "1.2.0",
+  "package": "CCDASTROWorkflowManager-1.2.0.zip",
+  "sha1": "96d520ed77acc2a30637020c85b0fd50dd0493c5",
+  "packageFiles": [
+    "CCDASTROWorkflowManager.js",
+    "CCDASTROWorkflowManager.xsgn",
+    "CCDASTROAutoDBEEngine.jsh",
+    "CCDASTROAdvancedWorkflow.jsh"
+  ],
+  "manifestSigned": true,
+  "scriptSignatureValidatedInPixInsight": true,
+  "validation": "24 Node regression suites; workflow definition; native release-source checks; actual RC Astro crop execution"
+}

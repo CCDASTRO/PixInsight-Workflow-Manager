@@ -165,12 +165,11 @@
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
 <p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage</a> · <a href="https://youtu.be/0G-PI8F51rE">Short video</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
-<h2 id="v1.2.0-release-preparation">v1.2.0 release preparation</h2>
-<p>The v1.2.0 source adds ordered linear RC Astro passes and full starless finishing.
-Its script and update-manifest signatures must be regenerated before publishing
-the PixInsight update package. The existing signed updater remains at v1.1.47
-until that release step is complete. See <a href="docs/ADVANCED-WORKFLOW.md">the v1.2.0 guide</a>
-for the new controls and native validation results.</p>
+<h2 id="new-in-v1.2.0">New in v1.2.0</h2>
+<p>Ordered linear BlurX/NoiseX/StarX passes, full starless finishing, optional
+post-stretch cleanup, reference RGB matching, reviewed background repairs,
+TIFF export and step-by-step reports are now integrated into the workflow.
+See <a href="docs/ADVANCED-WORKFLOW.md">the v1.2.0 guide</a> for settings and validation.</p>
 <h2 id="install-with-pixinsight-update-manager">Install with PixInsight Update Manager</h2>
 <ol>
 <li><p>Choose <strong>Resources &gt; Updates &gt; Manage Repositories</strong>, click <strong>Add</strong>, and paste:</p>
@@ -1012,7 +1011,7 @@ its developer and verifies integrity; it does not imply PTeam endorsement.</p>
 <p>Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.</p>
 <ul>
-<li><strong>v1.2.0:</strong> Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. Certified release signing is pending.</li>
+<li><strong>v1.2.0:</strong> Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. The script and update manifest are signed for the CCDASTRO identity.</li>
 <li><strong>v1.1.47:</strong> Detects vendor-configured SyQon executables when workflow paths are
 empty; explicitly saved workflow paths take priority. Accepts quoted paths and
 known executable folders. Missing-path errors show the actual resolved value.</li>

@@ -6,13 +6,12 @@ finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
 
-## v1.2.0 release preparation
+## New in v1.2.0
 
-The v1.2.0 source adds ordered linear RC Astro passes and full starless finishing.
-Its script and update-manifest signatures must be regenerated before publishing
-the PixInsight update package. The existing signed updater remains at v1.1.47
-until that release step is complete. See [the v1.2.0 guide](docs/ADVANCED-WORKFLOW.md)
-for the new controls and native validation results.
+Ordered linear BlurX/NoiseX/StarX passes, full starless finishing, optional
+post-stretch cleanup, reference RGB matching, reviewed background repairs,
+TIFF export and step-by-step reports are now integrated into the workflow.
+See [the v1.2.0 guide](docs/ADVANCED-WORKFLOW.md) for settings and validation.
 
 ## Install with PixInsight Update Manager
 
@@ -864,7 +863,7 @@ node pixinsight/tools/validate-workflow.js
 Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.
 
-- **v1.2.0:** Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. Certified release signing is pending.
+- **v1.2.0:** Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. The script and update manifest are signed for the CCDASTRO identity.
 - **v1.1.47:** Detects vendor-configured SyQon executables when workflow paths are
   empty; explicitly saved workflow paths take priority. Accepts quoted paths and
   known executable folders. Missing-path errors show the actual resolved value.

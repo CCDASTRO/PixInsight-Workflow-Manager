@@ -20,6 +20,11 @@ $sourceAdvanced = Join-Path $repositoryRoot 'pixinsight\CCDASTROAdvancedWorkflow
 $updatesDirectory = Join-Path $repositoryRoot 'updates'
 $stageRoot = Join-Path $PSScriptRoot '.stage'
 $stageScriptDirectory = Join-Path $stageRoot 'src\scripts\CCDASTRO'
+$resolvedStageRoot = [System.IO.Path]::GetFullPath($stageRoot)
+$expectedStageRoot = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot 'packaging\.stage'))
+if ($resolvedStageRoot -ne $expectedStageRoot) {
+    throw 'Refusing staging operations outside this repository packaging/.stage.'
+}
 $packageName = "CCDASTROWorkflowManager-$Version.zip"
 $packagePath = Join-Path $updatesDirectory $packageName
 $manifestPath = Join-Path $updatesDirectory 'updates.xri'

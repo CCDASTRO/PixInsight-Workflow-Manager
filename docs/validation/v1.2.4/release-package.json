@@ -1,0 +1,14 @@
+{
+  "version": "1.2.4",
+  "package": "CCDASTROWorkflowManager-1.2.4.zip",
+  "sha1": "7a11fa0a61ae6d2b7910473a00cb1109c571baf0",
+  "packageFiles": [
+    "CCDASTROWorkflowManager.js",
+    "CCDASTROWorkflowManager.xsgn",
+    "CCDASTROAutoDBEEngine.jsh",
+    "CCDASTROAdvancedWorkflow.jsh"
+  ],
+  "manifestSigned": true,
+  "scriptSignatureValidatedInPixInsight": true,
+  "validation": "26 Node regression suites; native wide and narrow dialog rendering; expanded content height 1056 versus 1936 pixels"
+}

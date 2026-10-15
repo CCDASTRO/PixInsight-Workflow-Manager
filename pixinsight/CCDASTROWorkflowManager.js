@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.3"
+#define VERSION "1.2.4"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -2942,16 +2942,31 @@ constructor()
    this.content.sizer.add(this.inputQualityNote);
    this.content.sizer.add(this.linearConfirmation);
    this.content.sizer.add(this.rememberSettings);
-   this.content.sizer.add(this.lrgbBox);
-   this.content.sizer.add(this.profileSection);
-   this.content.sizer.add(this.profileBox);
-   this.content.sizer.add(this.stepsSection);
-   this.content.sizer.add(this.stepsBox);
-   this.content.sizer.add(this.branchesSection);
-   this.content.sizer.add(this.branchesBox);
-   this.content.sizer.add(this.advancedBox);
-   this.content.sizer.add(this.statusSection);
-   this.content.sizer.add(this.statusBox);
+   // Use the available desktop width to avoid one long stack of expanded sections.
+   this.wideWorkflowLayout = this.availableScreenRect.width >= 1500;
+   this.workflowColumns = this.wideWorkflowLayout ? new HorizontalSizer : new VerticalSizer;
+   this.workflowColumns.spacing = 12;
+   this.linearColumn = new VerticalSizer;
+   this.linearColumn.spacing = 6;
+   this.finishingColumn = new VerticalSizer;
+   this.finishingColumn.spacing = 6;
+   this.linearColumn.add(this.lrgbBox);
+   this.linearColumn.add(this.profileSection);
+   this.linearColumn.add(this.profileBox);
+   this.linearColumn.add(this.stepsSection);
+   this.linearColumn.add(this.stepsBox);
+   this.finishingColumn.add(this.branchesSection);
+   this.finishingColumn.add(this.branchesBox);
+   this.finishingColumn.add(this.advancedBox);
+   this.finishingColumn.add(this.statusSection);
+   this.finishingColumn.add(this.statusBox);
+   if(this.wideWorkflowLayout) {
+      this.linearColumn.addStretch();
+      this.finishingColumn.addStretch();
+   }
+   this.workflowColumns.add(this.linearColumn, this.wideWorkflowLayout ? 55 : 0);
+   this.workflowColumns.add(this.finishingColumn, this.wideWorkflowLayout ? 45 : 0);
+   this.content.sizer.add(this.workflowColumns);
 
    this.sizer = new VerticalSizer;
    this.sizer.margin = 8;
@@ -3076,8 +3091,8 @@ constructor()
       self.cancel();
    };
    var minimumHeight = Math.min(620, Math.round(this.availableScreenRect.height * 0.75));
-   this.setMinSize(600, minimumHeight);
-   this.resize(Math.min(840, Math.round(this.availableScreenRect.width * 0.92)),
+   this.setMinSize(this.wideWorkflowLayout ? 1380 : 600, minimumHeight);
+   this.resize(Math.min(this.wideWorkflowLayout ? 1720 : 840, Math.round(this.availableScreenRect.width * 0.94)),
       Math.min(900, Math.round(this.availableScreenRect.height * 0.90)));
    this.refreshScrollableLayout();
 }

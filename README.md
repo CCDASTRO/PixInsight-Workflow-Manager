@@ -1,10 +1,14 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.3
+# CCDASTRO PixInsight Workflow Manager v1.2.4
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.2.4
+
+The main window uses two columns on wider screens: input and linear tools on the left, stretching and finishing on the right. Smaller screens keep a single column. Validate and Run stay fixed below the scroll area.
 
 ## New in v1.2.3
 

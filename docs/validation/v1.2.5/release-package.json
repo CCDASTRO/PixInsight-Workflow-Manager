@@ -1,0 +1,14 @@
+{
+  "version": "1.2.5",
+  "package": "CCDASTROWorkflowManager-1.2.5.zip",
+  "sha1": "0949f39e57e371f9b1445c6277c19d23b9786aeb",
+  "packageFiles": [
+    "CCDASTROWorkflowManager.js",
+    "CCDASTROWorkflowManager.xsgn",
+    "CCDASTROAutoDBEEngine.jsh",
+    "CCDASTROAdvancedWorkflow.jsh"
+  ],
+  "manifestSigned": true,
+  "scriptSignatureValidatedInPixInsight": true,
+  "validation": "26 Node regression suites; native tool-selection callbacks and local-repair dialog rendering"
+}

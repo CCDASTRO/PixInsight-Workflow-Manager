@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.4"
+#define VERSION "1.2.5"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -419,7 +419,7 @@ PlateSolveAdapter.prototype.execute = function(view)
    if (!finitePositive(solver.metadata.observationTime))
    {
       solver.solverCfg.tryApparentCoordinates = false;
-      logLine("Image metadata has no valid observation time; apparent-coordinate retry disabled.");
+      throw new Error("Plate solving requires observation time for the Gaia catalog. Restore the actual capture DATE-OBS metadata in this image, or solve it in ImageSolver with the correct observation date before running the workflow. No date has been invented.");
    }
    if (typeof CatalogMode !== "undefined")
       solver.solverCfg.catalogMode = CatalogMode.Automatic;
@@ -2105,8 +2105,9 @@ constructor(settings)
 }
 
 function selectableWorkflowStep(step) { var copy=Object.assign({},step);copy.adapterIds=step.adapterIds.slice();return copy; }
-function WorkflowRow(parent, step)
+function WorkflowRow(parent, step, dialog)
 {
+   this.dialog = dialog;
    var originalStep = step;
    step = selectableWorkflowStep(step);
    this.step = step;
@@ -2185,12 +2186,12 @@ function WorkflowRow(parent, step)
    this.refreshChoiceHelp();
    this.refreshStatus();
    var self = this;
-   this.enabled.onCheck = function() { self.suspendedSelection = false; self.refreshStatus(); if(self.dialog.refreshAdvancedControls)self.dialog.refreshAdvancedControls(); };
+   this.enabled.onCheck = function() { self.suspendedSelection = false; self.refreshStatus(); if(self.dialog && self.dialog.refreshAdvancedControls)self.dialog.refreshAdvancedControls(); };
    this.choice.onItemSelected = function()
    {
       self.refreshChoiceHelp();
       self.refreshStatus();
-      if(self.dialog.refreshAdvancedControls)self.dialog.refreshAdvancedControls();
+      if(self.dialog && self.dialog.refreshAdvancedControls)self.dialog.refreshAdvancedControls();
    };
    if (this.setup !== null)
       this.setup.onClick = function()
@@ -2713,7 +2714,7 @@ constructor()
    var workflow = defaultWorkflow();
    for (var i = 0; i < workflow.length; ++i)
    {
-      var row = new WorkflowRow(this.content, workflow[i]);
+      var row = new WorkflowRow(this.content, workflow[i], this);
       this.rows.push(row);
       this.rowsById[workflow[i].id] = row;
       this.stepsBox.sizer.add(row.sizer);

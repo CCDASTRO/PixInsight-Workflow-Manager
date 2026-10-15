@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.4
+# CCDASTRO PixInsight Workflow Manager v1.2.5
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,10 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.2.5
+
+Fix tool-selection refresh errors and corrupted punctuation in advanced dialogs. Place Skip repairs beside Apply instead of over the instructions. Missing observation-time metadata now produces an actionable error before Gaia plate solving begins.
 
 ## New in v1.2.4
 

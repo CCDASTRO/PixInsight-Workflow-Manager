@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.1"
+#define VERSION "1.2.2"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -624,7 +624,7 @@ function configureSyQon(dialog, id)
          accepted=v;d.ok();
       } catch(e) {(new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok)).execute();}
    };
-   d.adjustToContents();if(d.execute() && accepted) {syqonSettings[id]=accepted;dialog.refreshSyQonControls();saveWorkflowState(dialog,false);}
+   d.adjustToContents();if(executeAdvancedDialog(d) && accepted) {syqonSettings[id]=accepted;dialog.refreshSyQonControls();saveWorkflowState(dialog,false);return true;}return false;
 }
 
 function installSyQonControls(dialog)
@@ -736,7 +736,7 @@ function syqonTemporaryTransfer(view,id,values)
    else for(var c=0;c<channels;++c){var center=median.at(c);if(center<=0||center>=1)throw new Error("Cannot calculate reversible SyQon stretch.");result.push(Math.mtf(target,center));}
    applySyQonTransfer(view,result,false);return result;
 }
-function executeSyQonEngine(id,values,view)
+function executeSyQonEngine(id,values,view,scope)
 {
    prepareSyQonEngine(id,values,view);
    var directory=File.uniqueFileName(File.systemTempDirectory,12,"CCDASTRO_SyQon_",""),extension=id==="syqonStarless"?".tif":".fits",input=directory+"/input"+extension,output=directory+"/output"+extension;
@@ -744,7 +744,7 @@ function executeSyQonEngine(id,values,view)
    try {
       File.createDirectory(directory);created=true;
       copy=cloneHDRView(view,"_SyQonTransfer");
-      var transfer=syqonTemporaryTransfer(copy.mainView,id,values);
+      var transfer=scope==="stretched"?[]:syqonTemporaryTransfer(copy.mainView,id,values);
       var writer=new FileFormatInstance(new FileFormat(extension,false,true));
       try{var description=new ImageDescription;description.bitsPerSample=32;description.ieeefpSampleFormat=true;
          if(!writer.create(input,"float 32")||!writer.setOptions(description)||!writer.writeImage(copy.mainView.image))throw new Error("Cannot write Float32 SyQon input image.");}finally{writer.close();}
@@ -766,7 +766,7 @@ function executeSyQonEngine(id,values,view)
       if(image.width!==view.image.width||image.height!==view.image.height||image.numberOfChannels!==view.image.numberOfChannels||image.isColor!==view.image.isColor)throw new Error("SyQon output dimensions/channels differ from input.");
       if(!finiteNumber(image.minimum())||!finiteNumber(image.maximum()))throw new Error("SyQon output contains invalid samples.");
       if(transfer.length)applySyQonTransfer(opened[0].mainView,transfer,true);
-      if(id==="syqonStarless") {
+      if(id==="syqonStarless" && scope!=="stretched") {
          stars=cloneHDRView(view,"_stars");var pm=new PixelMath;
          pm.expression="max(0,"+view.fullId+"-"+opened[0].mainView.fullId+")";
          pm.useSingleExpression=true;pm.createNewImage=false;pm.rescale=false;pm.truncate=true;pm.truncateLower=0;pm.truncateUpper=1;
@@ -985,7 +985,7 @@ function configureNativeProcess(id)
    var save=new PushButton(d);save.text="Save settings";save.onClick=function(){try{var v={useIcon:override.checked};for(var key in controls){var item=controls[key],c=item.control,f=item.field;v[key]=f.type==="boolean"?c.checked:f.type==="integer"?c.value:f.type==="number"?Number(c.text.trim()):f.type==="enum"||f.type.indexOf("curve")===0?c.values[c.currentItem]:c.text.trim();if(f.type==="number"&&!c.text.trim())throw new Error("Enter "+f.label);}
       validateNativeSettings(id,v);accepted=v;d.ok();}catch(e){(new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok)).execute();}};buttons.add(save);
    var cancel=new PushButton(d);cancel.text="Cancel";cancel.onClick=function(){d.cancel();};buttons.add(cancel);root.add(buttons);d.adjustToContents();
-   if(d.execute()&&accepted){nativeSettings[id]=accepted;saveNativeWorkflowSettings();if(nativeSettingsOwner)nativeSettingsOwner.refreshNativeControls();return true;}return false;
+   if(executeAdvancedDialog(d)&&accepted){nativeSettings[id]=accepted;saveNativeWorkflowSettings();if(nativeSettingsOwner)nativeSettingsOwner.refreshNativeControls();return true;}return false;
 }
 function finalDenoiseKey(tool)
 {

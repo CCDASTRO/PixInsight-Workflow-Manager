@@ -543,3 +543,27 @@ function workflowPrecisionError(image) {
    return image.bitsPerSample < 16 ? "The selected image is only " + image.bitsPerSample + " bits per sample. Open the original linear 16-bit or 32-bit integration before running this workflow. GraXpert requires at least 16 bits; converting an 8-bit export cannot recover the lost data." : "";
 }
 
+
+// Bounded interior sampling: at most 4096 samples per nominal channel.
+function quickWorkflowInputCheck(image) {
+   var result={errors:[],warnings:[],channels:[],sampleCount:0},channels=Math.min(3,image.numberOfNominalChannels || image.numberOfChannels);
+   var nx=Math.min(64,image.width),ny=Math.min(64,image.height),allFlat=true;
+   for(var c=0;c<channels;c++) {
+      var values=[],grid=0,interior=0,levels={},invalid=0,black=0,white=0;
+      for(var y=0;y<ny;y++)for(var x=0;x<nx;x++) {
+         var v=image.sample(Math.min(image.width-1,Math.floor((x+.5)*image.width/nx)),Math.min(image.height-1,Math.floor((y+.5)*image.height/ny)),c);
+         if(!isFinite(v)){invalid++;continue;}values.push(v);black+=v<=0?1:0;white+=v>=1?1:0;
+         if(v>0 && v<1){interior++;var q=Math.round(v*255);if(Math.abs(v*255-q)<.0001){grid++;levels[q]=true;}}
+      }
+      values.sort(function(a,b){return a-b;});var n=values.length,min=n?values[0]:null,max=n?values[n-1]:null,median=n?values[Math.floor(n/2)]:null;
+      var stats={channel:c,samples:n+invalid,invalid:invalid,median:median,min:min,max:max,blackFraction:n?black/n:0,whiteFraction:n?white/n:0,eightBitGridFraction:interior?grid/interior:0,eightBitLevels:Object.keys(levels).length};
+      result.channels.push(stats);result.sampleCount+=n+invalid;
+      if(invalid)result.errors.push("Channel "+(c+1)+": invalid/nonfinite sampled pixels. Repair or re-export the integration before processing.");
+      if(n && max-min>1e-8)allFlat=false;
+      if(interior>=2048 && grid/interior>=.999 && stats.eightBitLevels>=64)result.errors.push("Channel "+(c+1)+": sampled values retain an 8-bit quantization grid despite the storage format. Reject this input for the linear workflow; export the original full-precision linear integration. Conversion to 32-bit cannot restore lost values.");
+      if(median!==null && median>.1)result.warnings.push("Channel "+(c+1)+": bright median "+median.toFixed(3)+"; possible prior stretch or high background. Confirm this is the original unstretched master. Brightness alone does not prove a stretch.");
+      if(stats.blackFraction>.01 || stats.whiteFraction>.01)result.warnings.push("Channel "+(c+1)+": sampled clipping at zero="+(100*stats.blackFraction).toFixed(1)+"%, at one="+(100*stats.whiteFraction).toFixed(1)+"%. Inspect borders, background and saturated stars.");
+   }
+   if(channels && allFlat)result.errors.push("No usable sampled intensity variation: blank or constant input.");
+   return result;
+}

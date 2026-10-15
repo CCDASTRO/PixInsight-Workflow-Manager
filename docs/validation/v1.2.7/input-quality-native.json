@@ -1,0 +1,52 @@
+{
+  "errors": [
+    "Channel 1: sampled values retain an 8-bit quantization grid despite the storage format. Reject this input for the linear workflow; export the original full-precision linear integration. Conversion to 32-bit cannot restore lost values.",
+    "Channel 2: sampled values retain an 8-bit quantization grid despite the storage format. Reject this input for the linear workflow; export the original full-precision linear integration. Conversion to 32-bit cannot restore lost values.",
+    "Channel 3: sampled values retain an 8-bit quantization grid despite the storage format. Reject this input for the linear workflow; export the original full-precision linear integration. Conversion to 32-bit cannot restore lost values."
+  ],
+  "warnings": [
+    "Channel 1: bright median 0.239; possible prior stretch or high background. Confirm this is the original unstretched master. Brightness alone does not prove a stretch.",
+    "Channel 2: bright median 0.243; possible prior stretch or high background. Confirm this is the original unstretched master. Brightness alone does not prove a stretch.",
+    "Channel 3: bright median 0.243; possible prior stretch or high background. Confirm this is the original unstretched master. Brightness alone does not prove a stretch."
+  ],
+  "channels": [
+    {
+      "channel": 0,
+      "samples": 4096,
+      "invalid": 0,
+      "median": 0.239215686917305,
+      "min": 0,
+      "max": 1,
+      "blackFraction": 0.0009765625,
+      "whiteFraction": 0.002197265625,
+      "eightBitGridFraction": 1,
+      "eightBitLevels": 234
+    },
+    {
+      "channel": 1,
+      "samples": 4096,
+      "invalid": 0,
+      "median": 0.24313725531101227,
+      "min": 0,
+      "max": 1,
+      "blackFraction": 0.00048828125,
+      "whiteFraction": 0.001708984375,
+      "eightBitGridFraction": 1,
+      "eightBitLevels": 218
+    },
+    {
+      "channel": 2,
+      "samples": 4096,
+      "invalid": 0,
+      "median": 0.24313725531101227,
+      "min": 0,
+      "max": 1,
+      "blackFraction": 0.000732421875,
+      "whiteFraction": 0.00048828125,
+      "eightBitGridFraction": 1,
+      "eightBitLevels": 216
+    }
+  ],
+  "sampleCount": 12288,
+  "elapsedMs": 16
+}

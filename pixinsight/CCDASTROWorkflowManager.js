@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.2"
+#define VERSION "1.2.3"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -2185,11 +2185,12 @@ function WorkflowRow(parent, step)
    this.refreshChoiceHelp();
    this.refreshStatus();
    var self = this;
-   this.enabled.onCheck = function() { self.suspendedSelection = false; self.refreshStatus(); };
+   this.enabled.onCheck = function() { self.suspendedSelection = false; self.refreshStatus(); if(self.dialog.refreshAdvancedControls)self.dialog.refreshAdvancedControls(); };
    this.choice.onItemSelected = function()
    {
       self.refreshChoiceHelp();
       self.refreshStatus();
+      if(self.dialog.refreshAdvancedControls)self.dialog.refreshAdvancedControls();
    };
    if (this.setup !== null)
       this.setup.onClick = function()

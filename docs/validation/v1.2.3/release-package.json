@@ -1,0 +1,14 @@
+{
+  "version": "1.2.3",
+  "package": "CCDASTROWorkflowManager-1.2.3.zip",
+  "sha1": "cddc6f6fb17b240b0629eceaf673171390a9e921",
+  "packageFiles": [
+    "CCDASTROWorkflowManager.js",
+    "CCDASTROWorkflowManager.xsgn",
+    "CCDASTROAutoDBEEngine.jsh",
+    "CCDASTROAdvancedWorkflow.jsh"
+  ],
+  "manifestSigned": true,
+  "scriptSignatureValidatedInPixInsight": true,
+  "validation": "26 Node regression suites, including active-tool names, custom labels, disabled passes, main selections and noise-placement order"
+}

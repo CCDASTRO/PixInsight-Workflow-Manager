@@ -5,10 +5,10 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.2.2.zip" sha1="fcbab4a2d1e948a802e1fc6e87d2b738e1230a53" type="script" releaseDate="20261015152250">
-         <title>CCDASTRO Workflow Manager 1.2.2</title>
+      <package fileName="CCDASTROWorkflowManager-1.2.3.zip" sha1="cddc6f6fb17b240b0629eceaf673171390a9e921" type="script" releaseDate="20261015153342">
+         <title>CCDASTRO Workflow Manager 1.2.3</title>
          <description>
-            <p>v1.2.2 extends multiple processing passes to the remaining workflow tools.</p>
+            <p>v1.2.3 displays the actual active processing tools and clarifies sequence overrides.</p>
             <ul>
                <li>v1.2.2 adds per-pass Parallax, MLDenoise, Prism, StarNet2, SyQon Starless, ACDNR and MLT with independent settings and stage-aware execution.</li>
                <li>26 regression suites and native editor, classic-denoise and mixed-remover layer tests passed; additional model inference remains installation-dependent.</li>
@@ -78,4 +78,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-15T15:22:51.327Z" encoding="Base64">x+xY9JbrLz5xpXPy8mj5erBQEX6E9BKsK4IUEX1ydPBXzxGkK4EBo8mjNjdOwKas0UuuqruHueFNWedMFcDvDQ==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-15T15:33:43.208Z" encoding="Base64">zTdE00/YPaQQu0MTCXJLSiDt7Gyqw9C7LJtRRrc0EVLZAougmKLgJQwFqtQF354moDp3+FxiFTNKtxLjACdXAg==</Signature>

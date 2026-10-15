@@ -21,3 +21,10 @@ const starNet=ctx.defaultRCPass("StarNet2");icons.first={...processFor("StarNet2
 starNet.processIcon="missing";assert.throws(()=>ctx.advancedProcessForPass(starNet,"linear"),/Missing process icon/);
 ctx.advancedWorkflowSettings.useLinearPasses=true;ctx.advancedWorkflowSettings.linearPasses=[ctx.defaultRCPass("StarNet2")];assert.equal(ctx.advancedSeparationEnabled({}),true);
 console.log("All-tool pass lists, independent configs, restoration after failure, models/icons, stage flags and SyQon scope capture passed.");
+const rows={deconvolution:{enabled:{checked:true},adapterId:()=>"parallax"},noiseReduction:{enabled:{checked:true},adapterId:()=>"nx"},starSeparation:{enabled:{checked:true},adapterId:()=>"sx"}};
+ctx.adapters={parallax:{label:"SyQon Parallax"},nx:{label:"NoiseXTerminator"},sx:{label:"StarXTerminator"}};
+const dialog={rowsById:rows,noisePlacement:{currentItem:1}};
+let summary=ctx.advancedLinearToolSummary(dialog,{useLinearPasses:false});
+assert(summary.indexOf("SyQon Parallax")<summary.indexOf("StarXTerminator"));assert(summary.indexOf("StarXTerminator")<summary.indexOf("NoiseXTerminator"));assert(!summary.includes("BlurX"));
+rows.noiseReduction.enabled.checked=false;assert(!ctx.advancedLinearToolSummary(dialog,{useLinearPasses:false}).includes("NoiseX"));
+summary=ctx.advancedLinearToolSummary(dialog,{useLinearPasses:true,linearPasses:[{enabled:true,tool:"SyQonParallax",label:"Correction pass"},{enabled:false,tool:"BlurXTerminator",label:"Old pass"}]});assert(summary.includes("SyQon Parallax (Correction pass)"));assert(summary.includes("overridden"));assert(!summary.includes("Old pass"));

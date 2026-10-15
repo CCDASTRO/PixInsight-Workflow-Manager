@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.6"
+#define VERSION "1.2.7"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -1826,7 +1826,14 @@ PreflightValidator.prototype.validate = function()
 
    if (lrgbViews !== null && lrgbViews.R) { window = lrgbViews.R.window; view = lrgbViews.R; }
    var precisionViews = lrgbViews !== null ? Object.keys(lrgbViews).map(function(k){return lrgbViews[k];}).filter(function(v){return v && v.image;}) : [view];
-   precisionViews.forEach(function(v){var message=workflowPrecisionError(v.image);if(message)result.errors.push(v.fullId+": "+message);});
+   precisionViews.forEach(function(v){
+      var message=workflowPrecisionError(v.image);if(message)result.errors.push(v.fullId+": "+message);
+      if(v.image && typeof v.image.sample === "function") {
+         var inputCheck=quickWorkflowInputCheck(v.image);
+         inputCheck.errors.forEach(function(t){result.errors.push(v.fullId+": "+t);});
+         inputCheck.warnings.forEach(function(t){result.warnings.push(v.fullId+": "+t);});
+      }
+   });
    var cropRow = this.dialog.rowsById.crop;
    if (!cropRow.enabled.checked)
       try
@@ -2682,7 +2689,7 @@ constructor()
    this.inputQualityNote.text = "<b>Input quality matters:</b> The workflow builds on the linear master you provide. " +
       "Accurate calibration, registration, integration, rejection, and color combination are essential; " +
       "processing cannot recover detail or remove defects lost or introduced while creating the master.";
-   this.inputQualityNote.toolTip = "Create the best possible linear master with the preprocessing method of your choice before running this workflow.";
+   this.inputQualityNote.toolTip = "Validate and Run sample the input for hidden 8-bit quantization, invalid pixels, clipping, blank data and possible prior stretching. This is a quick screening, not a guarantee of linearity or image quality.";
    this.linearConfirmation = new CheckBox(this.content);
    this.linearConfirmation.text = "I confirm the workflow inputs are unstretched, integrated linear masters";
    this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";

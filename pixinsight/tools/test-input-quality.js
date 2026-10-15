@@ -1,0 +1,15 @@
+"use strict";
+require('./advanced-test-context.cjs');
+const assert=require('node:assert/strict'),vm=require('node:vm');
+const ctx=vm.createContext({});
+const image=fn=>({width:4096,height:4096,numberOfNominalChannels:3,sample:fn});
+const linear=image((x,y,c)=>.005+((x*17+y*23+c*11)%100003)/100003*.025);
+let r=ctx.quickWorkflowInputCheck(linear);assert.equal(r.errors.length,0);assert.equal(r.warnings.length,0);assert.equal(r.sampleCount,12288);
+const quantized=image((x,y,c)=>(((x>>6)*17+(y>>6)*23+c*11)%256)/255);
+r=ctx.quickWorkflowInputCheck(quantized);assert(r.errors.some(s=>s.includes('8-bit quantization')));
+r=ctx.quickWorkflowInputCheck(image((x,y,c)=>linear.sample(x,y,c)+.25));assert.equal(r.errors.length,0);assert(r.warnings.some(s=>s.includes('possible prior stretch')));
+r=ctx.quickWorkflowInputCheck(image(()=>NaN));assert(r.errors.some(s=>s.includes('nonfinite')));
+r=ctx.quickWorkflowInputCheck(image(()=>.01));assert(r.errors.some(s=>s.includes('constant')));
+r=ctx.quickWorkflowInputCheck(image((x,y,c)=>x<512?1:linear.sample(x,y,c)));assert(r.warnings.some(s=>s.includes('clipping')));
+r=ctx.quickWorkflowInputCheck(image((x,y,c)=>Math.round(linear.sample(x,y,c)*65535)/65535));assert.equal(r.errors.length,0);
+console.log('Quick screening detects hidden 8-bit, invalid, blank and clipped inputs; bright high-precision data only warns; normal 16-bit and float linear data pass.');

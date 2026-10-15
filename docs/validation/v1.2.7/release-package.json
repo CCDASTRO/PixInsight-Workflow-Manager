@@ -1,0 +1,14 @@
+{
+  "version": "1.2.7",
+  "package": "CCDASTROWorkflowManager-1.2.7.zip",
+  "sha1": "cc67c342d283aece7365a6dcaf1fd89843d88651",
+  "packageFiles": [
+    "CCDASTROWorkflowManager.js",
+    "CCDASTROWorkflowManager.xsgn",
+    "CCDASTROAutoDBEEngine.jsh",
+    "CCDASTROAdvancedWorkflow.jsh"
+  ],
+  "manifestSigned": true,
+  "scriptSignatureValidatedInPixInsight": true,
+  "validation": "27 Node regression suites; native screening rejects the known quantized 32-bit FITS in 16 ms"
+}

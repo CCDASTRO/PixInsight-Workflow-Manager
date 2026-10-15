@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.6
+# CCDASTRO PixInsight Workflow Manager v1.2.7
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,10 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.2.7
+
+Validate and Run perform quick bounded input sampling before processing. Hidden 8-bit quantization, sampled nonfinite values and blank data block the linear workflow. Bright medians and clipping produce warnings for review. The screening cannot guarantee linearity or detect every processing defect.
 
 ## New in v1.2.6
 

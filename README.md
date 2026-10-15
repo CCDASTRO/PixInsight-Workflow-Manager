@@ -1,10 +1,16 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.2
+# CCDASTRO PixInsight Workflow Manager v1.2.3
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.2.3
+
+The pass summary now displays actual tool names alongside custom pass labels.
+With ordered passes disabled it follows the enabled main tool selections and noise placement.
+With ordered passes enabled it identifies the active sequence and explains that it overrides the main tool rows.
 
 ## New in v1.2.2
 

@@ -126,13 +126,13 @@ function validateRCPass(pass, scope) {
    if (pass.tool==="BlurXTerminator") {
       if (typeof pass.correctOnly!=="boolean") throw new Error("Invalid Correct Only setting.");
       for (var i=0, keys=["stars","nonstellar"];i<keys.length;i++)
-         if (!finiteNumber(pass[keys[i]]) || pass[keys[i]]<0 || pass[keys[i]]>1) throw new Error("Sharpening must be 0–100 percent.");
-      if (!finiteNumber(pass.halos) || pass.halos < -1 || pass.halos>1) throw new Error("Halo adjustment must be -100–100 percent.");
+         if (!finiteNumber(pass[keys[i]]) || pass[keys[i]]<0 || pass[keys[i]]>1) throw new Error("Sharpening must be 0â€“100 percent.");
+      if (!finiteNumber(pass.halos) || pass.halos < -1 || pass.halos>1) throw new Error("Halo adjustment must be -100â€“100 percent.");
    }
    if (pass.tool==="NoiseXTerminator") {
       for (var i=0, keys=["denoise","detail"];i<keys.length;i++)
-         if (!finiteNumber(pass[keys[i]]) || pass[keys[i]]<0 || pass[keys[i]]>1) throw new Error("Denoise and detail must be 0–100 percent.");
-      if (!Number.isInteger(pass.iterations) || pass.iterations<1 || pass.iterations>10) throw new Error("Iterations must be 1–10.");
+         if (!finiteNumber(pass[keys[i]]) || pass[keys[i]]<0 || pass[keys[i]]>1) throw new Error("Denoise and detail must be 0â€“100 percent.");
+      if (!Number.isInteger(pass.iterations) || pass.iterations<1 || pass.iterations>10) throw new Error("Iterations must be 1â€“10.");
    }
    if (pass.tool==="StarXTerminator")
       for (var i=0, flags=["aureoles","reflections","spikes"];i<flags.length;i++)
@@ -402,7 +402,7 @@ function buildLocalRepairCandidate(view,rows) {
 }
 
 function editLocalRepair(row,view) {
-   var r=advancedCopy(row),d=new Dialog;d.windowTitle="Local background repair — photographic retouch";d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=7;
+   var r=advancedCopy(row),d=new Dialog;d.windowTitle="Local background repair â€” photographic retouch";d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=7;
    var note=new Label(d);note.wordWrapping=true;note.text="Use nearby clean background to replace a known stellar remnant. This is retouching; keep the unretouched comparison. Coordinates are zero-based.";d.sizer.add(note);
    var enabled=advancedCheck(d,d.sizer,"Enable repair",r.enabled);
    var cx=advancedIntegerRow(d,d.sizer,"Target x",0,view.image.width-1,r.cx),cy=advancedIntegerRow(d,d.sizer,"Target y",0,view.image.height-1,r.cy);
@@ -419,7 +419,7 @@ function editLocalRepair(row,view) {
 }
 function reviewLocalRepairs(view) {
    var d=new FinishingReviewDialog(view,"Inspection"),list=advancedCopy(advancedWorkflowSettings.repairs),candidate=null,accepted=false;
-   d.windowTitle="Local background repair — review before applying";d.instructions.text="Repair only known residual stars using nearby background. The unretouched image is kept. Compare Before / After at 100%.";
+   d.windowTitle="Local background repair â€” review before applying";d.instructions.text="Repair only known residual stars using nearby background. The unretouched image is kept. Compare Before / After at 100%.";
    var tree=new TreeBox(d);tree.numberOfColumns=3;tree.headerVisible=true;tree.setHeaderText(0,"Enabled");tree.setHeaderText(1,"Target / source");tree.setHeaderText(2,"Radius / levels");tree.setMinSize(600,90);
    function idx(){return tree.currentNode?tree.currentNode.repairIndex:-1;}function refresh(selected){tree.clear();list.forEach(function(r,i){var n=new TreeBoxNode(tree);n.repairIndex=i;n.setText(0,r.enabled?"Yes":"No");n.setText(1,r.cx+","+r.cy+" -> "+(r.cx+r.dx)+","+(r.cy+r.dy));n.setText(2,r.inner+"/"+r.outer+" px; "+r.levelMode);if(i===selected)tree.currentNode=n;});for(var c=0;c<3;c++)tree.adjustColumnWidthToContents(c);d.applyButton.enabled=false;}
    var bar=new HorizontalSizer;bar.spacing=6;function button(text,fn){var b=new PushButton(d);b.text=text;b.onClick=function(){try{fn();}catch(e){d.previewStatus.text=errorMessage(e);}};bar.add(b);}
@@ -462,6 +462,23 @@ function exportAdvancedTIFF(view) {
    try{copy.setSampleFormat(16,false);if(!copy.saveAs(path,false,false,false,false))throw new Error("Could not export 16-bit TIFF.");advancedRecord("16-bit TIFF export",{path:path,width:view.image.width,height:view.image.height});return "16-bit TIFF saved: "+path;}finally{copy.forceClose();}
 }
 
+function advancedLinearToolSummary(dialog,a) {
+   var names=[];
+   if(a.useLinearPasses) {
+      names=a.linearPasses.filter(function(p){return p.enabled;}).map(function(p){
+         var tool=advancedToolInfo(p.tool).label;
+         return tool+(p.label&&p.label!==tool?" ("+p.label+")":"");
+      });
+   } else {
+      var order=["deconvolution","noiseReduction","starSeparation"];
+      if(dialog.noisePlacement && dialog.noisePlacement.currentItem===1)order=["deconvolution","starSeparation","noiseReduction"];
+      order.forEach(function(id){var row=dialog.rowsById[id];if(row.enabled.checked)names.push(adapters[row.adapterId()].label);});
+   }
+   return (a.useLinearPasses?"Active ordered passes: ":"Active tools from main selections: ")+
+      (names.length?names.map(function(n,i){return (i+1)+". "+n;}).join(" → "):"None")+
+      (a.useLinearPasses?"\nEdit the sequence to change these tools; main tool selections are overridden.":"");
+}
+
 function installAdvancedWorkflowControls(dialog) {
    var box=new GroupBox(dialog.content);box.title="Pass sequences and optional finishing";box.sizer=new VerticalSizer;box.sizer.margin=8;box.sizer.spacing=7;
    var use=advancedCheck(box,box.sizer,"Use ordered linear processing passes (all tools)",false);
@@ -481,7 +498,7 @@ function installAdvancedWorkflowControls(dialog) {
    var note=new Label(box);note.wordWrapping=true;note.text="Gradients and color calibration run first. The custom linear sequence replaces the ordinary deblur, denoise and separation rows. Every pass has its own settings. Reference matching and local repairs are optional, previewed edits.";box.sizer.add(note);
    dialog.advancedValues=function(){return advancedCopy(advancedWorkflowSettings);};
    dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
-      summary.text=a.linearPasses.filter(function(p){return p.enabled;}).map(function(p,i){return (i+1)+". "+p.label;}).join(" → ");edit.enabled=a.useLinearPasses;postEdit.enabled=a.postEnabled;
+      summary.text=advancedLinearToolSummary(dialog,a);edit.enabled=a.useLinearPasses;postEdit.enabled=a.postEnabled;
       ["deconvolution","noiseReduction","starSeparation"].forEach(function(id){dialog.rowsById[id].enabled.enabled=!a.useLinearPasses;dialog.rowsById[id].choice.enabled=!a.useLinearPasses;});
       target.value=Math.round(a.starlessTarget*100);target.enabled=a.keepStarless||a.saveBoth;
       if(dialog.blurXBox)dialog.blurXBox.enabled=!a.useLinearPasses;if(dialog.noisePlacement){dialog.noisePlacement.enabled=!a.useLinearPasses;}

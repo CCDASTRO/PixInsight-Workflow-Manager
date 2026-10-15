@@ -1,5 +1,7 @@
 # CCDASTRO PixInsight Workflow Manager v1.2.4
 
+![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
+
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
@@ -126,8 +128,6 @@ the required order.
 
 **During the run, this settings window is hidden to keep the Process Console
 visible. It returns automatically when the run ends.**
-
-![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
 ## Direct process setup and optional icons
 

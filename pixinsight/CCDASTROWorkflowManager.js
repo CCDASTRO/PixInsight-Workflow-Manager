@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.5"
+#define VERSION "1.2.6"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -168,14 +168,15 @@ function captureWorkflowState(dialog, resumeAfterCrop)
             adapterId: row.adapterId()
          };
    }
-   if (state.resumeAfterCrop)
+   if (state.resumeAfterCrop || plateSolveSettings.source === "Reviewed in Plate Solve Setup")
       state.plateSolve = {
          ra: plateSolveSettings.ra,
          dec: plateSolveSettings.dec,
          focal: plateSolveSettings.focal,
          pixelSize: plateSolveSettings.pixelSize,
          resolution: plateSolveSettings.resolution,
-         source: plateSolveSettings.source
+         source: plateSolveSettings.source,
+         imageKey: plateSolveSettings.imageKey || ""
       };
    return state;
 }
@@ -260,7 +261,7 @@ function restoreWorkflowState(dialog)
       restoreAdvancedWorkflowSettings(state.advanced);
       dialog.refreshStarReductionControls();
       if(dialog.refreshAdvancedControls) dialog.refreshAdvancedControls();
-      if (state.resumeAfterCrop && state.plateSolve)
+      if (state.plateSolve && (state.resumeAfterCrop || (state.plateSolve.imageKey && state.plateSolve.imageKey === plateSolveSettings.imageKey)))
       {
          var savedPlateSolve = state.plateSolve;
          plateSolveSettings.ra = finiteNumber(savedPlateSolve.ra) ? savedPlateSolve.ra : NaN;
@@ -338,12 +339,16 @@ function PlateSolveSettings()
    this.pixelSize = NaN;   // micrometers
    this.resolution = NaN;  // degrees per pixel
    this.source = "Not initialized";
+   this.imageKey = "";
 }
 
-PlateSolveSettings.prototype.autofill = function(window)
+PlateSolveSettings.prototype.autofill = function(window, preserveReviewed)
 {
    if (window === null || window.isNull)
       throw new Error("Open and select the integrated image before configuring plate solving.");
+   var imageKey = window.filePath || (window.mainView ? window.mainView.fullId : "");
+   if(preserveReviewed && this.source === "Reviewed in Plate Solve Setup" && this.imageKey === imageKey && this.complete())return;
+   this.imageKey = imageKey;
    var solver = new ImageSolver;
    solver.initialize(window, false /*prioritizeSettings*/);
    if(typeof solver.solverCfg.vizierServer==="string" && solver.solverCfg.vizierServer.toLowerCase().indexOf("https://")!==0)
@@ -424,7 +429,7 @@ PlateSolveAdapter.prototype.execute = function(view)
    if (typeof CatalogMode !== "undefined")
       solver.solverCfg.catalogMode = CatalogMode.Automatic;
 
-   logLine("Running ImageSolver on " + view.fullId + " with metadata-derived seed values.");
+   logLine("Running ImageSolver on " + view.fullId + "; seed source="+this.settings.source+"; RA="+this.settings.ra+" deg; Dec="+this.settings.dec+" deg; scale="+(solver.metadata.resolution*3600)+" arcsec/pixel.");
    solver.solveImage(window);
    if (!imageHasAstrometricSolution(window))
       throw new Error("ImageSolver completed without creating an astrometric solution.");
@@ -500,9 +505,13 @@ ProcessAdapter.prototype.execute = function(view)
    var className = this.className();
    if (className === null)
       throw new Error(this.label + " is not installed or is unavailable to scripts.");
+   if(this.id === "graxpert") {
+      var precisionError=workflowPrecisionError(view.image);
+      if(precisionError)throw new Error(precisionError);
+   }
    var process = createProcess(className);
    this.configure(process);
-   logLine("Running " + this.label + " on " + view.fullId);
+   logLine("Running " + this.label + " on " + view.fullId + "; samples=" + view.image.bitsPerSample + "-bit " + (view.image.isReal ? "floating point" : "integer"));
    if (!process.executeOn(view))
       throw new Error(this.label + " did not complete successfully.");
 };
@@ -1816,6 +1825,8 @@ PreflightValidator.prototype.validate = function()
       result.errors.push("This workflow expects an integrated color master, or separate R/G/B/L mode.");
 
    if (lrgbViews !== null && lrgbViews.R) { window = lrgbViews.R.window; view = lrgbViews.R; }
+   var precisionViews = lrgbViews !== null ? Object.keys(lrgbViews).map(function(k){return lrgbViews[k];}).filter(function(v){return v && v.image;}) : [view];
+   precisionViews.forEach(function(v){var message=workflowPrecisionError(v.image);if(message)result.errors.push(v.fullId+": "+message);});
    var cropRow = this.dialog.rowsById.crop;
    if (!cropRow.enabled.checked)
       try
@@ -2067,6 +2078,8 @@ constructor(settings)
       settings.pixelSize = parseOptionalNumber(self.pixelRow.edit.text);
       settings.resolution = parseOptionalNumber(self.resolutionRow.edit.text);
       settings.source = "Reviewed in Plate Solve Setup";
+      var activeWindow=ImageWindow.activeWindow;
+      settings.imageKey=activeWindow.filePath || activeWindow.mainView.fullId;
       if (!settings.complete())
          throw new Error("Enter valid RA and Dec plus either resolution or both focal length and pixel size.");
    };
@@ -2207,7 +2220,7 @@ function WorkflowRow(parent, step, dialog)
             {
                configureNativeProcess("spfc"); configureNativeProcess("mgc");
             }
-            (new PlateSolveSetupDialog(plateSolveSettings)).execute();
+            if((new PlateSolveSetupDialog(plateSolveSettings)).execute() && self.dialog)saveWorkflowState(self.dialog,false);
             self.refreshStatus();
          }
          catch (e)
@@ -2323,7 +2336,7 @@ function lrgbInputViews(dialog)
       throw new Error("Separate LRGB mode requires a final RGB stretch.");
    if (dialog.rowsById.starSeparation.enabled.checked && !dialog.recombine.checked)
       throw new Error("Separate LRGB mode requires recombination when star separation is enabled.");
-   if (!imageHasAstrometricSolution(reference.window)) plateSolveSettings.autofill(reference.window);
+   if (!imageHasAstrometricSolution(reference.window)) plateSolveSettings.autofill(reference.window, true);
    return views;
 }
 
@@ -2709,7 +2722,7 @@ constructor()
    this.rowsById = {};
    if (!ImageWindow.activeWindow.isNull &&
        !imageHasAstrometricSolution(ImageWindow.activeWindow))
-      try { plateSolveSettings.autofill(ImageWindow.activeWindow); }
+      try { plateSolveSettings.autofill(ImageWindow.activeWindow, true); }
       catch (e) { logLine("Plate-solve metadata autofill needs review: " + errorMessage(e)); }
    var workflow = defaultWorkflow();
    for (var i = 0; i < workflow.length; ++i)
@@ -4716,7 +4729,7 @@ function executeWorkflow(self, quiet)
       var sourceId = workflowSourceId(view);
       advancedRunAudit={version:VERSION,started:new Date().toISOString(),sourcePath:sourcePath,sourceId:sourceId,configuration:captureWorkflowState(self,false),steps:[]};
       view = lrgbViews !== null && lrgbViews.R ? combineLinearRGB(lrgbViews) : cloneWorkflowInput(view);
-      if (lrgbViews !== null && !imageHasAstrometricSolution(view.window)) plateSolveSettings.autofill(view.window);
+      if (lrgbViews !== null && !imageHasAstrometricSolution(view.window)) plateSolveSettings.autofill(view.window, true);
       clearDisplaySTF(view);
       checkAbortRequested();
       var linearOrder = linearStageOrder(self.rowsById);

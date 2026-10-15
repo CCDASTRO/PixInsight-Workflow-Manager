@@ -538,3 +538,8 @@ function saveRecombinedCompanion(starless,branches,dialog,sourcePath,sourceId) {
    if(dialog.finishingEnabled.checked)result+="\n\n"+exportSharingImage(combined,sourcePath,sourceId);
    return result;
 }
+
+function workflowPrecisionError(image) {
+   return image.bitsPerSample < 16 ? "The selected image is only " + image.bitsPerSample + " bits per sample. Open the original linear 16-bit or 32-bit integration before running this workflow. GraXpert requires at least 16 bits; converting an 8-bit export cannot recover the lost data." : "";
+}
+

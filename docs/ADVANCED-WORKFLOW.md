@@ -1,4 +1,4 @@
-# v1.2.1 — Ordered RC Astro passes and paired final outputs
+# v1.2.2 — Ordered processing passes and paired final outputs
 
 ## What was added
 
@@ -14,7 +14,7 @@
 
 ## Suggested starting sequence for your starless image
 
-1. Enable **Use ordered linear BlurX / NoiseX / StarX passes** and **Finish and save the starless branch**.
+1. Enable **Use ordered linear processing passes (all tools)** and **Finish and save the starless branch**.
 2. Edit the sequence. Start with one BlurX pass (stars 25%, nonstellar 50%, halo adjustment 0, overlap 50%), StarX (overlap 50%), then NoiseX (denoise 55%, detail 30%, one iteration, overlap 50%). These are the settings used for the prior vivid linear preparation.
 3. If correction needs a separate pass, try the gentle two-stage BlurX preset and enable per-pass review. Additional passes are optional; repetition can amplify artifacts or erase detail. After StarX, subsequent BlurX/NoiseX passes act on the starless image.
 4. Select an unlinked final auto histogram stretch. The starless auto-histogram median target is configurable from 1–50%; its default is 23%, matching the earlier vivid image before reference matching.
@@ -53,3 +53,46 @@ Native checks verified separate XISF files, reopened starless samples, a real st
 contribution in the companion, unchanged final-starless pixels and unchanged
 original input. The deterministic separation test exercises the full production
 controller and native PixelMath/recombination/save operations.
+
+## Multiple passes with other tools
+
+Enable **Use ordered linear processing passes (all tools)**, then **Edit linear
+pass sequence...**. Add or duplicate a pass, select its tool, edit its settings
+and place it in the desired order. Each pass can have a label and optional
+Before/After review. Every accepted linear star-removal pass contributes to the
+retained stars layer, including when different removers are mixed.
+
+| Role | Tools | Stages |
+|---|---|---|
+| Deblur/sharpen | BlurXTerminator, SyQon Parallax | Linear |
+| Denoise | NoiseXTerminator, MLDenoise, SyQon Prism/DeepPrism, ACDNR, MultiscaleLinearTransform | Linear or post-stretch |
+| Remove stars | StarXTerminator, StarNet2, SyQon Starless | Linear or post-stretch |
+
+For MLDenoise, ACDNR, MLT and SyQon, **Tool-specific setup for this pass...**
+opens the existing workflow setup on an isolated settings copy. Accepting it
+updates only that pass. Cancelling restores the original configuration. MLDenoise
+requires an existing model file. Native icons are optional, referenced by name;
+use different names for passes that need different icon settings. StarNet2 uses
+its installed defaults or a separately configured StarNet2 process icon; its
+linear and stars-mask flags are set according to the selected stage.
+
+Examples include Parallax correction → gentle Parallax sharpening → Prism →
+StarNet2 → MLDenoise, or two different MLDenoise models/strengths. These are
+configuration examples, not prescribed processing recipes. After the first
+remover, later linear passes process the starless image. Extra passes require
+inspection to avoid excess smoothing/sharpening.
+
+SyQon's existing temporary stretch/inverse remains in its linear path; post-stretch
+passes use the already stretched input directly. Post-stretch star removal does
+not create a new linear stars layer. SyQon Starless retains its vendor GUI
+interaction and each executable/model/license must be available. Missing tools,
+models or icons fail validation with the pass name before processing.
+
+Validation for this expansion: 26 Node suites passed; all ten native pass editors
+and mixed-list construction/cancellation passed; nested setup restored global
+settings; real ACDNR/MLT ran before and after stretching with finite sampled RGB
+output. Mixed StarX/StarNet2/SyQon stars accumulation passed with deterministic
+inference and native PixelMath. StarNet2 was not installed in the test environment;
+MLDenoise and SyQon model inference were not run for this update. Their existing
+backends are reused with settings, scope, model/icon and file-exchange regression
+coverage. The previous RC Astro inference and paired-output checks remain recorded.

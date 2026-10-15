@@ -1,10 +1,25 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.1
+# CCDASTRO PixInsight Workflow Manager v1.2.2
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.2.2
+
+Ordered passes now support all sharpening, denoise and star-removal tools already
+offered by the workflow: BlurX, SyQon Parallax, NoiseX, MLDenoise, SyQon
+Prism/DeepPrism, StarX, StarNet2 and SyQon Starless. ACDNR and
+MultiscaleLinearTransform are also available as repeatable denoise passes.
+
+Enable **Use ordered linear processing passes (all tools)**, edit the sequence,
+then use **Tool-specific setup for this pass...** for independent model/path and
+strength settings. Mix, duplicate and reorder tools. Native process icons can be
+named separately for each pass; StarNet2 uses installed defaults or its selected
+icon. Linear/mask modes follow the stage. BlurX and Parallax remain linear-only.
+
+The workflow script and update manifest are signed for the CCDASTRO identity.
 
 ## New in v1.2.1
 
@@ -874,6 +889,7 @@ node pixinsight/tools/validate-workflow.js
 Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.
 
+- **v1.2.2:** Extends ordered linear/post-stretch passes to the remaining workflow tools, adds independent per-pass native/SyQon setup and icon names, accumulates stars from all linear removers, and prevents an extra temporary SyQon stretch on nonlinear inputs. Adds repeatable ACDNR/MLT. 26 regression suites and native editor/classic-denoise/mixed-layer checks passed.
 - **v1.2.1:** Adds paired final starless/recombined saves from one run, distinct suggested filenames, companion overwrite protection and independent output exports/reports. Native two-file save/reopen and pixel-preservation checks passed.
 - **v1.2.0:** Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. The script and update manifest are signed for the CCDASTRO identity.
 - **v1.1.47:** Detects vendor-configured SyQon executables when workflow paths are

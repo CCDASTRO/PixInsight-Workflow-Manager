@@ -1,4 +1,4 @@
-/* Optional ordered RC Astro passes, reference tone matching, and local repairs.
+/* Optional ordered processing passes, reference tone matching, and local repairs.
  * Copyright (c) 2026 Chuck Faranda / CCDASTRO, Inc.
  * Included by CCDASTROWorkflowManager; all edits operate on working copies.
  */
@@ -9,11 +9,98 @@ var advancedDialogExecutor = null;
 function executeAdvancedDialog(dialog) {return advancedDialogExecutor ? advancedDialogExecutor(dialog) : dialog.execute();}
 
 function advancedCopy(value) { return JSON.parse(JSON.stringify(value)); }
+
+function advancedToolInfo(tool) {
+   var definitions={
+      BlurXTerminator:{label:"BlurXTerminator",kind:"sharpen",linearOnly:true},
+      NoiseXTerminator:{label:"NoiseXTerminator",kind:"noise"},
+      StarXTerminator:{label:"StarXTerminator",kind:"stars"},
+      SyQonParallax:{label:"SyQon Parallax",kind:"sharpen",linearOnly:true,syqon:"syqonParallax"},
+      MLDenoise:{label:"MLDenoise",kind:"noise",nativeKey:"mlDenoise"},
+      SyQonPrism:{label:"SyQon Prism / DeepPrism",kind:"noise",syqon:"syqonPrism"},
+      StarNet2:{label:"StarNet2",kind:"stars"},
+      SyQonStarless:{label:"SyQon Starless",kind:"stars",syqon:"syqonStarless"},
+      ACDNR:{label:"ACDNR",kind:"noise",nativeKey:"finalACDNR"},
+      MultiscaleLinearTransform:{label:"MultiscaleLinearTransform",kind:"noise",nativeKey:"finalMLT"}
+   };
+   return definitions[tool]||null;
+}
+function advancedToolNames(scope) {
+   return ["BlurXTerminator","SyQonParallax","NoiseXTerminator","MLDenoise","SyQonPrism","StarXTerminator","StarNet2","SyQonStarless","ACDNR","MultiscaleLinearTransform"].filter(function(t){return scope!=="stretched"||!advancedToolInfo(t).linearOnly;});
+}
+function advancedIsStarRemoval(tool) {var d=advancedToolInfo(tool);return d&&d.kind==="stars";}
+function advancedDefaultToolConfig(tool) {
+   var d=advancedToolInfo(tool);
+   if(d&&d.syqon){try{var v=configuredSyQonExecutable(d.syqon);v.useIcon=false;return advancedCopy(v);}catch(e){return advancedCopy(syqonSettings[d.syqon]);}}
+   if(d&&d.nativeKey)return advancedCopy(nativeSettings[d.nativeKey]);
+   return null;
+}
+function advancedWithToolConfig(pass,callback) {
+   var d=advancedToolInfo(pass.tool),oldNative=nativeSettings,oldSyqon=syqonSettings,oldOwner=nativeSettingsOwner;
+   try {
+      nativeSettings=advancedCopy(oldNative);syqonSettings=advancedCopy(oldSyqon);nativeSettingsOwner=null;
+      if(d.nativeKey)nativeSettings[d.nativeKey]=advancedCopy(pass.config);
+      if(d.syqon)syqonSettings[d.syqon]=advancedCopy(pass.config);
+      return callback(d);
+   }finally{nativeSettings=oldNative;syqonSettings=oldSyqon;nativeSettingsOwner=oldOwner;}
+}
+function configureAdvancedToolPass(pass) {
+   return advancedWithToolConfig(pass,function(d){
+      if(d.nativeKey){if(!configureNativeProcess(d.nativeKey))return false;pass.config=advancedCopy(nativeSettings[d.nativeKey]);return true;}
+      if(d.syqon){var fake={rememberSettings:{checked:false},refreshSyQonControls:function(){}};
+         if(!configureSyQon(fake,d.syqon))return false;var v=configuredSyQonExecutable(d.syqon);v.useIcon=false;pass.config=advancedCopy(v);return true;}
+      return false;
+   });
+}
+function advancedProcessIcon(name,expectedClass) {
+   if(ProcessInstance.icons().indexOf(name)<0)throw new Error("Missing process icon: "+name);
+   var p=ProcessInstance.fromIcon(name);
+   if(!p||p.processId()!==expectedClass)throw new Error(name+" must contain "+expectedClass+".");
+   return p;
+}
+function advancedOtherProcessForPass(pass,scope) {
+   var d=advancedToolInfo(pass.tool),p;
+   if(d.syqon)return advancedWithToolConfig(pass,function(){
+      var v=configuredSyQonExecutable(d.syqon);v.useIcon=false;
+      return {toSource:function(){return JSON.stringify({tool:pass.tool,scope:scope,settings:v});},
+         validateSetup:function(view){prepareSyQonEngine(d.syqon,v,view);},
+         executeOn:function(view){executeSyQonEngine(d.syqon,v,view,scope);return true;}};
+   });
+   if(d.nativeKey){
+      if(pass.processIcon)p=advancedProcessIcon(pass.processIcon,pass.tool);
+      else p=advancedWithToolConfig(pass,function(){return configuredNativeProcess(d.nativeKey);});
+      if(pass.tool==="MLDenoise"){
+         if(typeof p.modelPath!=="string"||!p.modelPath.trim()||!File.exists(p.modelPath))throw new Error("Choose an existing MLDenoise model for this pass.");
+         setFirstProperty(p,["noisePreview"],false);setFirstProperty(p,["maskPreview"],false);
+      }
+      if(pass.tool==="ACDNR")setFirstProperty(p,["previewMask"],false);
+      if(pass.tool==="MultiscaleLinearTransform"){
+         requiredNativeProperty(p,"linear",scope==="linear");
+         setFirstProperty(p,["linearMaskPreview"],false);setFirstProperty(p,["outputDeringingMaps"],false);
+         if(propertyExists(p,"previewMode"))p.previewMode=MultiscaleLinearTransform.Disabled;
+      }
+      return p;
+   }
+   if(pass.tool==="StarNet2") {
+      if(resolveProcessClass(["StarNet2"])===null)throw new Error("Install StarNet2 to use this pass.");
+      p=pass.processIcon?advancedProcessIcon(pass.processIcon,"StarNet2"):createProcess("StarNet2");
+      requiredNativeProperty(p,"mask",scope==="linear");requiredNativeProperty(p,"linear",scope==="linear");return p;
+   }
+   throw new Error("Unsupported processing tool: "+pass.tool);
+}
+function validateAdvancedPassAvailability(passes,scope,view) {
+   validateRCPasses(passes,scope);
+   passes.forEach(function(pass,i){if(!pass.enabled)return;try{var p=advancedProcessForPass(pass,scope);if(p.validateSetup)p.validateSetup(view);}catch(e){throw new Error(scope+" pass "+(i+1)+" ("+pass.label+"): "+errorMessage(e));}});
+}
+
 function defaultRCPass(tool) {
-   return {enabled:true, label:tool, tool:tool, review:false, overlap:0.50,
+   var pass={enabled:true, label:tool, tool:tool, review:false, overlap:0.50,
       correctOnly:false, stars:0.25, nonstellar:0.50, halos:0,
       denoise:0.55, detail:0.30, iterations:1,
       aureoles:true, reflections:false, spikes:false};
+   var d=advancedToolInfo(tool);pass.processIcon="";
+   if(d&&(d.nativeKey||d.syqon))pass.config=advancedDefaultToolConfig(tool);
+   return pass;
 }
 function defaultAdvancedWorkflowSettings() {
    return {useLinearPasses:false,
@@ -25,13 +112,16 @@ function defaultAdvancedWorkflowSettings() {
 var advancedWorkflowSettings = defaultAdvancedWorkflowSettings();
 
 function validateRCPass(pass, scope) {
-   if (!pass || ["BlurXTerminator","NoiseXTerminator","StarXTerminator"].indexOf(pass.tool)<0)
-      throw new Error("Choose BlurXTerminator, NoiseXTerminator, or StarXTerminator.");
-   if (scope==="stretched" && pass.tool==="BlurXTerminator")
-      throw new Error("BlurX passes belong in the linear sequence.");
+   if (!pass || !advancedToolInfo(pass.tool))throw new Error("Choose an available workflow processing tool.");
+   var definition=advancedToolInfo(pass.tool);
+   if(scope!=="linear"&&scope!=="stretched")throw new Error("Invalid pass scope.");
+   if(scope==="stretched"&&definition.linearOnly)throw new Error(definition.label+" passes belong in the linear sequence.");
+   if(pass.processIcon!==undefined&&(typeof pass.processIcon!=="string"||pass.processIcon.length>256))throw new Error("Invalid process icon name.");
+   if(definition.nativeKey)validateNativeSettings(definition.nativeKey,pass.config);
+   if(definition.syqon)validateSyQonSettings(definition.syqon,pass.config);
    if (typeof pass.enabled!=="boolean" || typeof pass.review!=="boolean" || typeof pass.label!=="string" || pass.label.length>120)
       throw new Error("Invalid pass label or enabled/review flags.");
-   if (!finiteNumber(pass.overlap) || pass.overlap<0.20 || pass.overlap>0.50)
+   if (["BlurXTerminator","NoiseXTerminator","StarXTerminator"].indexOf(pass.tool)>=0 && (!finiteNumber(pass.overlap) || pass.overlap<0.20 || pass.overlap>0.50))
       throw new Error("Tile overlap must be between 20 and 50 percent.");
    if (pass.tool==="BlurXTerminator") {
       if (typeof pass.correctOnly!=="boolean") throw new Error("Invalid Correct Only setting.");
@@ -72,7 +162,7 @@ function restoreAdvancedWorkflowSettings(value) {
 }
 function advancedSeparationEnabled(dialog) {
    if(!advancedWorkflowSettings.useLinearPasses) return dialog.rowsById.starSeparation.enabled.checked;
-   return advancedWorkflowSettings.linearPasses.some(function(p){return p.enabled && p.tool==="StarXTerminator";});
+   return advancedWorkflowSettings.linearPasses.some(function(p){return p.enabled && advancedIsStarRemoval(p.tool);});
 }
 function advancedStarlessFinal(dialog) {return (advancedWorkflowSettings.keepStarless || advancedWorkflowSettings.saveBoth) && advancedSeparationEnabled(dialog);}
 function advancedRecord(kind, data) {
@@ -80,6 +170,7 @@ function advancedRecord(kind, data) {
 }
 function advancedProcessForPass(pass, scope) {
    validateRCPass(pass,scope);
+   if(["BlurXTerminator","NoiseXTerminator","StarXTerminator"].indexOf(pass.tool)<0)return advancedOtherProcessForPass(pass,scope);
    var p=createProcess(pass.tool);
    requiredNativeProperty(p,"overlap",pass.overlap);
    if(pass.tool==="BlurXTerminator") {
@@ -136,13 +227,13 @@ function runRCPassSequence(view, passes, scope, reviewer) {
       try {
          var process=advancedProcessForPass(pass,scope);
          logLine((scope==="linear"?"Linear":"Stretched")+" pass "+(i+1)+": "+pass.label+"; target="+(branches?"starless":"image")+"\n"+process.toSource());
-         if(pass.tool==="StarXTerminator" && scope==="linear") {
+         if(advancedIsStarRemoval(pass.tool) && scope==="linear") {
             var adapter={label:pass.tool,execute:function(v){if(!process.executeOn(v,false))throw new Error(pass.tool+" failed.");}};
             stars=executeStarSeparation(adapter,candidate.mainView).starsView.window;
          } else if(!process.executeOn(candidate.mainView,false)) throw new Error(pass.tool+" failed.");
          checkAbortRequested();
          var accepted=!pass.review || (reviewer||advancedReviewPass)(current,candidate.mainView,scope==="linear",pass.label);
-         advancedRecord("RC Astro pass",{scope:scope,index:i+1,pass:pass,parameters:process.toSource(),kept:accepted});
+         advancedRecord("Processing pass",{scope:scope,index:i+1,pass:pass,parameters:process.toSource(),kept:accepted});
          if(!accepted)continue;
          if(stars) {
             if(branches) {advancedAddStarLayers(branches.starsView,stars.mainView);stars.forceClose();stars=null;}
@@ -171,7 +262,7 @@ function advancedControlledStars(branches) {
 
 function advancedIntegerRow(parent,sizer,label,low,high,value) {
    var row=new HorizontalSizer;row.spacing=8;var l=new Label(parent);l.text=label;var c=new SpinBox(parent);c.minValue=low;c.maxValue=high;c.value=value;
-   row.add(l);row.addStretch();row.add(c);sizer.add(row);return c;
+   row.add(l);row.addStretch();row.add(c);sizer.add(row);c.workflowLabel=l;return c;
 }
 function advancedCheck(parent,sizer,label,value) {var c=new CheckBox(parent);c.text=label;c.checked=value;sizer.add(c);return c;}
 function advancedButtons(parent,sizer,okLabel,cancelLabel) {
@@ -179,9 +270,9 @@ function advancedButtons(parent,sizer,okLabel,cancelLabel) {
    ok.onClick=function(){parent.ok();};cancel.onClick=function(){parent.cancel();};r.addStretch();r.add(ok);r.add(cancel);sizer.add(r);return {ok:ok,cancel:cancel};
 }
 function editRCPass(value,scope) {
-   var p=advancedCopy(value),d=new Dialog;d.windowTitle="RC Astro pass settings";d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=7;
-   var tools=scope==="linear"?["BlurXTerminator","NoiseXTerminator","StarXTerminator"]:["NoiseXTerminator","StarXTerminator"];
-   var tool=new ComboBox(d);tools.forEach(function(t){tool.addItem(t);});tool.currentItem=Math.max(0,tools.indexOf(p.tool));d.sizer.add(tool);
+   var p=advancedCopy(value),d=new Dialog;d.windowTitle="Processing pass settings";d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=7;
+   var tools=advancedToolNames(scope);
+   var tool=new ComboBox(d);tools.forEach(function(t){tool.addItem(advancedToolInfo(t).label);});tool.currentItem=Math.max(0,tools.indexOf(p.tool));d.sizer.add(tool);
    var name=new Edit(d);name.text=p.label;name.toolTip="Optional pass label for the sequence and report.";d.sizer.add(name);
    var enabled=advancedCheck(d,d.sizer,"Enable this pass",p.enabled),review=advancedCheck(d,d.sizer,"Review Before / After before keeping this pass",p.review);
    var overlap=advancedIntegerRow(d,d.sizer,"Tile overlap (%)",20,50,Math.round(100*p.overlap));
@@ -194,22 +285,29 @@ function editRCPass(value,scope) {
    var denoise=advancedIntegerRow(nx,nx.sizer,"Denoise (%)",0,100,Math.round(100*p.denoise)),detail=advancedIntegerRow(nx,nx.sizer,"Detail (%)",0,100,Math.round(100*p.detail)),iterations=advancedIntegerRow(nx,nx.sizer,"Iterations",1,10,p.iterations);d.sizer.add(nx);
    var sx=new GroupBox(d);sx.title="StarX";sx.sizer=new VerticalSizer;sx.sizer.margin=8;sx.sizer.spacing=6;
    var aureoles=advancedCheck(sx,sx.sizer,"Remove aureoles",p.aureoles),reflections=advancedCheck(sx,sx.sizer,"Remove reflections",p.reflections),spikes=advancedCheck(sx,sx.sizer,"Remove spikes",p.spikes);d.sizer.add(sx);
-   var note=new Label(d);note.wordWrapping=true;note.text=scope==="linear"?"All passes stay linear. After the first StarX pass, later passes process the starless branch; removed stars layers are accumulated.":"These passes process the stretched result. BlurX is available only in the linear sequence.";d.sizer.add(note);
-   function update(){bx.visible=tools[tool.currentItem]==="BlurXTerminator";nx.visible=tools[tool.currentItem]==="NoiseXTerminator";sx.visible=tools[tool.currentItem]==="StarXTerminator";stars.enabled=nonstellar.enabled=halos.enabled=!correct.checked;d.adjustToContents();}
+   var setup=new PushButton(d);setup.text="Tool-specific setup for this pass...";d.sizer.add(setup);
+   var processIconLabel=new Label(d);processIconLabel.text="Workspace process icon (optional):";d.sizer.add(processIconLabel);
+   var processIcon=new Edit(d);processIcon.text=p.processIcon||"";processIcon.toolTip="Optional workspace process icon name, specific to this pass. It must match the chosen native tool. StarNet2 otherwise uses installed defaults; mask and linear mode follow the pass stage.";d.sizer.add(processIcon);
+   var specific=new Label(d);specific.wordWrapping=true;d.sizer.add(specific);
+   var configTool=p.tool;
+   setup.onClick=function(){try{p.tool=tools[tool.currentItem];configureAdvancedToolPass(p);specific.text="Independent settings: "+JSON.stringify(p.config);}catch(e){(new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok)).execute();}};
+   var note=new Label(d);note.wordWrapping=true;note.text=scope==="linear"?"All passes stay linear. After the first star-removal pass, later passes process the starless branch; removed stars layers are accumulated.":"These passes process the stretched result. BlurX and Parallax are available only in the linear sequence.";d.sizer.add(note);
+   function update(){var selected=tools[tool.currentItem],info=advancedToolInfo(selected);if(configTool!==selected){p.config=advancedDefaultToolConfig(selected);processIcon.text="";if(name.text===configTool)name.text=selected;configTool=selected;}p.tool=selected;setup.visible=!!(info.nativeKey||info.syqon);processIcon.visible=!!info.nativeKey||selected==="StarNet2";specific.visible=setup.visible||selected==="StarNet2";specific.text=selected==="StarNet2"?"Installed defaults or an optional per-pass process icon. Linear/mask flags follow this stage.":JSON.stringify(p.config||{});overlap.visible=["BlurXTerminator","NoiseXTerminator","StarXTerminator"].indexOf(selected)>=0;overlap.workflowLabel.visible=overlap.visible;processIconLabel.visible=processIcon.visible;bx.visible=tools[tool.currentItem]==="BlurXTerminator";nx.visible=tools[tool.currentItem]==="NoiseXTerminator";sx.visible=tools[tool.currentItem]==="StarXTerminator";stars.enabled=nonstellar.enabled=halos.enabled=!correct.checked;d.adjustToContents();}
    tool.onItemSelected=update;correct.onCheck=update;advancedButtons(d,d.sizer,"Save pass","Cancel");update();
    if(!executeAdvancedDialog(d))return null;
-   p.tool=tools[tool.currentItem];p.label=name.text.trim()||p.tool;p.enabled=enabled.checked;p.review=review.checked;p.overlap=overlap.value/100;
+   p.processIcon=processIcon.text.trim();p.tool=tools[tool.currentItem];p.label=name.text.trim()||p.tool;p.enabled=enabled.checked;p.review=review.checked;p.overlap=overlap.value/100;
    p.correctOnly=correct.checked;p.stars=stars.value/100;p.nonstellar=nonstellar.value/100;p.halos=halos.value/100;
    p.denoise=denoise.value/100;p.detail=detail.value/100;p.iterations=iterations.value;p.aureoles=aureoles.checked;p.reflections=reflections.checked;p.spikes=spikes.checked;
    return validateRCPass(p,scope);
 }
 function rcPassSummary(pass) {
+   var info=advancedToolInfo(pass.tool);if(info&&(info.nativeKey||info.syqon))return (pass.processIcon?"Icon "+pass.processIcon:JSON.stringify(pass.config||{}));if(pass.tool==="StarNet2")return pass.processIcon?"Icon "+pass.processIcon:"Installed defaults; stage-aware";
    if(pass.tool==="BlurXTerminator")return pass.correctOnly?"Correct Only":"Stars "+Math.round(pass.stars*100)+"%, nonstellar "+Math.round(pass.nonstellar*100)+"%";
    if(pass.tool==="NoiseXTerminator")return "Denoise "+Math.round(pass.denoise*100)+"%, detail "+Math.round(pass.detail*100)+"%, "+pass.iterations+" iteration(s)";
    return "Overlap "+Math.round(pass.overlap*100)+"%; aureoles "+(pass.aureoles?"on":"off");
 }
 function editRCPassSequence(passes,scope) {
-   var list=advancedCopy(passes),d=new Dialog;d.windowTitle=scope==="linear"?"Ordered linear RC Astro passes":"Post-stretch cleanup passes";
+   var list=advancedCopy(passes),d=new Dialog;d.windowTitle=scope==="linear"?"Ordered linear processing passes":"Post-stretch cleanup passes";
    d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=8;
    var note=new Label(d);note.wordWrapping=true;note.text="Add, duplicate, edit and reorder passes. Each pass has its own settings and optional Before / After review.";d.sizer.add(note);
    var tree=new TreeBox(d);tree.numberOfColumns=4;tree.headerVisible=true;tree.rootDecoration=false;tree.setHeaderText(0,"#");tree.setHeaderText(1,"Enabled");tree.setHeaderText(2,"Tool / label");tree.setHeaderText(3,"Settings");tree.setMinSize(720,250);d.sizer.add(tree);
@@ -366,7 +464,7 @@ function exportAdvancedTIFF(view) {
 
 function installAdvancedWorkflowControls(dialog) {
    var box=new GroupBox(dialog.content);box.title="Pass sequences and optional finishing";box.sizer=new VerticalSizer;box.sizer.margin=8;box.sizer.spacing=7;
-   var use=advancedCheck(box,box.sizer,"Use ordered linear BlurX / NoiseX / StarX passes",false);
+   var use=advancedCheck(box,box.sizer,"Use ordered linear processing passes (all tools)",false);
    var summary=new Label(box);summary.wordWrapping=true;box.sizer.add(summary);
    var edit=new PushButton(box);edit.text="Edit linear pass sequence...";box.sizer.add(edit);
    var keep=advancedCheck(box,box.sizer,"Finish and save the starless branch",false);
@@ -374,7 +472,7 @@ function installAdvancedWorkflowControls(dialog) {
    both.toolTip="Finish/save starless first, then review stars recombination and save a separate final. The starless file is protected from overwrite by its companion.";
    var target=advancedIntegerRow(box,box.sizer,"Starless auto-histogram median target (%)",1,50,23);
    target.toolTip="Used for linked/unlinked automatic histogram stretching. Histogram/MAS workflows use their own Setup parameters.";
-   var post=advancedCheck(box,box.sizer,"Enable post-stretch NoiseX / StarX cleanup passes",false);
+   var post=advancedCheck(box,box.sizer,"Enable post-stretch denoise / star-removal passes",false);
    var postEdit=new PushButton(box);postEdit.text="Edit post-stretch passes...";box.sizer.add(postEdit);
    var ref=advancedCheck(box,box.sizer,"Review reference RGB tone matching",false);
    var repairs=advancedCheck(box,box.sizer,"Review local background repairs (photographic retouch)",false);
@@ -399,8 +497,8 @@ function installAdvancedWorkflowControls(dialog) {
 function advancedPreflight(dialog,result,window) {
    var a=advancedWorkflowSettings;
    try{
-      if(a.useLinearPasses){validateRCPasses(a.linearPasses,"linear");a.linearPasses.filter(function(p){return p.enabled;}).forEach(function(p){advancedProcessForPass(p,"linear");});}
-      if(a.postEnabled){validateRCPasses(a.postPasses,"stretched");a.postPasses.filter(function(p){return p.enabled;}).forEach(function(p){advancedProcessForPass(p,"stretched");});}
+      if(a.useLinearPasses)validateAdvancedPassAvailability(a.linearPasses,"linear",window.currentView);
+      if(a.postEnabled)validateAdvancedPassAvailability(a.postPasses,"stretched",window.currentView);
       if((a.keepStarless||a.saveBoth)&&!advancedSeparationEnabled(dialog))throw new Error("Starless output requires an enabled StarX / star-separation pass.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&dialog.finalStretch.currentItem===0&&dialog.starlessStretch.currentItem===0)throw new Error("Post-stretch cleanup, reference matching and local repairs require a workflow stretch.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&advancedSeparationEnabled(dialog)&&!dialog.recombine.checked&&!a.keepStarless&&!a.saveBoth)throw new Error("Enable Finish and save the starless branch, or recombine, for advanced finishing.");

@@ -5,11 +5,13 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.2.1.zip" sha1="b0520d5096eca3b8a281c3264d5a50f0876edbd8" type="script" releaseDate="20261014231343">
-         <title>CCDASTRO Workflow Manager 1.2.1</title>
+      <package fileName="CCDASTROWorkflowManager-1.2.2.zip" sha1="fcbab4a2d1e948a802e1fc6e87d2b738e1230a53" type="script" releaseDate="20261015152250">
+         <title>CCDASTRO Workflow Manager 1.2.2</title>
          <description>
-            <p>v1.2.1 adds separate final starless and recombined saves from the same run.</p>
+            <p>v1.2.2 extends multiple processing passes to the remaining workflow tools.</p>
             <ul>
+               <li>v1.2.2 adds per-pass Parallax, MLDenoise, Prism, StarNet2, SyQon Starless, ACDNR and MLT with independent settings and stage-aware execution.</li>
+               <li>26 regression suites and native editor, classic-denoise and mixed-remover layer tests passed; additional model inference remains installation-dependent.</li>
                <li>v1.2.1 saves independent starless and recombined finals, protects their filenames and exports/reports each result.</li>
                <li>Native paired save/reopen and starless/original pixel-preservation checks passed.</li>
                <li>v1.2.0 adds independent multipass BlurX/NoiseX/StarX, accumulated stars, post-stretch cleanup, reference RGB matching, reviewed repairs, TIFF and run reports.</li>
@@ -76,4 +78,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-14T23:13:43.705Z" encoding="Base64">HndeguLmDpTfbb8Y2X1JeIvXsChUmWkG7b/oOlv/oslMAUvW8SMu3NTC3WBc6Rdh9s6Ytgb9JG167kQ5PhpyBw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-15T15:22:51.327Z" encoding="Base64">x+xY9JbrLz5xpXPy8mj5erBQEX6E9BKsK4IUEX1ydPBXzxGkK4EBo8mjNjdOwKas0UuuqruHueFNWedMFcDvDQ==</Signature>

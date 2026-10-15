@@ -36,6 +36,11 @@ for(const outcome of ['failed','start-failure','missing','wrong-size','timeout',
  const f=fixture(outcome);assert.throws(()=>f.ctx.executeSyQonEngine('syqonParallax',f.ctx.configuredSyQonExecutable('syqonParallax'),f.view));assert.equal(f.changes(),0);
  if(['start-failure','timeout','abort'].includes(outcome))assert.ok(f.calls.includes('terminate'));
 }
+for(const id of ['syqonPrism','syqonStarless']){
+ const post=fixture();post.ctx.executeSyQonEngine(id,post.ctx.configuredSyQonExecutable(id),post.view,'stretched');
+ assert.equal(post.changes(),1);assert.equal(post.calls.filter(c=>c.H).length,0,'post-stretch data must not be stretched again');
+ assert.ok(!post.calls.includes('show-stars'),'post-stretch removal must not leave a linear stars layer');
+}
 let f=fixture('stars-failure');assert.throws(()=>f.ctx.executeSyQonEngine('syqonStarless',f.ctx.configuredSyQonExecutable('syqonStarless'),f.view));assert.equal(f.changes(),0);
 f=fixture();f.ctx.syqonSettings.syqonPrism.path='';assert.throws(()=>f.ctx.configuredSyQonExecutable('syqonPrism'),/executable not found/);
 assert.ok(!source.includes('new Function('));assert.ok(!source.includes('compileSyQonEngine'));

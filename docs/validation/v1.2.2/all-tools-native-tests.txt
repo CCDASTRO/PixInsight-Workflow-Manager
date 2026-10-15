@@ -1,0 +1,23 @@
+Starting native all-tool pass tests.
+PASS expanded workflow GUI constructs
+PASS pass editor constructs/cancels for BlurXTerminator
+PASS pass editor constructs/cancels for SyQonParallax
+PASS pass editor constructs/cancels for NoiseXTerminator
+PASS pass editor constructs/cancels for MLDenoise
+PASS pass editor constructs/cancels for SyQonPrism
+PASS pass editor constructs/cancels for StarXTerminator
+PASS pass editor constructs/cancels for StarNet2
+PASS pass editor constructs/cancels for SyQonStarless
+PASS pass editor constructs/cancels for ACDNR
+PASS pass editor constructs/cancels for MultiscaleLinearTransform
+PASS mixed-tool sequence editor constructs/cancels
+PASS MLD per-pass setup cancels cleanly
+PASS Prism per-pass setup cancels cleanly
+PASS nested setup restores global settings and owner
+PASS MLT native mode follows linear/post stage
+PASS actual ACDNR and MLT linear passes execute
+PASS actual ACDNR and MLT post-stretch passes produce finite sampled RGB output
+PASS original input unchanged after four native denoise passes
+PASS uninstalled StarNet2 fails clearly at preflight
+PASS mixed StarX/StarNet2/SyQon removers accumulate all three stars layers (deterministic inference)
+DONE

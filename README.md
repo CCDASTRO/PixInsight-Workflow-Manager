@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.5
+# CCDASTRO PixInsight Workflow Manager v1.2.6
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,10 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.2.6
+
+Manual plate-solve setup is saved for the same image and retained across reopening and implicit LRGB autofill. Explicit Autofill can still replace it. Logs show the selected seed coordinates and sample format; 8-bit inputs are rejected before processing.
 
 ## New in v1.2.5
 

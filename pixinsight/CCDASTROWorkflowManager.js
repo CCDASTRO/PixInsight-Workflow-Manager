@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.8"
+#define VERSION "1.3.0"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -4911,6 +4911,7 @@ function executeWorkflow(self, quiet)
             finalView = reviewFinalHDR(finalView, self, branches);
             finalView = reviewPostLuminance(finalView, self, luminanceState);
          }
+         if(advancedWorkflowSettings.metadataFinishingEnabled)finalView=reviewMetadataFinishing(finalView);
          if(advancedRunAudit)advancedRunAudit.outputKind=advancedWorkflowSettings.saveBoth?"Starless":"Final";
          completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId,advancedWorkflowSettings.saveBoth?"Starless":undefined);
          if(advancedWorkflowSettings.tiff) completion += "\n\n" + exportAdvancedTIFF(finalView);

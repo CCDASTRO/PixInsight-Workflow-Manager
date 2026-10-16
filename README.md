@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.8
+# CCDASTRO PixInsight Workflow Manager v1.3.0
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,14 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.3.0
+
+Enable **Review optional masked finishing** for opt-in SCNR green cleanup, per-scale MLT denoise/sharpening, Lab lightness replacement, registered image blends, Bill Blanshan Star Method V3 and CloneStamp icon replay. Existing masked RGB/lightness curves are available from the same chooser. Preview each operation on a copy, apply and finish, or apply and choose another operation. Original pixels are preserved.
+
+Sources and masks must be open, registered and identically cropped. V3 needs the matching stretched starless source. CloneStamp requires a configured native icon and is photographic retouching. Full MLT settings can also come from a native icon. These features do not recreate external masks or recover lost data. All options start off.
+
+In starless/dual-output mode the stretch selector now reads **Starless final stretch**, and recombination help explains its separate review.
 
 ## New in v1.2.8
 

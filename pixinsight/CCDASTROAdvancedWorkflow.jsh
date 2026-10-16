@@ -106,7 +106,7 @@ function defaultAdvancedWorkflowSettings() {
    return {useLinearPasses:false,
       linearPasses:[defaultRCPass("BlurXTerminator"), defaultRCPass("StarXTerminator"), defaultRCPass("NoiseXTerminator")],
       keepStarless:false, saveBoth:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
-      referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
+      metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
       reports:true, tiff:false};
 }
 var advancedWorkflowSettings = defaultAdvancedWorkflowSettings();
@@ -149,7 +149,7 @@ function restoreAdvancedWorkflowSettings(value) {
    var candidate=defaultAdvancedWorkflowSettings();
    if (value) {
       for (var k in candidate) if (Object.prototype.hasOwnProperty.call(value,k)) candidate[k]=advancedCopy(value[k]);
-      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","reports","tiff"];i<flags.length;i++)
+      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","metadataFinishingEnabled","reports","tiff"];i<flags.length;i++)
          if(typeof candidate[flags[i]]!=="boolean") throw new Error("Invalid advanced workflow flag: "+flags[i]);
       if(!finiteNumber(candidate.referenceStrength)||candidate.referenceStrength<0||candidate.referenceStrength>100) throw new Error("Invalid reference match strength.");
       if(!finiteNumber(candidate.starlessTarget)||candidate.starlessTarget<0.01||candidate.starlessTarget>0.50) throw new Error("Starless histogram target must be 1-50 percent.");
@@ -493,18 +493,21 @@ function installAdvancedWorkflowControls(dialog) {
    var postEdit=new PushButton(box);postEdit.text="Edit post-stretch passes...";box.sizer.add(postEdit);
    var ref=advancedCheck(box,box.sizer,"Review reference RGB tone matching",false);
    var repairs=advancedCheck(box,box.sizer,"Review local background repairs (photographic retouch)",false);
+   var metadata=advancedCheck(box,box.sizer,"Review optional masked finishing: SCNR, multiscale, blends, lightness, V3 and retouch",false);
+   metadata.toolTip="After normal finishing and luminance combination, review optional operations on separate copies. Each pass selects its own tool, settings and mask. Nothing is applied automatically.";
    var reports=advancedCheck(box,box.sizer,"Save step-by-step report and sampled final checks",true);
    var tiff=advancedCheck(box,box.sizer,"Also export a full-resolution 16-bit TIFF",false);
    var note=new Label(box);note.wordWrapping=true;note.text="Gradients and color calibration run first. The custom linear sequence replaces the ordinary deblur, denoise and separation rows. Every pass has its own settings. Reference matching and local repairs are optional, previewed edits.";box.sizer.add(note);
    dialog.advancedValues=function(){return advancedCopy(advancedWorkflowSettings);};
-   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
+   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
       summary.text=advancedLinearToolSummary(dialog,a);edit.enabled=a.useLinearPasses;postEdit.enabled=a.postEnabled;
       ["deconvolution","noiseReduction","starSeparation"].forEach(function(id){dialog.rowsById[id].enabled.enabled=!a.useLinearPasses;dialog.rowsById[id].choice.enabled=!a.useLinearPasses;});
       target.value=Math.round(a.starlessTarget*100);target.enabled=a.keepStarless||a.saveBoth;
       if(dialog.blurXBox)dialog.blurXBox.enabled=!a.useLinearPasses;if(dialog.noisePlacement){dialog.noisePlacement.enabled=!a.useLinearPasses;}
-      if(a.keepStarless||a.saveBoth){dialog.recombine.checked=false;dialog.finishStarless.checked=false;dialog.starlessStretch.currentItem=0;dialog.starsStretch.currentItem=0;if(a.keepStarless)dialog.starReduction.checked=false;}dialog.recombine.enabled=dialog.finishStarless.enabled=dialog.starlessStretch.enabled=dialog.starsStretch.enabled=!(a.keepStarless||a.saveBoth);
+      if(a.keepStarless||a.saveBoth){dialog.recombine.checked=false;dialog.finishStarless.checked=false;dialog.starlessStretch.currentItem=0;dialog.starsStretch.currentItem=0;if(a.keepStarless)dialog.starReduction.checked=false;}dialog.finalStretchControl.label.text=(a.keepStarless||a.saveBoth)?"Starless final stretch:":"Final image stretch:";dialog.recombine.toolTip=a.saveBoth?"Dual output saves the stretched starless result first, then reviews stars recombination separately.":a.keepStarless?"Starless-only output does not recombine stars.":"Recombine star and starless branches before the final stretch.";dialog.recombine.enabled=dialog.finishStarless.enabled=dialog.starlessStretch.enabled=dialog.starsStretch.enabled=!(a.keepStarless||a.saveBoth);
    };
    function changed(){dialog.refreshAdvancedControls();saveWorkflowState(dialog,false);}
+   metadata.onCheck=function(v){advancedWorkflowSettings.metadataFinishingEnabled=v;changed();};
    target.onValueUpdated=function(v){advancedWorkflowSettings.starlessTarget=v/100;saveWorkflowState(dialog,false);};
    use.onCheck=function(v){advancedWorkflowSettings.useLinearPasses=v;changed();};keep.onCheck=function(v){advancedWorkflowSettings.keepStarless=v;if(v)advancedWorkflowSettings.saveBoth=false;changed();};both.onCheck=function(v){advancedWorkflowSettings.saveBoth=v;if(v)advancedWorkflowSettings.keepStarless=false;changed();};post.onCheck=function(v){advancedWorkflowSettings.postEnabled=v;changed();};ref.onCheck=function(v){advancedWorkflowSettings.referenceEnabled=v;changed();};repairs.onCheck=function(v){advancedWorkflowSettings.repairsEnabled=v;changed();};reports.onCheck=function(v){advancedWorkflowSettings.reports=v;changed();};tiff.onCheck=function(v){advancedWorkflowSettings.tiff=v;changed();};
    edit.onClick=function(){var p=editRCPassSequence(advancedWorkflowSettings.linearPasses,"linear");if(p){advancedWorkflowSettings.linearPasses=p;changed();}};
@@ -519,6 +522,7 @@ function advancedPreflight(dialog,result,window) {
       if((a.keepStarless||a.saveBoth)&&!advancedSeparationEnabled(dialog))throw new Error("Starless output requires an enabled StarX / star-separation pass.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&dialog.finalStretch.currentItem===0&&dialog.starlessStretch.currentItem===0)throw new Error("Post-stretch cleanup, reference matching and local repairs require a workflow stretch.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&advancedSeparationEnabled(dialog)&&!dialog.recombine.checked&&!a.keepStarless&&!a.saveBoth)throw new Error("Enable Finish and save the starless branch, or recombine, for advanced finishing.");
+      if(a.metadataFinishingEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Optional finishing tools require a stretched final image.");
       if(a.saveBoth&&dialog.finalStretch.currentItem===0)throw new Error("Saving both final images requires a final stretch before stars recombination.");
       if(a.referenceEnabled&&(!window.currentView.image.isColor||window.currentView.image.numberOfNominalChannels!==3))throw new Error("Reference RGB matching requires an RGB working image.");
    }catch(e){result.errors.push("Pass sequences / finishing: "+errorMessage(e));}
@@ -532,6 +536,7 @@ function saveRecombinedCompanion(starless,branches,dialog,sourcePath,sourceId) {
    if(dialog.combinedHDREnabled.checked)combined=reviewHDR(combined);
    advancedRecord("Recombined companion accepted",{starBrightness:dialog.starBrightness.value,starlessView:starless.fullId,recombinedView:combined.fullId});
    if(advancedRunAudit)advancedRunAudit.outputKind="Recombined";
+   if(advancedWorkflowSettings.metadataFinishingEnabled)combined=reviewMetadataFinishing(combined);
    var result=saveFinalImage(combined,sourcePath,sourceId,"Recombined",starless.window.filePath||"");
    if(advancedWorkflowSettings.tiff)result+="\n\n"+exportAdvancedTIFF(combined);
    if(advancedWorkflowSettings.reports)result+="\n\n"+saveAdvancedRunReport(combined);
@@ -566,4 +571,70 @@ function quickWorkflowInputCheck(image) {
    }
    if(channels && allFlat)result.errors.push("No usable sampled intensity variation: blank or constant input.");
    return result;
+}
+
+// Bill Blanshan Star Method V3, as recorded in the user-supplied M42 history.
+var metadataStarV3Expression="/*      Star Reduction using PixelMath, by Bill Blanshan -\n                      Star Method - V3                            */\n\nImg1= Starless  ;// <--Starless Image name\n\nI=   2  ;// <--number of iterations, between 1-3\nM=   3  ;// <--Method mode; 1=Strong; 2=Moderate; 3=Soft reductions\n\n/*  Drag bottom left arrow over to the image you require star reduction\n\nNote:\n   Strong mode produces smaller sharp stars while removing small stars\n   Moderate mode still has sharp stars and some smaller stars\n   Soft mode is a simple star reduction of the original image       */\n\n\n\n\n\n\n\n\n\n\n\n//equations:\nE1= $T*~(~(max(0,min(1,Img1/$T)))*~$T);  //iteration-1\nE2= max(E1,($T*E1)+(E1*~E1));\n\nE3= E1*~(~(max(0,min(1,Img1/E1)))*~E1);  //iteration-2\nE4= max(E3,($T*E3)+(E3*~E3));\n\nE5= E3*~(~(max(0,min(1,Img1/E3)))*~E3);  //iteration-3\nE6= max(E5,($T*E5)+(E5*~E5));\n\nE7= iif(I==1,E1,iif(I==2,E3,E5)); // Strong reduction mode\nE8= iif(I==1,E2,iif(I==2,E4,E6)); // Moderate reduction mode\n\nE9= mean(\n$T-($T-iif(I==1,E2,iif(I==2,E4,E6))), \n$T*~($T-iif(I==1,E2,iif(I==2,E4,E6)))); //soft reduction mode\n\niif(M==1,E7,iif(M==2,E8,E9))";
+var metadataStarV3Symbols="I,M,Img1,E1,E2,E3,E4,E5,E6,E7,E8,E9,E10,";
+function metadataFinishingTools(){return ["SCNR green cleanup","Multiscale denoise","Multiscale sharpening","Replace Lab lightness","Masked image blend","Star reduction V3","CloneStamp retouch","Masked RGB / lightness curves"];}
+function metadataFinishingDefaults(tool){return {tool:tool,amount:25,source:"",registered:false,icon:"",iterations:1,mode:3,mask:{id:"",registered:false,invert:false,brightness:false},layers:[0,1,2,3,4].map(function(){return {enabled:false,bias:0,threshold:3,amount:.5,iterations:1};})};}
+function metadataSource(view,p){var v=View.viewById(p.source);if(!p.source||v.isNull||v.isPreview)throw new Error("Select an open main source image.");if(!p.registered)throw new Error("Confirm source registration and matching crop.");if(v.image.width!==view.image.width||v.image.height!==view.image.height)throw new Error("Source dimensions differ from target. Register and crop first.");if(p.tool==="Replace Lab lightness" && (v.image.isColor||v.image.numberOfNominalChannels!==1))throw new Error("Lightness replacement requires a grayscale source.");if(p.tool!=="Replace Lab lightness" && v.image.numberOfNominalChannels!==view.image.numberOfNominalChannels)throw new Error("Source and target channels differ.");return v;}
+function metadataProcessIcon(name,type){if(!name||ProcessInstance.icons().indexOf(name)<0)throw new Error("Select an existing "+type+" process icon.");var p=ProcessInstance.fromIcon(name);if(!p||p.processId()!==type)throw new Error("Icon must contain "+type+".");return p;}
+function buildMetadataFinishingCandidate(view,p){
+ var w=cloneHDRView(view,"_OptionalFinishing"),mask=null,process,source=null;
+ try{
+  if(p.amount<0||p.amount>100||!finiteNumber(p.amount))throw new Error("Amount must be 0-100 percent.");
+  if(p.mask&&p.mask.id){mask=createNebulaReviewMask(view,p.mask);w.setMask(mask);w.maskEnabled=true;w.maskInverted=false;w.maskVisible=false;}
+  if(p.tool==="SCNR green cleanup"){if(!view.image.isColor)throw new Error("SCNR requires RGB.");process=new SCNR;process.amount=p.amount/100;process.colorToRemove=SCNR.Green;process.protectionMethod=SCNR.AverageNeutral;process.preserveLightness=true;}
+  else if(p.tool==="Multiscale denoise"||p.tool==="Multiscale sharpening"){
+   process=p.icon?metadataProcessIcon(p.icon,"MultiscaleLinearTransform"):new MultiscaleLinearTransform;
+   if(!p.icon){if(!p.layers.some(function(l){return l.enabled;}))throw new Error("Enable at least one detail scale.");process.layers=p.layers.map(function(l){if(!finiteNumber(l.bias)||l.bias<0||l.bias>.5||l.threshold<0||l.threshold>10||l.amount<0||l.amount>1||l.iterations<1||l.iterations>10)throw new Error("Invalid multiscale settings.");return [true,true,p.tool==="Multiscale sharpening"&&l.enabled?l.bias:0,p.tool==="Multiscale denoise"&&l.enabled,l.threshold,l.amount,l.iterations];});process.layers=process.layers.concat([[true,true,0,false,3,.5,1]]);}
+   process.linear=false;process.linearMaskPreview=false;process.outputDeringingMaps=false;process.previewMode=MultiscaleLinearTransform.Disabled;
+  }
+  else if(p.tool==="Replace Lab lightness"){
+   if(!view.image.isColor)throw new Error("Lab lightness replacement requires RGB target.");source=metadataSource(view,p);process=new ChannelCombination;process.colorSpace=ChannelCombination.CIELab;process.channels=[[true,source.fullId],[false,""],[false,""]];process.inheritAstrometricSolution=true;
+  }
+  else if(p.tool==="Masked image blend"){
+   source=metadataSource(view,p);process=new PixelMath;process.expression="("+(1-p.amount/100)+")*$T+("+(p.amount/100)+")*"+source.fullId;process.useSingleExpression=true;process.createNewImage=false;process.rescale=false;process.truncate=true;
+  }
+  else if(p.tool==="Star reduction V3"){
+   source=metadataSource(view,p);if(p.iterations<1||p.iterations>3||p.mode<1||p.mode>3)throw new Error("V3 requires iterations and mode 1-3.");process=new PixelMath;process.expression=metadataStarV3Expression.replace(/Img1\s*=\s*Starless\s*;/,"Img1="+source.fullId+";").replace(/I\s*=\s*2\s*;/,"I="+p.iterations+";").replace(/M\s*=\s*3\s*;/,"M="+p.mode+";");process.symbols=metadataStarV3Symbols;process.useSingleExpression=true;process.createNewImage=false;process.rescale=false;process.truncate=true;
+  }
+  else if(p.tool==="CloneStamp retouch")process=metadataProcessIcon(p.icon,"CloneStamp");
+  else throw new Error("Unsupported optional finishing operation.");
+  checkAbortRequested();if(!process.executeOn(w.mainView))throw new Error(p.tool+" failed.");w.advancedProcessParameters=process.toSource();if(!finiteNumber(w.mainView.image.minimum())||!finiteNumber(w.mainView.image.maximum()))throw new Error("Optional finishing produced invalid pixels; discard this preview.");w.removeMask();checkAbortRequested();return w;
+ }catch(e){try{w.removeMask();}finally{w.forceClose();}throw e;}finally{if(mask)mask.forceClose();}
+}
+function editMetadataFinishingPass(view,prior){
+ var p=advancedCopy(prior),d=new Dialog;d.windowTitle="Optional masked finishing setup";d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=6;
+ var tools=metadataFinishingTools(),tool=new ComboBox(d);tools.forEach(function(t){tool.addItem(t);});tool.currentItem=Math.max(0,tools.indexOf(p.tool));d.sizer.add(tool);
+ var note=new Label(d);note.wordWrapping=true;note.text="All operations are optional and reviewed on a copy. Use registered, matching-crop sources and masks. V3 needs the corresponding stretched starless source and a target with stars. CloneStamp replays a configured icon: photographic retouching. Multiscale settings use five detail scales plus a protected residual.";d.sizer.add(note);
+ var amount=advancedIntegerRow(d,d.sizer,"SCNR strength / source blend (%)",0,100,p.amount);
+ var source=new ComboBox(d);source.addItem("Select registered source (blend / lightness / V3)...");ImageWindow.windows.forEach(function(w){if(w.mainView.fullId!==view.fullId)source.addItem(w.mainView.fullId);});source.currentItem=0;for(var i=1;i<source.numberOfItems;i++)if(source.itemText(i)===p.source)source.currentItem=i;d.sizer.add(source);
+ var registered=advancedCheck(d,d.sizer,"I confirm source registration, crop and matching stretch for blends / V3",p.registered);
+ var icon=new Edit(d);icon.text=p.icon;icon.toolTip="Optional MultiscaleLinearTransform icon for full native settings; required CloneStamp icon. The process is applied to a review copy.";d.sizer.add(icon);var il=new Label(d);il.text="Workspace process icon name (MLT override / required CloneStamp)";d.sizer.add(il);
+ var iterations=advancedIntegerRow(d,d.sizer,"V3 iterations",1,3,p.iterations),mode=advancedIntegerRow(d,d.sizer,"V3 mode: 1 strong, 2 moderate, 3 soft",1,3,p.mode),rows=[];
+ var heading=new Label(d);heading.text="Detail scales: enable | sharpening bias x100 | denoise threshold x100 | denoise amount % | iterations";d.sizer.add(heading);
+ p.layers.forEach(function(l,i){var row=new HorizontalSizer;row.spacing=5;var on=new CheckBox(d);on.text="Scale "+(i+1);on.checked=l.enabled;row.add(on);var controls=[];[[0,50,Math.round(l.bias*100)],[0,1000,Math.round(l.threshold*100)],[0,100,Math.round(l.amount*100)],[1,10,l.iterations]].forEach(function(v){var c=new SpinBox(d);c.minValue=v[0];c.maxValue=v[1];c.value=v[2];row.add(c);controls.push(c);});d.sizer.add(row);rows.push({on:on,c:controls});});
+ installNebulaMaskControls(d,view,function(){},false);if(d.restoreNebulaMask)d.restoreNebulaMask(p.mask);d.sizer.add(d.nebulaMaskRow);d.sizer.add(d.nebulaRegisteredRow);
+ function refreshMetadataSetup(){var t=tools[tool.currentItem],ml=t==="Multiscale denoise"||t==="Multiscale sharpening",src=t==="Replace Lab lightness"||t==="Masked image blend"||t==="Star reduction V3";
+  amount.visible=amount.workflowLabel.visible=t==="SCNR green cleanup"||t==="Masked image blend";source.visible=registered.visible=src;icon.visible=il.visible=ml||t==="CloneStamp retouch";iterations.visible=iterations.workflowLabel.visible=mode.visible=mode.workflowLabel.visible=t==="Star reduction V3";heading.visible=ml;heading.text=t==="Multiscale sharpening"?"Detail scales: enable | sharpening bias x100":"Detail scales: enable | denoise threshold x100 | amount % | iterations";amount.workflowLabel.text=t==="SCNR green cleanup"?"SCNR green removal (%)":"Source contribution (%)";rows.forEach(function(r){r.on.visible=ml;r.c.forEach(function(c,i){c.visible=ml&&(t==="Multiscale sharpening"?i===0:i>0);});});
+  d.adjustToContents();}
+ tool.onItemSelected=refreshMetadataSetup;
+ var buttons=new HorizontalSizer,ok=new PushButton(d),cancel=new PushButton(d);ok.text="Review this operation";cancel.text="Finish optional operations";buttons.addStretch();buttons.add(ok);buttons.add(cancel);d.sizer.add(buttons);ok.onClick=function(){d.ok();};cancel.onClick=function(){d.cancel();};refreshMetadataSetup();d.adjustToContents();if(!executeAdvancedDialog(d))return null;
+ p.tool=tools[tool.currentItem];p.amount=amount.value;p.source=source.currentItem?source.itemText(source.currentItem):"";p.registered=registered.checked;p.icon=icon.text.trim();p.iterations=iterations.value;p.mode=mode.value;p.mask=d.nebulaMaskSettings();p.layers=rows.map(function(r){return {enabled:r.on.checked,bias:r.c[0].value/100,threshold:r.c[1].value/100,amount:r.c[2].value/100,iterations:r.c[3].value};});return p;
+}
+function reviewMetadataFinishing(view){
+ var current=view,p=metadataFinishingDefaults("SCNR green cleanup"),pass=1;
+ for(;;){var chosen=editMetadataFinishingPass(current,p);if(!chosen)return current;p=chosen;
+  if(p.tool==="Masked RGB / lightness curves"){current=reviewAdaptive(current);pass++;continue;}
+  var d=new FinishingReviewDialog(current,"Inspection"),accepted=false,again=false;
+  d.windowTitle=p.tool+" - optional pass "+pass;d.instructions.text="Review "+p.tool+" on a copy at 100%. Update Preview recalculates from Before. Apply keeps this result; Skip preserves the previous result.";
+  d.updateButton.visible=true;d.updateButton.text="Update Preview";d.displayMode.enabled=true;d.skipButton.visible=true;d.buttons.add(d.skipButton);d.skipButton.text="Skip this operation";d.keepComparison.visible=true;d.keepComparison.checked=true;d.applyButton.text="Apply and finish";d.applyButton.enabled=false;
+  var next=new PushButton(d);next.text="Apply and choose another operation";next.enabled=false;d.buttons.insert(0,next);
+  d.updateButton.onClick=function(){d.enabled=false;try{if(d.candidate){d.candidate.forceClose();d.candidate=null;}d.candidate=buildMetadataFinishingCandidate(current,p);d.afterBitmap=d.candidate.mainView.image.render(1,false);d.differenceBitmap=null;d.displayMode.currentItem=1;d.applyButton.enabled=next.enabled=true;d.previewStatus.text=previewChangeSummary(current.image,d.candidate.mainView.image);}catch(e){d.displayMode.currentItem=0;d.applyButton.enabled=next.enabled=false;d.previewStatus.text=errorMessage(e);}finally{d.enabled=true;d.preview.repaint();}};
+  d.applyButton.onClick=function(){if(d.candidate&&d.applyButton.enabled){accepted=true;d.ok();}};next.onClick=function(){if(d.candidate&&next.enabled){accepted=true;again=true;d.ok();}};d.skipButton.onClick=function(){d.cancel();};d.adjustToContents();
+  try{executeAdvancedDialog(d);if(accepted){if(d.keepComparison.checked)cloneHDRView(current,"_BeforeOptionalFinishing").show();current=d.candidate.mainView;d.candidate.show();advancedRecord("Optional masked finishing",{pass:pass,settings:p,parameters:d.candidate.advancedProcessParameters});d.candidate=null;}}finally{if(d.candidate)d.candidate.forceClose();}
+  if(accepted&&!again)return current;pass++;
+ }
 }

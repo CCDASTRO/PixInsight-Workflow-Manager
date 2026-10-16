@@ -101,3 +101,25 @@ coverage. The previous RC Astro inference and paired-output checks remain record
 ## Local contrast (LHE) passes
 
 Use Apply and add another LHE pass to accept the current result and review another pass. Adjust Kernel radius, Amount, Contrast limit (shown multiplied by 10; 15 means 1.5) and the brightness or registered nebula mask independently. Apply LHE and finish completes the sequence. Update Preview does not accumulate passes. Finish without this pass discards only the current preview. Broad then smaller radii are optional experiments, not automatic defaults.
+
+
+## Optional masked finishing (v1.3.0)
+
+Enable Review optional masked finishing in Pass sequences and optional finishing. After ordinary finishing and any LRGB combination, choose an operation. Review this operation opens a Before/After preview. Update Preview recalculates from Before; Apply and choose another operation commits only that reviewed result and returns to the chooser. Apply and finish ends the sequence; Skip discards the current preview. Finish optional operations returns the last accepted result. Dual-output mode offers this review separately for the starless output and its recombined companion.
+
+Available operations:
+
+- SCNR green cleanup: adjustable strength, AverageNeutral protection and preserved lightness; optional grayscale mask. It is never automatic.
+- Multiscale denoise: independently enable five detail scales and set threshold, amount and iterations. The residual is retained. Optional MultiscaleLinearTransform icon overrides the table for full native settings.
+- Multiscale sharpening: independently enable scales and set bias; optional native MLT icon. No sharpening scale is enabled by default.
+- Replace Lab lightness: replace CIELab L using an open registered grayscale image while retaining target chroma. Requires an RGB target.
+- Masked image blend: mix the current image with an open registered source, using Source contribution percentage. Optional mask restricts the blend. Both images must have matching channels and compatible stretch.
+- Star reduction V3: Bill Blanshan's expression recorded in the supplied M42 history, with selectable 1-3 iterations and strong/moderate/soft mode. Select the corresponding registered stretched starless source and apply to an image containing stars. This is separate from the existing V2 option.
+- CloneStamp retouch: replay an existing CloneStamp process icon on a review copy. All source references required by the icon must be available. This is photographic retouching; it does not automatically select or repair objects.
+- Masked RGB / lightness curves: opens the existing repeatable curves editor, including separate Red, Green and Blue channels.
+
+Select an optional registered grayscale mask for each operation; white permits processing and black protects it. Invert is available. Color-, star- and range-selective masks can be supplied as grayscale images, but this feature does not reconstruct or automatically generate the masks named in an imported image history. Sources are validated for dimensions/channel count and require a registration confirmation; that confirmation cannot replace actual registration.
+
+Run reports record each accepted operation, selected source/mask, parameters and native process settings. Per-operation choices are made at review time; the opt-in checkbox is remembered. Nothing is inferred from filenames or silently applied from the M42 example.
+
+Validation covers 28 regression suites and native SCNR, masked MLT denoise/sharpening, Lab replacement, blend arithmetic, V3 execution, original preservation, setup/preview rendering and Skip. A real CloneStamp replay and arbitrary native MLT icon overrides have not been exercised in this release; missing/wrong icons are rejected.

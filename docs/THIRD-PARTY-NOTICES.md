@@ -36,3 +36,6 @@ ImageSolverEngine.js is included from the installed PixInsight distribution unde
 its existing PCL License 2.0 notices; its content is part of this workflow signature.
 It is not redistributed here. A change to ImageSolverEngine.js can require the
 workflow to be re-signed. No deprecated AdP/ImageSolver.js is used.
+
+
+Bill Blanshan Star Method V3: the optional finishing operation preserves the attributed PixelMath expression recorded in the user-supplied M42 LRGB Final.xisf processing history. Source image name, iterations and mode are parameterized. No image or external mask from that file is distributed.

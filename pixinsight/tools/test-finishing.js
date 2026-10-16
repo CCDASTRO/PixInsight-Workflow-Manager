@@ -100,7 +100,7 @@ finishingActions=[d=>{
  d.updateButton.onClick();firstAccepted=d.candidate;
  d.anotherPassButton.onClick();return true;
 },d=>{
- assert.match(d.windowTitle,/pass 2/);assert.equal(d.layers.value,150);assert.equal(d.strength.value,20);assert.equal(d.slopeLimit.value,12);
+ assert.match(d.windowTitle,/Local contrast \(LHE\) - Pass 2/);assert.equal(d.layers.value,150);assert.equal(d.strength.value,20);assert.equal(d.slopeLimit.value,12);
  assert.equal(d.skipButton.text,'Finish without this pass');
  d.layers.value=64;d.strength.value=10;d.updateButton.onClick();
  assert.equal(bases.at(-1),firstAccepted.mainView);secondAccepted=d.candidate;

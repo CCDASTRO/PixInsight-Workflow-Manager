@@ -96,3 +96,8 @@ inference and native PixelMath. StarNet2 was not installed in the test environme
 MLDenoise and SyQon model inference were not run for this update. Their existing
 backends are reused with settings, scope, model/icon and file-exchange regression
 coverage. The previous RC Astro inference and paired-output checks remain recorded.
+
+
+## Local contrast (LHE) passes
+
+Use Apply and add another LHE pass to accept the current result and review another pass. Adjust Kernel radius, Amount, Contrast limit (shown multiplied by 10; 15 means 1.5) and the brightness or registered nebula mask independently. Apply LHE and finish completes the sequence. Update Preview does not accumulate passes. Finish without this pass discards only the current preview. Broad then smaller radii are optional experiments, not automatic defaults.

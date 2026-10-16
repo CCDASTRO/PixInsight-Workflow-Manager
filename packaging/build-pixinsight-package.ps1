@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.2.7',
+    [string] $Version = '1.2.8',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -145,7 +145,7 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.2.7 screens input quality before expensive processing.</p>
+        <p>v1.2.8 clarifies masked local contrast (LHE) and repeated-pass controls.</p>
         <ul>
           <li>v1.2.2 adds per-pass Parallax, MLDenoise, Prism, StarNet2, SyQon Starless, ACDNR and MLT with independent settings and stage-aware execution.</li>
           <li>26 regression suites and native editor, classic-denoise and mixed-remover layer tests passed; additional model inference remains installation-dependent.</li>

@@ -42,7 +42,7 @@ abort=true;assert.throws(()=>ctx.buildLuminanceBlend(target,source,mask,40,false
 assert.throws(()=>ctx.stretchPreparedLuminance(target,target,true),/Create/);
 ctx.ProcessInstance.icons=()=>['CCDASTRO_LuminanceStretch'];ctx.ProcessInstance.fromIcon=()=>({processId:()=> 'CurvesTransformation'});assert.throws(()=>ctx.stretchPreparedLuminance(target,target,true),/HistogramTransformation/);
 ctx.ProcessInstance.fromIcon=()=>({processId:()=> 'HistogramTransformation',executeOn(){calls.push('configured');return true;}});
-choices={configured:true,'Review HDR on luminance':true,'Review local contrast on luminance (repeatable)':true,'Review masked source blends (repeatable)':true,'Review local contrast again after masked blends':true};ctx.reviewLuminanceBlends=v=>{calls.push('blends');return v;};calls=[];ctx.prepareLRGBLuminance(target,target);assert.deepEqual(calls,['configured','HDR','LHE','blends','LHE']);
+choices={configured:true,'Review HDR on luminance':true,'Review local contrast (LHE) on luminance - multiple passes':true,'Review masked source blends (repeatable)':true,'Review local contrast (LHE) again after masked blends':true};ctx.reviewLuminanceBlends=v=>{calls.push('blends');return v;};calls=[];ctx.prepareLRGBLuminance(target,target);assert.deepEqual(calls,['configured','HDR','LHE','blends','LHE']);
 optionsAccept=false;calls=[];ctx.prepareLRGBLuminance(target,target);assert.deepEqual(calls,['stretch']);optionsAccept=true;
 // Restore the real blend review. Repeated previews use the same pass input;
 // accepting a pass changes the next input, while Skip preserves accepted work.

@@ -1,0 +1,14 @@
+{
+  "version": "1.2.8",
+  "package": "CCDASTROWorkflowManager-1.2.8.zip",
+  "sha1": "2151780f73396efb7c5090b54e7d4b575cce1e86",
+  "packageFiles": [
+    "CCDASTROWorkflowManager.js",
+    "CCDASTROWorkflowManager.xsgn",
+    "CCDASTROAutoDBEEngine.jsh",
+    "CCDASTROAdvancedWorkflow.jsh"
+  ],
+  "manifestSigned": true,
+  "scriptSignatureValidatedInPixInsight": true,
+  "validation": "27 Node regression suites including repeated-pass preservation and cancellation; native masked LHE preview and revised dialog rendering"
+}

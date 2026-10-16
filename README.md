@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.2.7
+# CCDASTRO PixInsight Workflow Manager v1.2.8
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,10 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.2.8
+
+Local contrast is labeled Local contrast (LHE). Each dialog identifies its pass number; Apply and add another LHE pass accepts the preview and opens the next pass. Apply LHE and finish ends the sequence. Each pass can adjust kernel radius, amount, contrast limit and mask. Update Preview recalculates only the current pass; finishing without it retains earlier accepted passes. HDR defaults are unchanged.
 
 ## New in v1.2.7
 

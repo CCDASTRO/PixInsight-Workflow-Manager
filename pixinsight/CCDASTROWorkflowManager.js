@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.2.7"
+#define VERSION "1.2.8"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -2283,7 +2283,7 @@ function installLRGBInputs(dialog)
    dialog.lrgbRegistered.text = "I confirm all selected masters are linear, registered and share the same crop";
    box.sizer.add(dialog.lrgbRegistered);
    dialog.luminancePreparation = new CheckBox(dialog.content);
-   dialog.luminancePreparation.text = "Review luminance preparation: stretch, HDR, local contrast and masked blends";
+   dialog.luminancePreparation.text = "Review luminance preparation: stretch, HDR, local contrast (LHE) and masked blends";
    dialog.luminancePreparation.checked = false;
    dialog.luminancePreparation.toolTip = "Optional session-only reviews on an L copy, before LRGB. Blend sources and masks must already be registered and open.";
    box.sizer.add(dialog.luminancePreparation);
@@ -2562,9 +2562,9 @@ function prepareLRGBLuminance(view, rgb)
    }
    var stretchSetup=new PushButton(options);stretchSetup.text="L stretch setup...";stretchSetup.onClick=function(){configureNativeProcess("luminance");};
    var hdr = check("Review HDR on luminance");
-   var lhe = check("Review local contrast on luminance (repeatable)");
+   var lhe = check("Review local contrast (LHE) on luminance - multiple passes");
    var blends = check("Review masked source blends (repeatable)");
-   var after = check("Review local contrast again after masked blends");
+   var after = check("Review local contrast (LHE) again after masked blends");
    var button = new PushButton(options); button.text = "Prepare luminance"; button.onClick = function() { options.ok(); };
    var skip = new PushButton(options); skip.text = "Use automatic match only"; skip.onClick = function() { options.cancel(); };
    var buttons = new HorizontalSizer; buttons.spacing = 8; buttons.addStretch(); buttons.add(button); buttons.add(skip);
@@ -2879,7 +2879,7 @@ constructor()
    this.adaptiveEnabled.toolTip = "Apply native CurvesTransformation after HDR. Choose RGB/K, Lightness or Saturation, edit curve points and amount, and compare the preview before Apply or Skip.";
    this.branchesBox.sizer.add(this.adaptiveEnabled);
    this.finishingEnabled = new CheckBox(this.content);
-   this.finishingEnabled.text = "Final inspection, local contrast, noise cleanup, saturation and sharing export";
+   this.finishingEnabled.text = "Final inspection, local contrast (LHE), noise cleanup, saturation and sharing export";
    this.finishingEnabled.checked = true;
    this.finishingEnabled.toolTip = "Review each optional finishing step after Curves. Every processing stage has Apply/Skip. Save full-resolution XISF, then optionally export a separate resized JPEG/PNG.";
    this.branchesBox.sizer.add(this.finishingEnabled);
@@ -4051,7 +4051,7 @@ function reviewFinishing(view, kind, luminance)
    for (;;)
    {
       var dialog = new FinishingReviewDialog(current, kind, pass);
-      if (luminance) dialog.windowTitle = "Luminance local contrast review - pass " + pass;
+      if (luminance) dialog.windowTitle = "Luminance local contrast (LHE) - Pass " + pass;
       if (settings !== null)
       {
          dialog.layers.value = settings.radius; dialog.strength.value = settings.amount;
@@ -4179,7 +4179,7 @@ constructor(view, kind, pass)
 {
    super();
    var self = this;
-   this.windowTitle = kind + " review" + (kind === "Local contrast" ? " - pass " + (pass || 1) : "");
+   this.windowTitle = kind === "Local contrast" ? "Local contrast (LHE) - Pass " + (pass || 1) : kind + " review";
    this.anotherPassRequested = false;
    this.candidate = null;
    this.previewRevision = 0;
@@ -4188,9 +4188,9 @@ constructor(view, kind, pass)
    this.instructions = new Label(this);
    this.instructions.text = kind === "Inspection" ? "Inspect at 100%: background noise, star halos, clipped highlights and faint detail. Drag to pan." : "Preview " + kind + ". Compare Before / After at 100%; drag to pan. Apply keeps a separate result.\nLocal contrast and saturation protect dark background and bright highlights with a smooth brightness mask.";
    if (kind === "Local contrast") this.instructions.text += "\nAn optional registered grayscale nebula mask replaces brightness protection unless Also use brightness protection is checked. White allows; black protects.";
-   if (kind === "Local contrast") this.instructions.text += "\nAdd another pass accepts this preview and starts the next pass from it. Update Preview never stacks passes. Skip keeps earlier accepted passes.";
+   if (kind === "Local contrast") this.instructions.text += "\nApply and add another LHE pass keeps this preview and opens the next pass with its own settings and mask. Update Preview only recalculates this pass; it never stacks passes. Finish without this pass keeps earlier accepted passes.";
    this.layersLabel = new Label(this);
-   this.layersLabel.text = "Radius (pixels):";
+   this.layersLabel.text = "Kernel radius (pixels):";
    this.layers = new SpinBox(this);
    this.layers.minValue = 16;
    this.layers.maxValue = 256;
@@ -4238,10 +4238,11 @@ constructor(view, kind, pass)
    this.updateButton = new PushButton(this);
    this.updateButton.text = "Update Preview";
    this.applyButton = new PushButton(this);
-   this.applyButton.text = "Apply " + kind;
+   this.applyButton.text = kind === "Local contrast" ? "Apply LHE and finish" : "Apply " + kind;
    this.applyButton.enabled = false;
    this.anotherPassButton = new PushButton(this);
-   this.anotherPassButton.text = "Add another local contrast pass";
+   this.anotherPassButton.text = "Apply and add another LHE pass";
+   this.anotherPassButton.toolTip = "Accept the current masked LHE result, then review another pass. Adjust kernel radius, amount, contrast limit and mask independently for each pass.";
    this.anotherPassButton.enabled = false;
    this.anotherPassButton.visible = kind === "Local contrast";
    this.anotherPassButton.onClick = function() {
@@ -4258,6 +4259,7 @@ constructor(view, kind, pass)
    this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0-1000):";
    this.slopeLimit = new SpinBox(this); this.slopeLimit.minValue = 10; this.slopeLimit.maxValue = 100; this.slopeLimit.value = 15;
    this.slopeLabel = new Label(this); this.slopeLabel.text = "Contrast limit (x10):";
+   this.slopeLimit.toolTip = "LHE contrast limit multiplied by 10: 15 means 1.5. Each pass can use a different limit.";
    this.slopeLimit.onValueUpdated = dirty;
    this.maskLow.onValueUpdated = dirty; this.maskHigh.onValueUpdated = dirty;
    if (kind === "Local contrast") installNebulaMaskControls(this, view, dirty, true);

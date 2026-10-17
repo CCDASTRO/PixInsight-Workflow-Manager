@@ -1,0 +1,14 @@
+{
+  "version": "1.4.0",
+  "package": "CCDASTROWorkflowManager-1.4.0.zip",
+  "sha1": "6cf4206e511673645550209db381df0ff393a3ec",
+  "packageFiles": [
+    "CCDASTROWorkflowManager.js",
+    "CCDASTROWorkflowManager.xsgn",
+    "CCDASTROAutoDBEEngine.jsh",
+    "CCDASTROAdvancedWorkflow.jsh"
+  ],
+  "manifestSigned": true,
+  "scriptSignatureValidatedInPixInsight": true,
+  "validation": "29 Node regression suites; native all-four enhancement operations, bounded output, original preservation, zero strength, preview switching and Skip"
+}

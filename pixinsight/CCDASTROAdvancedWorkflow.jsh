@@ -106,7 +106,7 @@ function defaultAdvancedWorkflowSettings() {
    return {useLinearPasses:false,
       linearPasses:[defaultRCPass("BlurXTerminator"), defaultRCPass("StarXTerminator"), defaultRCPass("NoiseXTerminator")],
       keepStarless:false, saveBoth:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
-      metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
+      autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
       reports:true, tiff:false};
 }
 var advancedWorkflowSettings = defaultAdvancedWorkflowSettings();
@@ -149,7 +149,7 @@ function restoreAdvancedWorkflowSettings(value) {
    var candidate=defaultAdvancedWorkflowSettings();
    if (value) {
       for (var k in candidate) if (Object.prototype.hasOwnProperty.call(value,k)) candidate[k]=advancedCopy(value[k]);
-      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","metadataFinishingEnabled","reports","tiff"];i<flags.length;i++)
+      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","metadataFinishingEnabled","autoEnhanceEnabled","reports","tiff"];i<flags.length;i++)
          if(typeof candidate[flags[i]]!=="boolean") throw new Error("Invalid advanced workflow flag: "+flags[i]);
       if(!finiteNumber(candidate.referenceStrength)||candidate.referenceStrength<0||candidate.referenceStrength>100) throw new Error("Invalid reference match strength.");
       if(!finiteNumber(candidate.starlessTarget)||candidate.starlessTarget<0.01||candidate.starlessTarget>0.50) throw new Error("Starless histogram target must be 1-50 percent.");
@@ -495,11 +495,12 @@ function installAdvancedWorkflowControls(dialog) {
    var repairs=advancedCheck(box,box.sizer,"Review local background repairs (photographic retouch)",false);
    var metadata=advancedCheck(box,box.sizer,"Review optional masked finishing: SCNR, multiscale, blends, lightness, V3 and retouch",false);
    metadata.toolTip="After normal finishing and luminance combination, review optional operations on separate copies. Each pass selects its own tool, settings and mask. Nothing is applied automatically.";
+   var autoEnhance=advancedCheck(box,box.sizer,"Review Auto Image Enhance at the end (Tone / Contrast / Color / Auto All)",false);
    var reports=advancedCheck(box,box.sizer,"Save step-by-step report and sampled final checks",true);
    var tiff=advancedCheck(box,box.sizer,"Also export a full-resolution 16-bit TIFF",false);
    var note=new Label(box);note.wordWrapping=true;note.text="Gradients and color calibration run first. The custom linear sequence replaces the ordinary deblur, denoise and separation rows. Every pass has its own settings. Reference matching and local repairs are optional, previewed edits.";box.sizer.add(note);
    dialog.advancedValues=function(){return advancedCopy(advancedWorkflowSettings);};
-   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
+   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;autoEnhance.checked=a.autoEnhanceEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
       summary.text=advancedLinearToolSummary(dialog,a);edit.enabled=a.useLinearPasses;postEdit.enabled=a.postEnabled;
       ["deconvolution","noiseReduction","starSeparation"].forEach(function(id){dialog.rowsById[id].enabled.enabled=!a.useLinearPasses;dialog.rowsById[id].choice.enabled=!a.useLinearPasses;});
       target.value=Math.round(a.starlessTarget*100);target.enabled=a.keepStarless||a.saveBoth;
@@ -507,6 +508,7 @@ function installAdvancedWorkflowControls(dialog) {
       if(a.keepStarless||a.saveBoth){dialog.recombine.checked=false;dialog.finishStarless.checked=false;dialog.starlessStretch.currentItem=0;dialog.starsStretch.currentItem=0;if(a.keepStarless)dialog.starReduction.checked=false;}dialog.finalStretchControl.label.text=(a.keepStarless||a.saveBoth)?"Starless final stretch:":"Final image stretch:";dialog.recombine.toolTip=a.saveBoth?"Dual output saves the stretched starless result first, then reviews stars recombination separately.":a.keepStarless?"Starless-only output does not recombine stars.":"Recombine star and starless branches before the final stretch.";dialog.recombine.enabled=dialog.finishStarless.enabled=dialog.starlessStretch.enabled=dialog.starsStretch.enabled=!(a.keepStarless||a.saveBoth);
    };
    function changed(){dialog.refreshAdvancedControls();saveWorkflowState(dialog,false);}
+   autoEnhance.onCheck=function(v){advancedWorkflowSettings.autoEnhanceEnabled=v;changed();};
    metadata.onCheck=function(v){advancedWorkflowSettings.metadataFinishingEnabled=v;changed();};
    target.onValueUpdated=function(v){advancedWorkflowSettings.starlessTarget=v/100;saveWorkflowState(dialog,false);};
    use.onCheck=function(v){advancedWorkflowSettings.useLinearPasses=v;changed();};keep.onCheck=function(v){advancedWorkflowSettings.keepStarless=v;if(v)advancedWorkflowSettings.saveBoth=false;changed();};both.onCheck=function(v){advancedWorkflowSettings.saveBoth=v;if(v)advancedWorkflowSettings.keepStarless=false;changed();};post.onCheck=function(v){advancedWorkflowSettings.postEnabled=v;changed();};ref.onCheck=function(v){advancedWorkflowSettings.referenceEnabled=v;changed();};repairs.onCheck=function(v){advancedWorkflowSettings.repairsEnabled=v;changed();};reports.onCheck=function(v){advancedWorkflowSettings.reports=v;changed();};tiff.onCheck=function(v){advancedWorkflowSettings.tiff=v;changed();};
@@ -522,6 +524,7 @@ function advancedPreflight(dialog,result,window) {
       if((a.keepStarless||a.saveBoth)&&!advancedSeparationEnabled(dialog))throw new Error("Starless output requires an enabled StarX / star-separation pass.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&dialog.finalStretch.currentItem===0&&dialog.starlessStretch.currentItem===0)throw new Error("Post-stretch cleanup, reference matching and local repairs require a workflow stretch.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&advancedSeparationEnabled(dialog)&&!dialog.recombine.checked&&!a.keepStarless&&!a.saveBoth)throw new Error("Enable Finish and save the starless branch, or recombine, for advanced finishing.");
+      if(a.autoEnhanceEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Auto Image Enhance requires a stretched final image.");
       if(a.metadataFinishingEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Optional finishing tools require a stretched final image.");
       if(a.saveBoth&&dialog.finalStretch.currentItem===0)throw new Error("Saving both final images requires a final stretch before stars recombination.");
       if(a.referenceEnabled&&(!window.currentView.image.isColor||window.currentView.image.numberOfNominalChannels!==3))throw new Error("Reference RGB matching requires an RGB working image.");
@@ -537,6 +540,7 @@ function saveRecombinedCompanion(starless,branches,dialog,sourcePath,sourceId) {
    advancedRecord("Recombined companion accepted",{starBrightness:dialog.starBrightness.value,starlessView:starless.fullId,recombinedView:combined.fullId});
    if(advancedRunAudit)advancedRunAudit.outputKind="Recombined";
    if(advancedWorkflowSettings.metadataFinishingEnabled)combined=reviewMetadataFinishing(combined);
+   if(advancedWorkflowSettings.autoEnhanceEnabled)combined=reviewAutoImageEnhance(combined);
    var result=saveFinalImage(combined,sourcePath,sourceId,"Recombined",starless.window.filePath||"");
    if(advancedWorkflowSettings.tiff)result+="\n\n"+exportAdvancedTIFF(combined);
    if(advancedWorkflowSettings.reports)result+="\n\n"+saveAdvancedRunReport(combined);
@@ -637,4 +641,52 @@ function reviewMetadataFinishing(view){
   try{executeAdvancedDialog(d);if(accepted){if(d.keepComparison.checked)cloneHDRView(current,"_BeforeOptionalFinishing").show();current=d.candidate.mainView;d.candidate.show();advancedRecord("Optional masked finishing",{pass:pass,settings:p,parameters:d.candidate.advancedProcessParameters});d.candidate=null;}}finally{if(d.candidate)d.candidate.forceClose();}
   if(accepted&&!again)return current;pass++;
  }
+}
+
+function autoEnhanceSamples(view){
+ var im=view.image,n=Math.min(3,im.numberOfNominalChannels),a=[],pixels=[],nx=Math.min(96,im.width),ny=Math.min(96,im.height);for(var c=0;c<n;c++)a.push([]);
+ for(var y=0;y<ny;y++)for(var x=0;x<nx;x++){var p=[],ok=true;for(var c=0;c<n;c++){var v=im.sample(Math.min(im.width-1,Math.floor((x+.5)*im.width/nx)),Math.min(im.height-1,Math.floor((y+.5)*im.height/ny)),c);if(!finiteNumber(v))ok=false;p.push(v);}if(ok){pixels.push(p);for(var c=0;c<n;c++)a[c].push(p[c]);}}
+ if(pixels.length<32)throw new Error("Not enough valid samples for Auto Image Enhance.");a.forEach(function(v){v.sort(function(x,y){return x-y;});});return {channels:a,pixels:pixels};
+}
+function autoEnhancePlan(samples,operation,clip){
+ if(["Auto Tone","Auto Contrast","Auto Color"].indexOf(operation)<0)throw new Error("Unknown automatic enhancement.");if(!finiteNumber(clip)||clip<0||clip>1)throw new Error("Tail clipping must be 0-1 percent per tail.");
+ var a=samples.channels,n=a.length;if(operation==="Auto Color"&&n!==3)throw new Error("Auto Color requires RGB.");var q=clip/100,low=[],high=[],gamma=[];
+ for(var c=0;c<n;c++){low.push(advancedQuantile(a[c],q));high.push(advancedQuantile(a[c],1-q));gamma.push(1);}
+ if(operation==="Auto Contrast"){var l=Math.min.apply(null,low),h=Math.max.apply(null,high);for(var c=0;c<n;c++){low[c]=l;high[c]=h;}}
+ for(var c=0;c<n;c++)if(high[c]-low[c]<1e-6)throw new Error("Too little tonal range in channel "+(c+1)+" for "+operation+".");
+ var neutralCount=0;
+ if(operation==="Auto Color"){
+  var neutral=[[],[],[]];samples.pixels.forEach(function(p){var lo=Math.min.apply(null,p),hi=Math.max.apply(null,p),avg=(p[0]+p[1]+p[2])/3;if(avg>.1&&avg<.8&&(hi-lo)/Math.max(avg,.001)<.20){neutralCount++;for(var c=0;c<3;c++)neutral[c].push(Math.max(.001,Math.min(.999,(p[c]-low[c])/(high[c]-low[c]))));}});
+  if(neutralCount<32)throw new Error("Auto Color found too few near-neutral midtone samples. Use Auto Contrast or manual color adjustment instead.");
+  var med=neutral.map(function(v){v.sort(function(x,y){return x-y;});return advancedQuantile(v,.5);}),target=(med[0]+med[1]+med[2])/3;
+  for(var c=0;c<3;c++)gamma[c]=Math.max(.5,Math.min(2,Math.log(target)/Math.log(med[c])));
+ }
+ return {operation:operation,low:low,high:high,gamma:gamma,neutralSamples:neutralCount,clipPercent:clip};
+}
+function buildAutoEnhanceCandidate(view,operation,strengths,clip){
+ var order=operation==="Auto All"?["Auto Tone","Auto Contrast","Auto Color"]:[operation],w=cloneHDRView(view,"_AutoEnhance"),steps=[];
+ try{for(var i=0;i<order.length;i++){
+  var name=order[i],index=["Auto Tone","Auto Contrast","Auto Color"].indexOf(name);if(index<0)throw new Error("Unknown enhancement.");var amount=strengths[index];if(!finiteNumber(amount)||amount<0||amount>100)throw new Error("Enhancement strength must be 0-100 percent.");if(amount===0){steps.push({operation:name,skipped:"Zero strength"});continue;}
+  if(name==="Auto Color"&&!view.image.isColor){if(operation==="Auto All"){steps.push({operation:name,skipped:"Monochrome image"});continue;}throw new Error("Auto Color requires RGB.");}
+  var plan=autoEnhancePlan(autoEnhanceSamples(w.mainView),name,clip),p=new PixelMath;p.useSingleExpression=false;p.createNewImage=false;p.rescale=false;p.truncate=true;p.truncateLower=0;p.truncateUpper=1;
+  for(var c=0;c<plan.low.length;c++){var value="min(1,max(0,($T["+c+"]-("+plan.low[c]+"))/("+(plan.high[c]-plan.low[c])+")))";if(plan.gamma[c]!==1)value="("+value+")^("+plan.gamma[c]+")";var expression="("+(1-amount/100)+")*$T["+c+"]+("+(amount/100)+")*("+value+")";if(c===0)p.expression=expression;else if(c===1)p.expression1=expression;else p.expression2=expression;}
+  if(plan.low.length===1)p.useSingleExpression=true;checkAbortRequested();if(!p.executeOn(w.mainView))throw new Error(name+" failed.");plan.strength=amount;steps.push(plan);
+ }
+ if(!finiteNumber(w.mainView.image.minimum())||!finiteNumber(w.mainView.image.maximum()))throw new Error("Enhancement produced invalid pixels.");w.autoEnhanceSteps=steps;return w;
+ }catch(e){w.forceClose();throw e;}
+}
+function reviewAutoImageEnhance(view){
+ var d=new Dialog;d.windowTitle="Auto Image Enhance";d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=7;var candidate=null,selected="",before=view.image.render(1,false),after=null;
+ var note=new Label(d);note.wordWrapping=true;note.text="Optional finishing on a copy. These are Photoshop-like approximations, not photometric calibration. Each button starts from Before; Auto All runs Tone -> Contrast -> Color. Inspect color and faint background before applying.";d.sizer.add(note);
+ var tone=advancedIntegerRow(d,d.sizer,"Auto Tone strength (%)",0,100,25),contrast=advancedIntegerRow(d,d.sizer,"Auto Contrast strength (%)",0,100,25),color=advancedIntegerRow(d,d.sizer,"Auto Color strength (%)",0,100,25),clip=advancedIntegerRow(d,d.sizer,"Clipping per tail (0-100 = 0-1%)",0,100,10);
+ color.enabled=view.image.isColor;var buttons=new HorizontalSizer;buttons.spacing=6;d.sizer.add(buttons);
+ var mode=new ComboBox(d);mode.addItem("Before");mode.addItem("After");d.sizer.add(mode);var preview=new Control(d);preview.setMinSize(540,260);d.sizer.add(preview,100);
+ preview.onPaint=function(){var g=new Graphics(this);try{g.fillRect(this.boundsRect,new Brush(0xff202020));var b=mode.currentItem===1&&after?after:before;var scale=Math.min((this.width-8)/b.width,(this.height-8)/b.height),width=Math.round(b.width*scale),height=Math.round(b.height*scale);g.drawScaledBitmap(new Rect(Math.round((this.width-width)/2),Math.round((this.height-height)/2),Math.round((this.width+width)/2),Math.round((this.height+height)/2)),b);}finally{g.end();}};mode.onItemSelected=function(){preview.repaint();};
+ var status=new Label(d);status.wordWrapping=true;status.text="Choose an operation to calculate its preview.";d.sizer.add(status);var row=new HorizontalSizer,apply=new PushButton(d),skip=new PushButton(d);apply.text="Apply enhancement";apply.enabled=false;skip.text="Skip enhancement";row.addStretch();row.add(apply);row.add(skip);d.sizer.add(row);
+ function dirty(){apply.enabled=false;status.text="Settings changed. Click an operation again to update its preview.";}
+ [tone,contrast,color,clip].forEach(function(c){c.onValueUpdated=dirty;});
+ function calculate(name){d.enabled=false;try{if(candidate){candidate.forceClose();candidate=null;}after=null;apply.enabled=false;candidate=buildAutoEnhanceCandidate(view,name,[tone.value,contrast.value,color.value],clip.value/100);after=candidate.mainView.image.render(1,false);selected=name;mode.currentItem=1;apply.enabled=true;status.text=name+": "+previewChangeSummary(view.image,candidate.mainView.image);}catch(e){mode.currentItem=0;status.text=errorMessage(e);}finally{d.enabled=true;preview.repaint();}}
+ d.autoEnhanceControls={tone:tone,contrast:contrast,color:color,clip:clip,apply:apply,skip:skip,mode:mode};d.autoEnhanceButtons={};
+ ["Auto Tone","Auto Contrast","Auto Color","Auto All"].forEach(function(name){var b=new PushButton(d);d.autoEnhanceButtons[name]=b;b.text=name;b.enabled=name!=="Auto Color"||view.image.isColor;b.onClick=function(){calculate(name);};buttons.add(b);});apply.onClick=function(){if(candidate&&apply.enabled)d.ok();};skip.onClick=function(){d.cancel();};d.adjustToContents();
+ try{if(!executeAdvancedDialog(d)||!candidate||!apply.enabled)return view;candidate.show();advancedRecord("Auto Image Enhance",{operation:selected,steps:candidate.autoEnhanceSteps});var result=candidate.mainView;candidate=null;return result;}finally{if(candidate)candidate.forceClose();}
 }

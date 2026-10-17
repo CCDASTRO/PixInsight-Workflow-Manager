@@ -1,0 +1,12 @@
+"use strict";
+require('./advanced-test-context.cjs');const assert=require('node:assert/strict'),vm=require('node:vm');
+const ctx=vm.createContext({finiteNumber:Number.isFinite});
+const pixels=Array.from({length:1000},(_,i)=>{const x=.15+.6*i/999;return [x*.94,x,x*1.06];}),samples={pixels,channels:[0,1,2].map(c=>pixels.map(p=>p[c]).sort((a,b)=>a-b))};
+let p=ctx.autoEnhancePlan(samples,'Auto Tone',.1);assert(p.low[0]<p.low[1]);assert(p.high[1]<p.high[2]);
+p=ctx.autoEnhancePlan(samples,'Auto Contrast',.1);assert.equal(p.low[0],p.low[2]);assert.equal(p.high[0],p.high[2]);assert(p.gamma.every(g=>g===1));
+p=ctx.autoEnhancePlan(samples,'Auto Color',.1);assert(p.neutralSamples>32);assert(p.gamma.every(g=>g>=.5&&g<=2));
+assert.throws(()=>ctx.autoEnhancePlan(samples,'Auto Tone',2),/clipping/);
+assert.throws(()=>ctx.autoEnhancePlan({channels:[[.2,.2],[.3,.3],[.4,.4]],pixels:[]},'Auto Tone',0),/tonal range/);
+const colored={channels:samples.channels,pixels:Array.from({length:100},()=>[.8,.1,.1])};assert.throws(()=>ctx.autoEnhancePlan(colored,'Auto Color',.1),/near-neutral/);
+assert.equal(ctx.defaultAdvancedWorkflowSettings().autoEnhanceEnabled,false);
+console.log('Per-channel vs linked ranges, neutral-color guard, clipping/range guards and opt-in defaults passed.');

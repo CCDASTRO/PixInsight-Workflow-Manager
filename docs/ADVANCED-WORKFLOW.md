@@ -123,3 +123,21 @@ Select an optional registered grayscale mask for each operation; white permits p
 Run reports record each accepted operation, selected source/mask, parameters and native process settings. Per-operation choices are made at review time; the opt-in checkbox is remembered. Nothing is inferred from filenames or silently applied from the M42 example.
 
 Validation covers 28 regression suites and native SCNR, masked MLT denoise/sharpening, Lab replacement, blend arithmetic, V3 execution, original preservation, setup/preview rendering and Skip. A real CloneStamp replay and arbitrary native MLT icon overrides have not been exercised in this release; missing/wrong icons are rejected.
+
+
+## Auto Image Enhance (v1.4.0)
+
+Enable Review Auto Image Enhance at the end under Pass sequences and optional finishing. The window appears after other finishing and any luminance combination, immediately before the final save. Dual-output mode offers it separately for the starless result and recombined companion.
+
+- Auto Tone: independent per-channel sampled percentile black/white endpoints, then a strength blend with the original. It can change color balance.
+- Auto Contrast: common black/white endpoints shared across channels, followed by the selected strength blend.
+- Auto Color: per-channel endpoints plus gamma estimates from near-neutral midtone samples. Gamma is limited to 0.5-2. It refuses a correction when fewer than 32 eligible samples are found. A neutral-looking sample is an assumption, not a measured astrophysical reference.
+- Auto All: Tone -> Contrast -> Color, recalculating statistics at each step and applying the three individual strengths. Monochrome images skip Color.
+
+The default strengths are 25% each. Zero strength leaves that operation unchanged. Clipping per tail is shown as an integer hundredth of a percent: 10 means 0.1%; 100 means 1%. Sampling uses at most 96 x 96 positions per nominal channel. Percentile limits are estimates and do not constitute exact full-image clipping measurements.
+
+Each button starts from the same Before image. Trying Tone and then Contrast does not stack the two operations; Auto All explicitly combines them. Changing a strength or clipping setting invalidates the preview: click an operation again. Toggle Before/After to compare. Apply enhancement keeps a separate result; Skip discards the preview. The original final-stage image remains unchanged. Reports record the accepted operation order, strengths, endpoints and gamma values. Strengths start at their defaults each time this window opens; the workflow opt-in checkbox is remembered.
+
+This is optional aesthetic finishing. It can alter calibrated color, faint backgrounds and stellar highlights. It is not a substitute for SPCC/PCC, and no equivalence to Photoshop output is claimed. Adobe describes similar operations here: https://helpx.adobe.com/photoshop/desktop/adjust-color/color-corrections/apply-auto-tone-auto-contrast-and-auto-color.html
+
+Validation: 29 regression suites; native tests for all four operations, finite bounded output, original preservation, zero strengths, button switching without stacking, stale-preview invalidation and Skip. This establishes implementation behavior, not that automatic enhancement improves every astronomical image.

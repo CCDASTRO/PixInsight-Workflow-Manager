@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.3.0
+# CCDASTRO PixInsight Workflow Manager v1.4.0
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,12 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 [Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+
+## New in v1.4.0
+
+Enable **Review Auto Image Enhance at the end** for a compact Before/After control window with Auto Tone, Auto Contrast, Auto Color and Auto All. Each operation has its own 0-100% strength; all start at 25%. A shared tail-clipping control defaults to 0.1% per tail. Each button recalculates from Before. Apply keeps the reviewed copy; Skip preserves the previous result.
+
+Auto All runs Tone, Contrast then Color using each selected strength. Auto Color requires enough near-neutral midtone samples; it does not force a color correction when those samples are unavailable. These are deterministic Photoshop-like approximations for aesthetic finishing, not Adobe algorithms or photometric calibration. The feature is off by default and runs after other finishing, separately for each selected final output.
 
 ## New in v1.3.0
 

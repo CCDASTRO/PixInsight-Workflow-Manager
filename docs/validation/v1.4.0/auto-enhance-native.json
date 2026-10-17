@@ -1,0 +1,16 @@
+[
+  "PASS native bounded output: Auto Tone",
+  "PASS original preserved: Auto Tone",
+  "PASS native bounded output: Auto Contrast",
+  "PASS original preserved: Auto Contrast",
+  "PASS native bounded output: Auto Color",
+  "PASS original preserved: Auto Color",
+  "PASS native bounded output: Auto All",
+  "PASS original preserved: Auto All",
+  "PASS zero strengths preserve samples",
+  "PASS four-button window calculates preview",
+  "PASS button switching recalculates from Before without stacking",
+  "PASS changed settings invalidate preview",
+  "PASS Skip returns original view",
+  "DONE"
+]

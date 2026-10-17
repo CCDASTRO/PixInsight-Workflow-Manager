@@ -6,7 +6,9 @@ A configurable PixInsight workflow for integrated linear color images or separat
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
 
-[Workflow webpage](https://ccdastro.com/piworkflow.html) · [Short video](https://youtu.be/0G-PI8F51rE) · [CCDASTRO home](https://ccdastro.com/)
+[Workflow webpage](https://ccdastro.com/piworkflow.html) · [Silent walkthrough (5:44)](https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.4.0/CCDASTRO-Workflow-v1.4.0-Quick-Start-Silent.mp4) · [CCDASTRO home](https://ccdastro.com/)
+
+The silent walkthrough uses on-screen explanations and the Soul image example. It covers input validation, tool selection, noise placement, plate solving, ordered passes, dual outputs, LHE and Auto Image Enhance. No audio is required.
 
 ## New in v1.4.0
 

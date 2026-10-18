@@ -165,53 +165,6 @@
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
-<p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage</a> · <a href="https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.4.0/CCDASTRO-Workflow-v1.4.0-Quick-Start-Silent.mp4">Silent walkthrough (5:44)</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
-<p>The silent walkthrough uses on-screen explanations and the Soul image example. It covers input validation, tool selection, noise placement, plate solving, ordered passes, dual outputs, LHE and Auto Image Enhance. No audio is required.</p>
-<h2 id="new-in-v1.4.0">New in v1.4.0</h2>
-<p>Enable <strong>Review Auto Image Enhance at the end</strong> for a compact Before/After control window with Auto Tone, Auto Contrast, Auto Color and Auto All. Each operation has its own 0-100% strength; all start at 25%. A shared tail-clipping control defaults to 0.1% per tail. Each button recalculates from Before. Apply keeps the reviewed copy; Skip preserves the previous result.</p>
-<p>Auto All runs Tone, Contrast then Color using each selected strength. Auto Color requires enough near-neutral midtone samples; it does not force a color correction when those samples are unavailable. These are deterministic Photoshop-like approximations for aesthetic finishing, not Adobe algorithms or photometric calibration. The feature is off by default and runs after other finishing, separately for each selected final output.</p>
-<h2 id="new-in-v1.3.0">New in v1.3.0</h2>
-<p>Enable <strong>Review optional masked finishing</strong> for opt-in SCNR green cleanup, per-scale MLT denoise/sharpening, Lab lightness replacement, registered image blends, Bill Blanshan Star Method V3 and CloneStamp icon replay. Existing masked RGB/lightness curves are available from the same chooser. Preview each operation on a copy, apply and finish, or apply and choose another operation. Original pixels are preserved.</p>
-<p>Sources and masks must be open, registered and identically cropped. V3 needs the matching stretched starless source. CloneStamp requires a configured native icon and is photographic retouching. Full MLT settings can also come from a native icon. These features do not recreate external masks or recover lost data. All options start off.</p>
-<p>In starless/dual-output mode the stretch selector now reads <strong>Starless final stretch</strong>, and recombination help explains its separate review.</p>
-<h2 id="new-in-v1.2.8">New in v1.2.8</h2>
-<p>Local contrast is labeled Local contrast (LHE). Each dialog identifies its pass number; Apply and add another LHE pass accepts the preview and opens the next pass. Apply LHE and finish ends the sequence. Each pass can adjust kernel radius, amount, contrast limit and mask. Update Preview recalculates only the current pass; finishing without it retains earlier accepted passes. HDR defaults are unchanged.</p>
-<h2 id="new-in-v1.2.7">New in v1.2.7</h2>
-<p>Validate and Run perform quick bounded input sampling before processing. Hidden 8-bit quantization, sampled nonfinite values and blank data block the linear workflow. Bright medians and clipping produce warnings for review. The screening cannot guarantee linearity or detect every processing defect.</p>
-<h2 id="new-in-v1.2.6">New in v1.2.6</h2>
-<p>Manual plate-solve setup is saved for the same image and retained across reopening and implicit LRGB autofill. Explicit Autofill can still replace it. Logs show the selected seed coordinates and sample format; 8-bit inputs are rejected before processing.</p>
-<h2 id="new-in-v1.2.5">New in v1.2.5</h2>
-<p>Fix tool-selection refresh errors and corrupted punctuation in advanced dialogs. Place Skip repairs beside Apply instead of over the instructions. Missing observation-time metadata now produces an actionable error before Gaia plate solving begins.</p>
-<h2 id="new-in-v1.2.4">New in v1.2.4</h2>
-<p>The main window uses two columns on wider screens: input and linear tools on the left, stretching and finishing on the right. Smaller screens keep a single column. Validate and Run stay fixed below the scroll area.</p>
-<h2 id="new-in-v1.2.3">New in v1.2.3</h2>
-<p>The pass summary now displays actual tool names alongside custom pass labels.
-With ordered passes disabled it follows the enabled main tool selections and noise placement.
-With ordered passes enabled it identifies the active sequence and explains that it overrides the main tool rows.</p>
-<h2 id="new-in-v1.2.2">New in v1.2.2</h2>
-<p>Ordered passes now support all sharpening, denoise and star-removal tools already
-offered by the workflow: BlurX, SyQon Parallax, NoiseX, MLDenoise, SyQon
-Prism/DeepPrism, StarX, StarNet2 and SyQon Starless. ACDNR and
-MultiscaleLinearTransform are also available as repeatable denoise passes.</p>
-<p>Enable <strong>Use ordered linear processing passes (all tools)</strong>, edit the sequence,
-then use <strong>Tool-specific setup for this pass...</strong> for independent model/path and
-strength settings. Mix, duplicate and reorder tools. Native process icons can be
-named separately for each pass; StarNet2 uses installed defaults or its selected
-icon. Linear/mask modes follow the stage. BlurX and Parallax remain linear-only.</p>
-<p>The workflow script and update manifest are signed for the CCDASTRO identity.</p>
-<h2 id="new-in-v1.2.1">New in v1.2.1</h2>
-<p>Enable <strong>Save both final starless and recombined images</strong> under <strong>Pass sequences
-and optional finishing</strong>. The workflow finishes and saves starless first, then
-reviews stars recombination and saves a separate companion. Default filenames
-end in <code>_Starless.xisf</code> and <code>_Recombined.xisf</code>; the second save cannot overwrite
-the first. Each selected TIFF/report/sharing export is available for both outputs.
-Skipping the recombination review keeps the finished starless result.</p>
-<p>The workflow script and update manifest are signed for the CCDASTRO identity.</p>
-<h2 id="new-in-v1.2.0">New in v1.2.0</h2>
-<p>Ordered linear BlurX/NoiseX/StarX passes, full starless finishing, optional
-post-stretch cleanup, reference RGB matching, reviewed background repairs,
-TIFF export and step-by-step reports are now integrated into the workflow.
-See <a href="docs/ADVANCED-WORKFLOW.md">the v1.2.0 guide</a> for settings and validation.</p>
 <h2 id="install-with-pixinsight-update-manager">Install with PixInsight Update Manager</h2>
 <ol>
 <li><p>Choose <strong>Resources &gt; Updates &gt; Manage Repositories</strong>, click <strong>Add</strong>, and paste:</p>
@@ -248,6 +201,8 @@ This sibling location is required because the workflow uses PixInsight's install
 <p>The GitHub <code>tree/main/pixinsight</code> webpage is not an update URL. Use the raw
 <code>updates/</code> URL above for Update Manager or use the installed scripts directory
 for a manual Feature Scripts installation.</p>
+<p><a href="https://ccdastro.com/piworkflow.html">Workflow webpage</a> · <a href="https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.4.0/CCDASTRO-Workflow-v1.4.0-Quick-Start-Silent.mp4">Silent walkthrough (5:44)</a> · <a href="https://ccdastro.com/">CCDASTRO home</a></p>
+<p>The silent walkthrough uses on-screen explanations and the Soul image example. It covers input validation, tool selection, noise placement, plate solving, ordered passes, dual outputs, LHE and Auto Image Enhance. No audio is required.</p>
 <h2 id="requirements">Requirements</h2>
 <ul>
 <li>PixInsight 1.9.4 or 1.9.5 with its standard ImageSolver library. See the
@@ -1051,10 +1006,56 @@ its developer and verifies integrity; it does not imply PTeam endorsement.</p>
 <h2 id="revision-history">Revision history</h2>
 <p>Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.</p>
+<h3 id="v1.4.0">v1.4.0</h3>
+<p>Enable <strong>Review Auto Image Enhance at the end</strong> for a compact Before/After control window with Auto Tone, Auto Contrast, Auto Color and Auto All. Each operation has its own 0-100% strength; all start at 25%. A shared tail-clipping control defaults to 0.1% per tail. Each button recalculates from Before. Apply keeps the reviewed copy; Skip preserves the previous result.</p>
+<p>Auto All runs Tone, Contrast then Color using each selected strength. Auto Color requires enough near-neutral midtone samples; it does not force a color correction when those samples are unavailable. These are deterministic Photoshop-like approximations for aesthetic finishing, not Adobe algorithms or photometric calibration. The feature is off by default and runs after other finishing, separately for each selected final output.</p>
+<h3 id="v1.3.0">v1.3.0</h3>
+<p>Enable <strong>Review optional masked finishing</strong> for opt-in SCNR green cleanup, per-scale MLT denoise/sharpening, Lab lightness replacement, registered image blends, Bill Blanshan Star Method V3 and CloneStamp icon replay. Existing masked RGB/lightness curves are available from the same chooser. Preview each operation on a copy, apply and finish, or apply and choose another operation. Original pixels are preserved.</p>
+<p>Sources and masks must be open, registered and identically cropped. V3 needs the matching stretched starless source. CloneStamp requires a configured native icon and is photographic retouching. Full MLT settings can also come from a native icon. These features do not recreate external masks or recover lost data. All options start off.</p>
+<p>In starless/dual-output mode the stretch selector now reads <strong>Starless final stretch</strong>, and recombination help explains its separate review.</p>
+<h3 id="v1.2.8">v1.2.8</h3>
+<p>Local contrast is labeled Local contrast (LHE). Each dialog identifies its pass number; Apply and add another LHE pass accepts the preview and opens the next pass. Apply LHE and finish ends the sequence. Each pass can adjust kernel radius, amount, contrast limit and mask. Update Preview recalculates only the current pass; finishing without it retains earlier accepted passes. HDR defaults are unchanged.</p>
+<h3 id="v1.2.7">v1.2.7</h3>
+<p>Validate and Run perform quick bounded input sampling before processing. Hidden 8-bit quantization, sampled nonfinite values and blank data block the linear workflow. Bright medians and clipping produce warnings for review. The screening cannot guarantee linearity or detect every processing defect.</p>
+<h3 id="v1.2.6">v1.2.6</h3>
+<p>Manual plate-solve setup is saved for the same image and retained across reopening and implicit LRGB autofill. Explicit Autofill can still replace it. Logs show the selected seed coordinates and sample format; 8-bit inputs are rejected before processing.</p>
+<h3 id="v1.2.5">v1.2.5</h3>
+<p>Fix tool-selection refresh errors and corrupted punctuation in advanced dialogs. Place Skip repairs beside Apply instead of over the instructions. Missing observation-time metadata now produces an actionable error before Gaia plate solving begins.</p>
+<h3 id="v1.2.4">v1.2.4</h3>
+<p>The main window uses two columns on wider screens: input and linear tools on the left, stretching and finishing on the right. Smaller screens keep a single column. Validate and Run stay fixed below the scroll area.</p>
+<h3 id="v1.2.3">v1.2.3</h3>
+<p>The pass summary now displays actual tool names alongside custom pass labels.
+With ordered passes disabled it follows the enabled main tool selections and noise placement.
+With ordered passes enabled it identifies the active sequence and explains that it overrides the main tool rows.</p>
+<h3 id="v1.2.2">v1.2.2</h3>
+<p>Ordered passes now support all sharpening, denoise and star-removal tools already
+offered by the workflow: BlurX, SyQon Parallax, NoiseX, MLDenoise, SyQon
+Prism/DeepPrism, StarX, StarNet2 and SyQon Starless. ACDNR and
+MultiscaleLinearTransform are also available as repeatable denoise passes.</p>
+<p>Enable <strong>Use ordered linear processing passes (all tools)</strong>, edit the sequence,
+then use <strong>Tool-specific setup for this pass...</strong> for independent model/path and
+strength settings. Mix, duplicate and reorder tools. Native process icons can be
+named separately for each pass; StarNet2 uses installed defaults or its selected
+icon. Linear/mask modes follow the stage. BlurX and Parallax remain linear-only.</p>
+<p>The workflow script and update manifest are signed for the CCDASTRO identity.</p>
+<p>Extends ordered linear/post-stretch passes to the remaining workflow tools, adds independent per-pass native/SyQon setup and icon names, accumulates stars from all linear removers, and prevents an extra temporary SyQon stretch on nonlinear inputs. Adds repeatable ACDNR/MLT. 26 regression suites and native editor/classic-denoise/mixed-layer checks passed.</p>
+<h3 id="v1.2.1">v1.2.1</h3>
+<p>Enable <strong>Save both final starless and recombined images</strong> under <strong>Pass sequences
+and optional finishing</strong>. The workflow finishes and saves starless first, then
+reviews stars recombination and saves a separate companion. Default filenames
+end in <code>_Starless.xisf</code> and <code>_Recombined.xisf</code>; the second save cannot overwrite
+the first. Each selected TIFF/report/sharing export is available for both outputs.
+Skipping the recombination review keeps the finished starless result.</p>
+<p>The workflow script and update manifest are signed for the CCDASTRO identity.</p>
+<p>Adds paired final starless/recombined saves from one run, distinct suggested filenames, companion overwrite protection and independent output exports/reports. Native two-file save/reopen and pixel-preservation checks passed.</p>
+<h3 id="v1.2.0">v1.2.0</h3>
+<p>Ordered linear BlurX/NoiseX/StarX passes, full starless finishing, optional
+post-stretch cleanup, reference RGB matching, reviewed background repairs,
+TIFF export and step-by-step reports are now integrated into the workflow.
+See <a href="docs/ADVANCED-WORKFLOW.md">the v1.2.0 guide</a> for settings and validation.</p>
+<p>Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. The script and update manifest are signed for the CCDASTRO identity.</p>
+<h3 id="earlier-releases">Earlier releases</h3>
 <ul>
-<li><strong>v1.2.2:</strong> Extends ordered linear/post-stretch passes to the remaining workflow tools, adds independent per-pass native/SyQon setup and icon names, accumulates stars from all linear removers, and prevents an extra temporary SyQon stretch on nonlinear inputs. Adds repeatable ACDNR/MLT. 26 regression suites and native editor/classic-denoise/mixed-layer checks passed.</li>
-<li><strong>v1.2.1:</strong> Adds paired final starless/recombined saves from one run, distinct suggested filenames, companion overwrite protection and independent output exports/reports. Native two-file save/reopen and pixel-preservation checks passed.</li>
-<li><strong>v1.2.0:</strong> Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and optional pass review; accumulated stars layers; complete starless-only finishing/save; configurable auto-histogram target; post-stretch cleanup; reference RGB matching; reviewed local background repair; TIFF export and execution reports. Native and actual RC Astro crop checks passed. The script and update manifest are signed for the CCDASTRO identity.</li>
 <li><strong>v1.1.47:</strong> Detects vendor-configured SyQon executables when workflow paths are
 empty; explicitly saved workflow paths take priority. Accepts quoted paths and
 known executable folders. Missing-path errors show the actual resolved value.</li>

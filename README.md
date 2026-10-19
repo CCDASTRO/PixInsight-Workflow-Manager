@@ -6,6 +6,12 @@ A configurable PixInsight workflow for integrated linear color images or separat
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
 
+## New in v1.5.0 — Color & Tone Studio
+
+Finish stretched images with soft color and luminosity masks, tone and color sliders, and smooth master RGB or individual-channel curves. Pick a hue directly from the preview, inspect the mask or overlay, and apply independent passes on separate copies.
+
+Enable **Review Color & Tone Studio (color masks / curves / sliders)** under **Pass sequences and optional finishing**. Live previews use a bounded sample grid; use **Full-resolution preview** and **100%** inspection before committing fine adjustments. The panel is optional and off by default. [Full controls and usage](#color-tone-studio).
+
 ## Install with PixInsight Update Manager
 
 1. Choose **Resources > Updates > Manage Repositories**, click **Add**, and paste:
@@ -857,6 +863,8 @@ node pixinsight/tools/validate-workflow.js
 
 Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.
+
+<a id="color-tone-studio"></a>
 
 ### v1.5.0 — Color & Tone Studio
 

@@ -14,5 +14,11 @@ assert.equal(saved.length,1);assert.equal(saved[0].kind,"Recombined");assert.equ
 accepted=false;saved=[];assert.match(ctx.saveRecombinedCompanion(starless,{controlledStarsView:stars},dialog,"/master.xisf","master"),/skipped/);assert.equal(saved.length,0);
 accepted=true;dialog.combinedHDREnabled.checked=true;ctx.advancedWorkflowSettings.tiff=true;ctx.saveRecombinedCompanion(starless,{controlledStarsView:stars},dialog,"/master.xisf","master");assert.equal(hdr,1);assert.equal(exported[0],combined);
 assert.throws(()=>ctx.saveRecombinedCompanion(starless,{},dialog,"/master.xisf","master"),/missing/);
+// Color & Tone runs on the recombined companion before its separate save.
+let graded=0;ctx.advancedWorkflowSettings.colorToneEnabled=true;
+const toned={fullId:'toned',window:{filePath:''}};
+ctx.reviewColorTone=v=>{assert.equal(v,combined);graded++;return toned;};
+ctx.saveRecombinedCompanion(starless,{controlledStarsView:stars},dialog,"/master.xisf","master");
+assert.equal(graded,1);assert.equal(saved.at(-1).v,toned);assert.equal(starless.pixel,.25);
 const settings=JSON.parse(JSON.stringify(ctx.defaultAdvancedWorkflowSettings()));settings.saveBoth=true;settings.keepStarless=true;ctx.restoreAdvancedWorkflowSettings(settings);assert.equal(ctx.advancedWorkflowSettings.saveBoth,true);assert.equal(ctx.advancedWorkflowSettings.keepStarless,false);
 console.log("Dual output preserves starless, saves a distinct recombined companion, respects skip/HDR/TIFF and restores exclusive output options.");

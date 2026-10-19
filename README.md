@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.4.1
+# CCDASTRO PixInsight Workflow Manager v1.5.0
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -857,6 +857,19 @@ node pixinsight/tools/validate-workflow.js
 
 Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.
+
+### v1.5.0 — Color & Tone Studio
+
+Enable **Review Color & Tone Studio (color masks / curves / sliders)** under **Pass sequences and optional finishing**. It runs after stretching and other finishing, before each final save. The feature is off by default; saved workflows from earlier versions retain their behavior.
+
+- Select all colors, a preset hue, or a custom hue picked directly from the preview. Hue width, feathering and minimum saturation shape a soft color mask. Combine it with shadows, midtones or highlights, invert the combined selection, and blend with Overall amount.
+- Adjust exposure, contrast, shadows, highlights, whites, blacks, saturation, vibrance, temperature and tint. Smooth RGB/master and individual R/G/B curves have shadow, midtone and highlight output sliders and a curve graph.
+- Use Before, After, Mask or Mask overlay. Live preview uses a bounded sample grid for responsiveness. **Full-resolution preview** and **100%** inspection use the actual full-resolution result; drag to pan.
+- **Create mask image** creates a full-resolution grayscale selection image. White selects and black protects. It does not write a file or alter the source image.
+- **Apply and add another pass** explicitly accepts a separate result and starts a neutral new pass from it. This allows independent red-nebula, cyan-nebula or background adjustments. Recalculating a preview always starts from the same Before image; it never stacks changes accidentally. Skipping a later pass retains earlier accepted passes.
+- Monochrome inputs support tonal controls and the master curve. Hue, color controls and individual RGB curves require RGB. Curves preserve monotonicity. These are CCDASTRO's own aesthetic finishing operations, not photometric calibration and not a reproduction of Lighthouse's algorithms. Local clarity, texture and noise reduction remain separate workflow tools.
+
+Mask selection uses the unmodified input of each accepted pass; masks are not recomputed from partially adjusted pixels. Input pixels and metadata stay on the original view, while results inherit the workflow's copy/metadata preservation behavior. Adjustment parameters and mask coverage are included in the run report.
 
 ### v1.4.1
 

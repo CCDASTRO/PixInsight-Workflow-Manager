@@ -1,0 +1,26 @@
+{
+  "fullResolution": {
+    "minimum": 0.03999999910593033,
+    "maximum": 0.9917596578598022,
+    "coverage": 0.2115842874691289
+  },
+  "mask": {
+    "minimum": 0,
+    "maximum": 1
+  },
+  "created": true,
+  "dialog": {
+    "width": 1180,
+    "height": 850,
+    "applyEnabled": true
+  },
+  "narrow": {
+    "width": 860,
+    "height": 560
+  },
+  "scroll": {
+    "maximum": 205,
+    "position": 205
+  },
+  "success": true
+}

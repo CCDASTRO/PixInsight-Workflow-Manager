@@ -106,7 +106,7 @@ function defaultAdvancedWorkflowSettings() {
    return {useLinearPasses:false,
       linearPasses:[defaultRCPass("BlurXTerminator"), defaultRCPass("StarXTerminator"), defaultRCPass("NoiseXTerminator")],
       keepStarless:false, saveBoth:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
-      autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
+      colorToneEnabled:false, autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
       reports:true, tiff:false};
 }
 var advancedWorkflowSettings = defaultAdvancedWorkflowSettings();
@@ -149,7 +149,7 @@ function restoreAdvancedWorkflowSettings(value) {
    var candidate=defaultAdvancedWorkflowSettings();
    if (value) {
       for (var k in candidate) if (Object.prototype.hasOwnProperty.call(value,k)) candidate[k]=advancedCopy(value[k]);
-      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","metadataFinishingEnabled","autoEnhanceEnabled","reports","tiff"];i<flags.length;i++)
+      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","metadataFinishingEnabled","autoEnhanceEnabled","colorToneEnabled","reports","tiff"];i<flags.length;i++)
          if(typeof candidate[flags[i]]!=="boolean") throw new Error("Invalid advanced workflow flag: "+flags[i]);
       if(!finiteNumber(candidate.referenceStrength)||candidate.referenceStrength<0||candidate.referenceStrength>100) throw new Error("Invalid reference match strength.");
       if(!finiteNumber(candidate.starlessTarget)||candidate.starlessTarget<0.01||candidate.starlessTarget>0.50) throw new Error("Starless histogram target must be 1-50 percent.");
@@ -496,11 +496,13 @@ function installAdvancedWorkflowControls(dialog) {
    var metadata=advancedCheck(box,box.sizer,"Review optional masked finishing: SCNR, multiscale, blends, lightness, V3 and retouch",false);
    metadata.toolTip="After normal finishing and luminance combination, review optional operations on separate copies. Each pass selects its own tool, settings and mask. Nothing is applied automatically.";
    var autoEnhance=advancedCheck(box,box.sizer,"Review Auto Image Enhance at the end (Tone / Contrast / Color / Auto All)",false);
+   var colorTone=advancedCheck(box,box.sizer,"Review Color & Tone Studio (color masks / curves / sliders)",false);
+   colorTone.toolTip="After stretching and other finishing, refine selected hues and tones with live mask and curve previews. Apply commits a separate copy.";
    var reports=advancedCheck(box,box.sizer,"Save step-by-step report and sampled final checks",true);
    var tiff=advancedCheck(box,box.sizer,"Also export a full-resolution 16-bit TIFF",false);
    var note=new Label(box);note.wordWrapping=true;note.text="Gradients and color calibration run first. The custom linear sequence replaces the ordinary deblur, denoise and separation rows. Every pass has its own settings. Reference matching and local repairs are optional, previewed edits.";box.sizer.add(note);
    dialog.advancedValues=function(){return advancedCopy(advancedWorkflowSettings);};
-   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;autoEnhance.checked=a.autoEnhanceEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
+   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;colorTone.checked=a.colorToneEnabled;autoEnhance.checked=a.autoEnhanceEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
       summary.text=advancedLinearToolSummary(dialog,a);edit.enabled=a.useLinearPasses;postEdit.enabled=a.postEnabled;
       ["deconvolution","noiseReduction","starSeparation"].forEach(function(id){dialog.rowsById[id].enabled.enabled=!a.useLinearPasses;dialog.rowsById[id].choice.enabled=!a.useLinearPasses;});
       target.value=Math.round(a.starlessTarget*100);target.enabled=a.keepStarless||a.saveBoth;
@@ -508,6 +510,7 @@ function installAdvancedWorkflowControls(dialog) {
       if(a.keepStarless||a.saveBoth){dialog.recombine.checked=false;dialog.finishStarless.checked=false;dialog.starlessStretch.currentItem=0;dialog.starsStretch.currentItem=0;if(a.keepStarless)dialog.starReduction.checked=false;}dialog.finalStretchControl.label.text=(a.keepStarless||a.saveBoth)?"Starless final stretch:":"Final image stretch:";dialog.recombine.toolTip=a.saveBoth?"Dual output saves the stretched starless result first, then reviews stars recombination separately.":a.keepStarless?"Starless-only output does not recombine stars.":"Recombine star and starless branches before the final stretch.";dialog.recombine.enabled=dialog.finishStarless.enabled=dialog.starlessStretch.enabled=dialog.starsStretch.enabled=!(a.keepStarless||a.saveBoth);
    };
    function changed(){dialog.refreshAdvancedControls();saveWorkflowState(dialog,false);}
+   colorTone.onCheck=function(v){advancedWorkflowSettings.colorToneEnabled=v;changed();};
    autoEnhance.onCheck=function(v){advancedWorkflowSettings.autoEnhanceEnabled=v;changed();};
    metadata.onCheck=function(v){advancedWorkflowSettings.metadataFinishingEnabled=v;changed();};
    target.onValueUpdated=function(v){advancedWorkflowSettings.starlessTarget=v/100;saveWorkflowState(dialog,false);};
@@ -524,6 +527,7 @@ function advancedPreflight(dialog,result,window) {
       if((a.keepStarless||a.saveBoth)&&!advancedSeparationEnabled(dialog))throw new Error("Starless output requires an enabled StarX / star-separation pass.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&dialog.finalStretch.currentItem===0&&dialog.starlessStretch.currentItem===0)throw new Error("Post-stretch cleanup, reference matching and local repairs require a workflow stretch.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&advancedSeparationEnabled(dialog)&&!dialog.recombine.checked&&!a.keepStarless&&!a.saveBoth)throw new Error("Enable Finish and save the starless branch, or recombine, for advanced finishing.");
+      if(a.colorToneEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Color & Tone Studio requires a stretched final image.");
       if(a.autoEnhanceEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Auto Image Enhance requires a stretched final image.");
       if(a.metadataFinishingEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Optional finishing tools require a stretched final image.");
       if(a.saveBoth&&dialog.finalStretch.currentItem===0)throw new Error("Saving both final images requires a final stretch before stars recombination.");
@@ -541,6 +545,7 @@ function saveRecombinedCompanion(starless,branches,dialog,sourcePath,sourceId) {
    if(advancedRunAudit)advancedRunAudit.outputKind="Recombined";
    if(advancedWorkflowSettings.metadataFinishingEnabled)combined=reviewMetadataFinishing(combined);
    if(advancedWorkflowSettings.autoEnhanceEnabled)combined=reviewAutoImageEnhance(combined);
+   if(advancedWorkflowSettings.colorToneEnabled)combined=reviewColorTone(combined);
    var result=saveFinalImage(combined,sourcePath,sourceId,"Recombined",starless.window.filePath||"");
    if(advancedWorkflowSettings.tiff)result+="\n\n"+exportAdvancedTIFF(combined);
    if(advancedWorkflowSettings.reports)result+="\n\n"+saveAdvancedRunReport(combined);
@@ -689,4 +694,270 @@ function reviewAutoImageEnhance(view){
  d.autoEnhanceControls={tone:tone,contrast:contrast,color:color,clip:clip,apply:apply,skip:skip,mode:mode};d.autoEnhanceButtons={};
  ["Auto Tone","Auto Contrast","Auto Color","Auto All"].forEach(function(name){var b=new PushButton(d);d.autoEnhanceButtons[name]=b;b.text=name;b.enabled=name!=="Auto Color"||view.image.isColor;b.onClick=function(){calculate(name);};buttons.add(b);});apply.onClick=function(){if(candidate&&apply.enabled)d.ok();};skip.onClick=function(){d.cancel();};d.adjustToContents();
  try{if(!executeAdvancedDialog(d)||!candidate||!apply.enabled)return view;candidate.show();advancedRecord("Auto Image Enhance",{operation:selected,steps:candidate.autoEnhanceSteps});var result=candidate.mainView;candidate=null;return result;}finally{if(candidate)candidate.forceClose();}
+}
+
+/* Color & Tone Studio: original CCDASTRO finishing controls, not Lighthouse code.
+ * Mask decisions always use the unmodified input to each explicitly accepted pass.
+ */
+function colorToneDefaults() {
+   return {hueEnabled:false,hue:0,width:45,feather:30,minSaturation:5,
+      range:"All tones",invert:false,amount:100,exposure:0,contrast:0,
+      shadows:0,highlights:0,whites:0,blacks:0,saturation:0,vibrance:0,
+      temperature:0,tint:0,curves:{RGB:[0,.25,.5,.75,1],R:[0,.25,.5,.75,1],G:[0,.25,.5,.75,1],B:[0,.25,.5,.75,1]}};
+}
+function colorToneClamp(x) {return Math.max(0,Math.min(1,x));}
+function colorToneSmooth(a,b,x) {var t=colorToneClamp((x-a)/(b-a));return t*t*(3-2*t);}
+function validateColorTone(p) {
+   var limits={hue:[0,360],width:[1,180],feather:[1,180],minSaturation:[0,100],amount:[0,100],exposure:[-2,2],
+      contrast:[-100,100],shadows:[-100,100],highlights:[-100,100],whites:[-100,100],blacks:[-100,100],
+      saturation:[-100,100],vibrance:[-100,100],temperature:[-100,100],tint:[-100,100]};
+   if(!p||typeof p.hueEnabled!=="boolean"||typeof p.invert!=="boolean")throw new Error("Invalid color-mask flags.");
+   for(var k in limits)if(!finiteNumber(p[k])||p[k]<limits[k][0]||p[k]>limits[k][1])throw new Error("Invalid Color & Tone value: "+k);
+   if(["All tones","Shadows","Midtones","Highlights"].indexOf(p.range)<0)throw new Error("Invalid tonal selection.");
+   for(var j=0,keys=["RGB","R","G","B"];j<4;j++) {
+      var a=p.curves&&p.curves[keys[j]];
+      if(!Array.isArray(a)||a.length!==5||a[0]!==0||a[4]!==1)throw new Error("Invalid tone curve.");
+      for(var i=0;i<5;i++)if(!finiteNumber(a[i])||a[i]<0||a[i]>1||(i&&a[i]<=a[i-1]))throw new Error("Curve points must increase from black to white.");
+   }
+   return p;
+}
+// Monotone cubic Hermite interpolation: smooth curves without overshoot.
+function colorToneCurve(points) {
+   var d=[],m=[],identity=true;
+   for(var i=0;i<4;i++)d[i]=4*(points[i+1]-points[i]);
+   m[0]=d[0];m[4]=d[3];
+   for(var i=1;i<4;i++)m[i]=d[i-1]*d[i]<=0?0:2*d[i-1]*d[i]/(d[i-1]+d[i]);
+   for(var i=0;i<5;i++)if(points[i]!==i/4)identity=false;
+   return {points:points.slice(),slopes:m,identity:identity};
+}
+function colorToneCurveValue(curve,x) {
+   if(curve.identity)return x;
+   x=colorToneClamp(x);var i=Math.min(3,Math.floor(x*4)),t=x*4-i,t2=t*t,t3=t2*t;
+   return colorToneClamp((2*t3-3*t2+1)*curve.points[i]+(t3-2*t2+t)*curve.slopes[i]/4+
+      (-2*t3+3*t2)*curve.points[i+1]+(t3-t2)*curve.slopes[i+1]/4);
+}
+function colorTonePlan(settings,isColor) {
+   var p=advancedCopy(validateColorTone(settings));p.isColor=isColor;p.gain=Math.pow(2,p.exposure);
+   p.curvePlans=[colorToneCurve(p.curves.RGB),colorToneCurve(p.curves.R),colorToneCurve(p.curves.G),colorToneCurve(p.curves.B)];
+   p.scratch=[0,0,0];
+   p.identity=p.exposure===0&&p.contrast===0&&p.shadows===0&&p.highlights===0&&p.whites===0&&p.blacks===0&&
+      p.saturation===0&&p.vibrance===0&&p.temperature===0&&p.tint===0&&p.curvePlans.every(function(c){return c.identity;});
+   if(!isColor&&(p.hueEnabled||p.temperature||p.tint||p.saturation||p.vibrance||!p.curvePlans.slice(1).every(function(c){return c.identity;})))
+      throw new Error("Color selection, color sliders and individual RGB curves require an RGB image.");
+   return p;
+}
+function colorToneHue(r,g,b) {
+   var hi=Math.max(r,g,b),lo=Math.min(r,g,b),d=hi-lo;if(d<1e-12)return 0;
+   var h=hi===r?(g-b)/d:hi===g?2+(b-r)/d:4+(r-g)/d;return ((h*60)%360+360)%360;
+}
+function colorToneMask(r,g,b,p) {
+   var y=colorToneClamp(.2126*r+.7152*g+.0722*b),m=1;
+   if(p.hueEnabled) {
+      var hi=Math.max(r,g,b),lo=Math.min(r,g,b),sat=hi>1e-12?(hi-lo)/hi:0;
+      var distance=Math.abs(colorToneHue(r,g,b)-p.hue);distance=Math.min(distance,360-distance);
+      var inner=p.width/2,outer=Math.min(180,inner+p.feather);
+      m=(1-colorToneSmooth(inner,outer,distance))*(sat<=p.minSaturation/100?0:colorToneSmooth(p.minSaturation/100,Math.min(1,p.minSaturation/100+.1),sat));
+   }
+   if(p.range==="Shadows")m*=1-colorToneSmooth(.12,.55,y);
+   else if(p.range==="Midtones")m*=colorToneSmooth(.04,.35,y)*(1-colorToneSmooth(.65,.96,y));
+   else if(p.range==="Highlights")m*=colorToneSmooth(.45,.88,y);
+   if(p.invert)m=1-m;
+   return colorToneClamp(m)*p.amount/100;
+}
+// Returns the selected-mask weight and writes adjusted RGB into out.
+function colorTonePixel(r,g,b,p,out) {
+   if(!finiteNumber(r)||!finiteNumber(g)||!finiteNumber(b))throw new Error("Color & Tone found a nonfinite image sample.");
+   var m=colorToneMask(r,g,b,p);out[0]=r;out[1]=g;out[2]=b;
+   if(m===0||p.identity)return m;
+   var y=colorToneClamp(.2126*r+.7152*g+.0722*b);
+   var lift=(p.shadows/100)*.25*Math.pow(1-y,2)+(p.highlights/100)*.25*y*y+
+      (p.whites/100)*.2*colorToneSmooth(.6,1,y)+(p.blacks/100)*.2*(1-colorToneSmooth(0,.4,y));
+   var adjusted=p.scratch;
+   for(var c=0;c<3;c++) {
+      var x=colorToneClamp((c===0?r:c===1?g:b)*p.gain);
+      // Endpoint-preserving contrast; identity at zero.
+      x=colorToneClamp(x+(p.contrast/100)*2*x*(1-x)*(2*x-1)+lift);
+      if(p.isColor)x=colorToneClamp(x*Math.pow(2,((c===0?p.temperature:c===2?-p.temperature:0)+(c===1?-p.tint:p.tint*.5))/200));
+      x=colorToneCurveValue(p.curvePlans[0],x);
+      if(p.isColor)x=colorToneCurveValue(p.curvePlans[c+1],x);
+      adjusted[c]=x;
+   }
+   if(p.isColor&&(p.saturation||p.vibrance)) {
+      var l=.2126*adjusted[0]+.7152*adjusted[1]+.0722*adjusted[2],hi=Math.max(adjusted[0],adjusted[1],adjusted[2]),lo=Math.min(adjusted[0],adjusted[1],adjusted[2]);
+      var s=hi>1e-12?(hi-lo)/hi:0,scale=Math.max(0,(1+p.saturation/100)*(1+(p.vibrance/100)*(1-s)));
+      // Reduce requested chroma uniformly at the gamut boundary rather than clip channels independently.
+      for(var c=0;c<3;c++){var delta=adjusted[c]-l;if(delta>0)scale=Math.min(scale,(1-l)/delta);else if(delta<0)scale=Math.min(scale,-l/delta);}
+      for(var c=0;c<3;c++)adjusted[c]=l+scale*(adjusted[c]-l);
+   }
+   for(var c=0;c<3;c++){var original=c===0?r:c===1?g:b;out[c]=colorToneClamp(original+m*(adjusted[c]-original));}
+   return m;
+}
+function colorTonePreviewSamples(view,limit) {
+   var im=view.image,scale=Math.min(1,(limit||720)/Math.max(im.width,im.height));
+   var w=Math.max(1,Math.round(im.width*scale)),h=Math.max(1,Math.round(im.height*scale)),n=im.isColor?3:1,planes=[];
+   for(var c=0;c<n;c++)planes.push(new Float64Array(w*h));
+   for(var y=0;y<h;y++){checkAbortRequested();for(var x=0;x<w;x++)for(var c=0;c<n;c++)planes[c][y*w+x]=im.sample(Math.min(im.width-1,Math.floor((x+.5)*im.width/w)),Math.min(im.height-1,Math.floor((y+.5)*im.height/h)),c);}
+   return {width:w,height:h,isColor:im.isColor,planes:planes};
+}
+function colorTonePreviewArrays(samples,settings,mode) {
+   var p=colorTonePlan(settings,samples.isColor),out=[],a=[],n=samples.isColor?3:1,count=samples.width*samples.height,selected=0,clipped=0;
+   for(var c=0;c<n;c++)a.push(new Float32Array(count));
+   for(var i=0;i<count;i++) {
+      var r=samples.planes[0][i],g=n===3?samples.planes[1][i]:r,b=n===3?samples.planes[2][i]:r;
+      var m=colorTonePixel(r,g,b,p,out);selected+=m;
+      for(var c=0;c<n;c++) {
+         var original=samples.planes[c][i];
+         a[c][i]=mode==="Before"?original:mode==="Mask"?m:mode==="Mask overlay"?(c===0?original*(1-.5*m)+.5*m:original*(1-.5*m)):out[c];
+         if(mode==="After"&&out[c]!==original&&(out[c]<=0||out[c]>=1))clipped++;
+      }
+   }
+   return {planes:a,coverage:selected/count,clipped:clipped};
+}
+function colorToneBitmap(samples,result) {
+   var image=new Image(samples.width,samples.height,result.planes.length,samples.isColor?ColorSpace.RGB:ColorSpace.Gray,32,PixelSampleType.Float);
+   try{for(var c=0;c<result.planes.length;c++)image.setSamples(result.planes[c],image.bounds,c);return image.render(1,false);}finally{image.free();}
+}
+function buildColorToneCandidate(view,settings) {
+   var p=colorTonePlan(settings,view.image.isColor),w=cloneHDRView(view,"_ColorTone"),im=w.mainView.image,source=view.image,n=im.isColor?3:1,out=[],selected=0,total=source.width*source.height;
+   try {
+      w.mainView.beginProcess(UndoFlag.NoSwapFile);
+      try {
+         for(var y=0;y<source.height;y+=32) {
+            checkAbortRequested();var height=Math.min(32,source.height-y),rect=new Rect(0,y,source.width,y+height),count=source.width*height,input=[],output=[];
+            for(var c=0;c<n;c++){input.push(new Float64Array(count));output.push(new Float64Array(count));source.getSamples(input[c],rect,c);}
+            for(var i=0;i<count;i++) {
+               selected+=colorTonePixel(input[0][i],n===3?input[1][i]:input[0][i],n===3?input[2][i]:input[0][i],p,out);
+               for(var c=0;c<n;c++)output[c][i]=out[c];
+            }
+            for(var c=0;c<n;c++)im.setSamples(output[c],rect,c);
+         }
+      }finally{w.mainView.endProcess();}
+      w.colorToneCoverage=selected/total;return w;
+   }catch(e){w.forceClose();throw e;}
+}
+function colorToneSlider(parent,sizer,label,low,high,value,precision,changed) {
+   var c=new NumericControl(parent);c.label.text=label;c.label.minWidth=155;c.setRange(low,high);c.setPrecision(precision||0);c.slider.setRange(0,1000);c.slider.minWidth=120;c.setValue(value);c.onValueUpdated=changed;sizer.add(c);return c;
+}
+function createColorToneDialog(view,pass) {
+   var d=new Dialog;d.windowTitle="Color & Tone Studio - pass "+pass;d.settings=colorToneDefaults();d.accepted=false;d.again=false;d.colorToneResult=null;d.refreshing=false;
+   var samples=colorTonePreviewSamples(view),bitmap=null,fullPreview=null,fullBitmap=null,revision=0,fullRevision=-1;
+   var root=new VerticalSizer;root.margin=10;root.spacing=8;d.sizer=root;
+   var note=new Label(d);note.wordWrapping=true;note.text="Finishing for stretched images. Select colors and tones, then adjust sliders. Each pass starts from Before. Apply makes a new full-resolution result.";root.add(note);
+   var body=new HorizontalSizer;body.spacing=10;root.add(body,100);
+   var left=new VerticalSizer;left.spacing=6;body.add(left,100);
+   var comparison=new HorizontalSizer;comparison.spacing=8;
+   var mode=new ComboBox(d);["Before","After","Mask","Mask overlay"].forEach(function(s){mode.addItem(s);});mode.currentItem=1;comparison.add(mode);
+   var live=new CheckBox(d);live.text="Live preview";live.checked=true;comparison.add(live);comparison.addStretch();left.add(comparison);
+   var preview=new Control(d);preview.setMinSize(280,220);left.add(preview,100);
+   var zoom=new ComboBox(d);["Fit","100% (drag to pan)"].forEach(function(s){zoom.addItem(s);});comparison.add(zoom);
+   var pan={x:0,y:0,drag:null},picking=false;
+   preview.onPaint=function(){var g=new Graphics(this);try{g.fillRect(this.boundsRect,new Brush(0xff202020));if(!bitmap)return;
+      if(zoom.currentItem===1){g.drawBitmap(pan.x,pan.y,bitmap);}
+      else{var scale=Math.min((this.width-8)/bitmap.width,(this.height-8)/bitmap.height),width=bitmap.width*scale,height=bitmap.height*scale;
+         g.drawScaledBitmap(new Rect((this.width-width)/2,(this.height-height)/2,(this.width+width)/2,(this.height+height)/2),bitmap);}
+   }finally{g.end();}};
+   preview.onMousePress=function(x,y){
+      if(picking&&bitmap){
+         var scale=zoom.currentItem===1?1:Math.min((this.width-8)/bitmap.width,(this.height-8)/bitmap.height);
+         var ox=zoom.currentItem===1?pan.x:(this.width-bitmap.width*scale)/2,oy=zoom.currentItem===1?pan.y:(this.height-bitmap.height*scale)/2;
+         var bx=(x-ox)/scale,by=(y-oy)/scale;if(bx<0||by<0||bx>=bitmap.width||by>=bitmap.height)return;
+         var sx=Math.min(view.image.width-1,Math.floor(bx*view.image.width/bitmap.width)),sy=Math.min(view.image.height-1,Math.floor(by*view.image.height/bitmap.height));
+         var r=view.image.sample(sx,sy,0),g=view.image.sample(sx,sy,1),b=view.image.sample(sx,sy,2);
+         if(Math.max(r,g,b)-Math.min(r,g,b)<1e-6){status.text="Choose a colored pixel; this pixel is neutral.";return;}
+         d.settings.hue=colorToneHue(r,g,b);d.settings.hueEnabled=true;controls.hue.setValue(d.settings.hue);preset.currentItem=9;hueEnabled();picking=false;pickHue.text="Pick hue from image";changed();return;
+      }
+      if(zoom.currentItem===1)pan.drag={x:x,y:y,px:pan.x,py:pan.y};
+   };
+   preview.onMouseMove=function(x,y){if(pan.drag){pan.x=pan.drag.px+x-pan.drag.x;pan.y=pan.drag.py+y-pan.drag.y;preview.repaint();}};
+   preview.onMouseRelease=function(){pan.drag=null;};
+   var status=new Label(d);status.wordWrapping=true;left.add(status);
+   var curveGraph=new Control(d);curveGraph.setMinSize(220,110);left.add(curveGraph);
+   var scroll=new ScrollBox(d);scroll.autoScroll=true;scroll.tracking=true;scroll.horizontalScrollBarVisible=false;scroll.setMinSize(365,240);body.add(scroll);
+   var content=new Control(scroll.viewport);content.sizer=new VerticalSizer;content.sizer.margin=6;content.sizer.spacing=5;
+   scroll.viewport.onResize=function(){content.resize(scroll.viewport.width,content.height);scroll.setVerticalScrollRange(0,Math.max(0,content.height-scroll.viewport.height));};
+   scroll.onVerticalScrollPosUpdated=function(v){content.position=new Point(0,-v);};
+   var controls={},curveControls=[],curveChannel="RGB",apply,again,maskSave,fullButton;
+   function heading(text){var l=new Label(content);l.text="<b>"+text+"</b>";l.useRichText=true;content.sizer.add(l);}
+   function renderPreview() {
+      timer.stop();apply.enabled=again.enabled=false;
+      try {
+         var name=mode.itemText(mode.currentItem);
+         if(fullPreview&&fullRevision===revision&&name==="After")bitmap=fullBitmap;
+         else {
+            var result=colorTonePreviewArrays(samples,d.settings,name);bitmap=colorToneBitmap(samples,result);
+            status.text="Sampled preview: "+samples.width+" x "+samples.height+". Mask coverage "+(100*result.coverage).toFixed(1)+"%."+
+               (name==="Mask"||name==="Mask overlay"?" White/red selects; black/uncolored protects.":"")+(result.clipped?" "+result.clipped+" adjusted channel samples reach black/white.":"");
+         }
+         if(fullPreview&&fullRevision===revision&&name==="After")status.text="Full-resolution After preview. Use 100% to inspect pixels; drag to pan.";
+         apply.enabled=again.enabled=true;maskSave.enabled=true;
+      }catch(e){bitmap=null;status.text=errorMessage(e);maskSave.enabled=false;}
+      preview.repaint();curveGraph.repaint();
+   }
+   function discardFull(){if(fullPreview){fullPreview.forceClose();fullPreview=null;}fullBitmap=null;fullRevision=-1;fullButton.text="Full-resolution preview";}
+   function changed(){if(d.refreshing)return;revision++;discardFull();apply.enabled=again.enabled=false;status.text="Settings changed. Updating preview...";curveGraph.repaint();if(live.checked){timer.stop();timer.start();}else status.text="Settings changed. Click Update preview.";}
+   var timer=new Timer;timer.interval=.25;timer.singleShot=true;timer.onTimeout=renderPreview;d.previewTimer=timer;
+   function slider(key,label,lo,hi,precision){controls[key]=colorToneSlider(content,content.sizer,label,lo,hi,d.settings[key],precision,function(v){d.settings[key]=v;changed();});return controls[key];}
+   heading("Color and luminosity selection");
+   var preset=new ComboBox(content),presets=[["All colors",null],["Red",0],["Orange",30],["Yellow",60],["Green",120],["Cyan",180],["Blue",240],["Purple",270],["Magenta",300],["Custom hue",null]];
+   presets.forEach(function(p){preset.addItem(p[0]);});content.sizer.add(preset);
+   slider("hue","Hue center (degrees)",0,360,0);slider("width","Hue width (degrees)",1,180,0);slider("feather","Hue feather (degrees)",1,180,0);slider("minSaturation","Minimum saturation (%)",0,100,0);
+   function hueEnabled(){["hue","width","feather","minSaturation"].forEach(function(k){controls[k].enabled=d.settings.hueEnabled&&view.image.isColor;});}
+   preset.enabled=view.image.isColor;
+   preset.onItemSelected=function(i){d.settings.hueEnabled=i!==0;if(presets[i][1]!==null){d.settings.hue=presets[i][1];controls.hue.setValue(d.settings.hue);}hueEnabled();changed();};
+   var range=new ComboBox(content);["All tones","Shadows","Midtones","Highlights"].forEach(function(s){range.addItem(s);});content.sizer.add(range);range.onItemSelected=function(){d.settings.range=range.itemText(range.currentItem);changed();};
+   var invert=new CheckBox(content);invert.text="Invert combined selection";content.sizer.add(invert);invert.onCheck=function(v){d.settings.invert=v;changed();};slider("amount","Overall amount (%)",0,100,0);
+   heading("Tone");slider("exposure","Exposure (stops)",-2,2,2);slider("contrast","Contrast",-100,100,0);slider("shadows","Shadows",-100,100,0);slider("highlights","Highlights",-100,100,0);slider("whites","Whites",-100,100,0);slider("blacks","Blacks",-100,100,0);
+   heading("Color");slider("saturation","Saturation",-100,100,0);slider("vibrance","Vibrance",-100,100,0);slider("temperature","Temperature",-100,100,0);slider("tint","Tint",-100,100,0);
+   ["saturation","vibrance","temperature","tint"].forEach(function(k){controls[k].enabled=view.image.isColor;});
+   heading("Curves - output level at fixed inputs");var channel=new ComboBox(content);["RGB","R","G","B"].forEach(function(s){if(view.image.isColor||s==="RGB")channel.addItem(s);});content.sizer.add(channel);
+   ["Shadows (25% input)","Midtones (50% input)","Highlights (75% input)"].forEach(function(label,i){var control=colorToneSlider(content,content.sizer,label,1,99,(i+1)*25,1,function(v){if(d.refreshing)return;var points=d.settings.curves[curveChannel],next=Math.max(points[i]+.001,Math.min(points[i+2]-.001,v/100));points[i+1]=next;d.refreshing=true;curveControls[i].setValue(next*100);d.refreshing=false;changed();});curveControls.push(control);});
+   function loadCurve(){d.refreshing=true;curveChannel=channel.itemText(channel.currentItem);for(var i=0;i<3;i++)curveControls[i].setValue(d.settings.curves[curveChannel][i+1]*100);d.refreshing=false;curveGraph.repaint();}
+   channel.onItemSelected=loadCurve;
+   curveGraph.onPaint=function(){var g=new Graphics(this);try{g.fillRect(this.boundsRect,new Brush(0xff202020));var pad=10,w=this.width-2*pad,h=this.height-2*pad;g.pen=new Pen(0xff555555);g.drawLine(pad,pad+h,pad+w,pad);
+      var colors=[0xffffffff,0xffff6666,0xff66dd88,0xff6699ff],keys=["RGB","R","G","B"],selected=keys.indexOf(curveChannel),curve=colorToneCurve(d.settings.curves[curveChannel]);g.pen=new Pen(colors[selected],2);
+      for(var i=1;i<=128;i++)g.drawLine(pad+w*(i-1)/128,pad+h*(1-colorToneCurveValue(curve,(i-1)/128)),pad+w*i/128,pad+h*(1-colorToneCurveValue(curve,i/128)));
+   }finally{g.end();}};
+   var curveReset=new PushButton(content);curveReset.text="Reset this curve";content.sizer.add(curveReset);curveReset.onClick=function(){d.settings.curves[curveChannel]=[0,.25,.5,.75,1];loadCurve();changed();};
+   var actionRow=new HorizontalSizer;actionRow.spacing=6;root.add(actionRow);
+   var update=new PushButton(d);update.text="Update preview";update.onClick=renderPreview;actionRow.add(update);
+   fullButton=new PushButton(d);fullButton.text="Full-resolution preview";actionRow.add(fullButton);
+   fullButton.onClick=function(){timer.stop();d.enabled=false;try{discardFull();fullPreview=buildColorToneCandidate(view,d.settings);fullBitmap=fullPreview.mainView.image.render(1,false);fullRevision=revision;mode.currentItem=1;renderPreview();}catch(e){discardFull();status.text=errorMessage(e);apply.enabled=again.enabled=false;}finally{d.enabled=true;}};
+   maskSave=new PushButton(d);maskSave.text="Create mask image";actionRow.add(maskSave);
+   maskSave.onClick=function(){timer.stop();d.enabled=false;try{saveColorToneMask(view,d.settings).show();status.text="Full-resolution selection mask created as an open image.";}catch(e){status.text=errorMessage(e);}finally{d.enabled=true;}};
+   var pickHue=new PushButton(d);pickHue.text="Pick hue from image";pickHue.enabled=view.image.isColor;actionRow.add(pickHue);
+   pickHue.onClick=function(){picking=!picking;pickHue.text=picking?"Cancel hue picker":"Pick hue from image";status.text=picking?"Click a colored area in the preview to select its hue.":"Hue picker cancelled.";};
+   actionRow.addStretch();
+   var reset=new PushButton(d);reset.text="Reset sliders";actionRow.add(reset);
+   reset.onClick=function(){d.refreshing=true;d.settings=colorToneDefaults();for(var key in controls)controls[key].setValue(d.settings[key]);preset.currentItem=range.currentItem=channel.currentItem=0;invert.checked=false;d.refreshing=false;loadCurve();hueEnabled();changed();};
+   var buttons=new HorizontalSizer;buttons.spacing=8;buttons.addStretch();root.add(buttons);
+   again=new PushButton(d);again.text="Apply and add another pass";buttons.add(again);apply=new PushButton(d);apply.text="Apply and finish";buttons.add(apply);
+   var skip=new PushButton(d);skip.text=pass===1?"Skip Color & Tone":"Finish without this pass";buttons.add(skip);skip.onClick=function(){d.cancel();};
+   function accept(repeat){timer.stop();d.enabled=false;try{validateColorTone(d.settings);var candidate=fullPreview&&fullRevision===revision?fullPreview:buildColorToneCandidate(view,d.settings);if(candidate===fullPreview)fullPreview=null;d.colorToneResult=candidate;d.again=repeat;d.accepted=true;d.ok();}catch(e){status.text=errorMessage(e);d.enabled=true;}};
+   apply.onClick=function(){if(apply.enabled)accept(false);};again.onClick=function(){if(again.enabled)accept(true);};
+   live.onCheck=function(v){if(v)changed();else timer.stop();};mode.onItemSelected=renderPreview;
+   zoom.onItemSelected=function(){pan.x=pan.y=0;if(zoom.currentItem===1&&fullRevision!==revision)status.text="100% of sampled preview. Use Full-resolution preview to inspect source pixels.";preview.repaint();};
+   d.onHide=function(){timer.stop();};
+   d.disposePreviews=function(){timer.stop();discardFull();bitmap=null;};
+   d.colorToneControls={controls:controls,preset:preset,range:range,invert:invert,mode:mode,curves:curveControls,channel:channel,apply:apply,again:again,skip:skip,update:update,full:fullButton,maskSave:maskSave,pickHue:pickHue,scroll:scroll,reset:reset};
+   content.adjustToContents();hueEnabled();
+   var screen=d.availableScreenRect;d.setMinSize(Math.min(740,screen.width-40),Math.min(460,screen.height-80));d.resize(Math.min(1180,Math.floor(screen.width*.94)),Math.min(850,Math.floor(screen.height*.90)));renderPreview();
+   return d;
+}
+function saveColorToneMask(view,settings) {
+   var p=colorTonePlan(settings,view.image.isColor),source=view.image;
+   var w=new ImageWindow(source.width,source.height,1,32,true,false,uniqueMainViewId(view.id+"_ColorToneMask"));
+   try{w.mainView.beginProcess(UndoFlag.NoSwapFile);try{for(var y=0;y<source.height;y+=32){checkAbortRequested();var h=Math.min(32,source.height-y),rect=new Rect(0,y,source.width,y+h),count=source.width*h,a=[],mask=new Float32Array(count);
+      for(var c=0;c<(source.isColor?3:1);c++){a.push(new Float64Array(count));source.getSamples(a[c],rect,c);}
+      for(var i=0;i<count;i++){var r=a[0][i],g=source.isColor?a[1][i]:r,b=source.isColor?a[2][i]:r;if(!finiteNumber(r)||!finiteNumber(g)||!finiteNumber(b))throw new Error("Nonfinite sample in mask source.");mask[i]=colorToneMask(r,g,b,p);}
+      w.mainView.image.setSamples(mask,rect,0);
+   }}finally{w.mainView.endProcess();}return w;}catch(e){w.forceClose();throw e;}
+}
+function reviewColorTone(view) {
+   var current=view,pass=1;
+   for(;;){var d=createColorToneDialog(current,pass);
+      try{executeAdvancedDialog(d);if(!d.accepted||!d.colorToneResult)return current;
+         var result=d.colorToneResult;d.colorToneResult=null;result.show();advancedRecord("Color & Tone",{pass:pass,settings:advancedCopy(d.settings),maskCoverage:result.colorToneCoverage});current=result.mainView;
+         if(!d.again)return current;pass++;
+      }finally{d.disposePreviews();if(d.colorToneResult)d.colorToneResult.forceClose();}
+   }
 }

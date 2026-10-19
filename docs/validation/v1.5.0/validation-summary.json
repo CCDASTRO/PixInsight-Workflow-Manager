@@ -1,0 +1,7 @@
+{
+  "version": "1.5.0",
+  "regressionSuites": 30,
+  "regressionSuitesPassed": 30,
+  "nativePanel": "PixInsight 1.9.5 build 1706: full-resolution RGB adjustment, grayscale mask creation and rendered 1180x850 and 860x560 layouts passed on a synthetic image",
+  "limits": "Sampled live preview; full-resolution preview is explicit. Local texture, clarity and noise-reduction operations remain separate. Script and manifest signatures verified by PixInsight before publication."
+}

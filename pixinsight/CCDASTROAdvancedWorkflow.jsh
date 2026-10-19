@@ -213,7 +213,7 @@ function advancedReviewPass(before, after, linear, label) {
       var d=new FinishingReviewDialog(a.mainView,"Inspection");d.windowTitle="Pass review: "+label;
       d.beforeBitmap=a.mainView.image.render(1,false);d.afterBitmap=b.mainView.image.render(1,false);
       d.candidate=b;
-      d.displayMode.enabled=true;d.displayMode.currentItem=1;d.applyButton.text="Keep pass";d.applyButton.enabled=true;d.skipButton.text="Skip pass";d.skipButton.visible=true;
+      d.displayMode.enabled=true;d.displayMode.currentItem=1;d.applyButton.text="Keep pass";d.applyButton.enabled=true;d.skipButton.text="Skip pass";d.buttons.add(d.skipButton);d.skipButton.visible=true;
       d.instructions.text=linear?"Before and After use the same temporary display stretch. The working image stays linear. Close or Skip discards this pass.":"Compare Before / After at 100%. Close or Skip discards this pass.";
       return executeAdvancedDialog(d)!==0;
    } finally {if(a)a.forceClose();if(b)b.forceClose();}
@@ -360,7 +360,7 @@ function reviewReferenceTone(view) {
    var strength=new SpinBox(d);strength.minValue=0;strength.maxValue=100;strength.value=advancedWorkflowSettings.referenceStrength;strength.toolTip="Reference match strength (%)";row.add(strength);
    var load=new PushButton(d);load.text="Load curve JSON...";row.add(load);
    d.sizer.insert(2,row);d.sizer.insert(3,confirm);
-   d.updateButton.visible=true;d.updateButton.text="Update match preview";d.keepComparison.visible=true;d.keepComparison.checked=true;d.displayMode.enabled=true;d.skipButton.visible=true;d.skipButton.text="Skip match";d.applyButton.text="Apply reference match";d.applyButton.enabled=false;
+   d.updateButton.visible=true;d.updateButton.text="Update match preview";d.keepComparison.visible=true;d.keepComparison.checked=true;d.displayMode.enabled=true;d.buttons.add(d.skipButton);d.skipButton.visible=true;d.skipButton.text="Skip match";d.applyButton.text="Apply reference match";d.applyButton.enabled=false;
    function dirty(){d.applyButton.enabled=false;}
    picker.onItemSelected=function(){curves=null;confirm.checked=false;dirty();};confirm.onCheck=dirty;strength.onValueUpdated=dirty;
    load.onClick=function(){var f=new OpenFileDialog;f.caption="Load reference RGB curve points";f.filters=[["JSON curve files","*.json"]];if(!f.execute())return;try{curves=validateReferenceToneCurves(JSON.parse(File.readTextFile(f.fileName)));confirm.checked=true;d.previewStatus.text="Loaded curves. Update preview to review.";dirty();}catch(e){d.previewStatus.text=errorMessage(e);}};

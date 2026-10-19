@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.4.0"
+#define VERSION "1.4.1"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -1328,6 +1328,7 @@ var adapters = {
          setFirstProperty(p, ["applyCalibration"], true);
          setFirstProperty(p, ["catalogId"], "GaiaDR3SP");
          setFirstProperty(p, ["autoLimitMagnitude"], true);
+         setFirstProperty(p, ["generateGraphs"], false);
       }),
 
    pcc: new PCCIconAdapter,

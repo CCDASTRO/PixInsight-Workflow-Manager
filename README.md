@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.4.0
+# CCDASTRO PixInsight Workflow Manager v1.4.1
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -857,6 +857,11 @@ node pixinsight/tools/validate-workflow.js
 
 Documentation has been streamlined around current controls. Historical entries
 below summarize changes and can mention superseded implementations.
+
+### v1.4.1
+
+- Moves Skip match and Skip pass to the bottom button row.
+- Suppresses SPCC graphs during workflow processing so they do not cover later stages.
 
 ### v1.4.0
 

@@ -1,0 +1,11 @@
+{
+  "process": "var P = new GraXpert;\nP.backgroundExtractionSampleFree = false;\nP.sampleFreeScale = 5.0;\nP.sampleFreeSmoothing = 1.0;\nP.sampleFreeProtect = true;\nP.sampleFreeProtectThreshold = 0.05;\nP.sampleFreeProtectAmount = 0.50;\nP.sampleFreeSimplify = false;\nP.sampleFreeSimplifyPolynomial = 1;\nP.sampleFreeDownSample = 4;\nP.backgroundExtraction = true;\nP.smoothing = 0.0;\nP.backgroundExtractionAIModel = \"\";\nP.denoising = false;\nP.strength = 1.00;\nP.denoiseAIModel = \"\";\nP.deconvolution = false;\nP.deconvolutionMode = \"Object-only\";\nP.deconvolutionObjectStrength = 0.5;\nP.deconvolutionObjectPSFSize = 5.0;\nP.deconvolutionObjectAIModel = \"\";\nP.deconvolutionStarsAIModel = \"\";\nP.correction = \"Subtraction\";\nP.createBackground = false;\nP.disableGPU = true;\nP.replaceImage = true;\nP.showLogs = false;\nP.appPath = \"C:/Users/chuck/AppData/Local/Programs/GraXpert/GraXpert.exe\";\nP.batchSize = 4;\n",
+  "executed": true,
+  "sourcePreserved": true,
+  "resultRange": [
+    0.12641078233718872,
+    0.12811613082885742
+  ],
+  "resultChanged": true,
+  "success": true
+}

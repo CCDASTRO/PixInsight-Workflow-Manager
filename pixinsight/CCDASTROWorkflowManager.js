@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.6.0"
+#define VERSION "1.6.1"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -1305,6 +1305,20 @@ InteractiveCropAdapter.prototype.requirement = function()
 
 var plateSolveSettings = new PlateSolveSettings;
 
+function configureWorkflowGraXpert(process)
+{
+   // The PixInsight module now defaults to sample-free extraction. The workflow
+   // promises AI extraction, including with CLIs that predate sample-free flags.
+   setFirstProperty(process,["backgroundExtractionSampleFree"],false);
+   requiredNativeProperty(process,"backgroundExtraction",true);
+   setFirstProperty(process,["denoising"],false);
+   setFirstProperty(process,["deconvolution"],false);
+   // executeOn must update the workflow's existing working copy, not create an
+   // unrelated result window that the following workflow stages would ignore.
+   requiredNativeProperty(process,"replaceImage",true);
+   setFirstProperty(process,["createBackground"],false);
+}
+
 var adapters = {
    mgc: new MGCAdapter,
    autoDBE: new AutoDBEAdapter,
@@ -1317,7 +1331,7 @@ var adapters = {
       }),
 
    graxpert: new ProcessAdapter(
-      "graxpert", "GraXpert", ["GraXpert", "GraXpertProcess"], function(p) {}),
+      "graxpert", "GraXpert", ["GraXpert", "GraXpertProcess"], configureWorkflowGraXpert),
 
    plateSolve: new PlateSolveAdapter(plateSolveSettings),
 

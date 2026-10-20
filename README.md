@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.6.0
+# CCDASTRO PixInsight Workflow Manager v1.6.1
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,12 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
+## New in v1.6.1 — GraXpert compatibility fix
+
+The workflow now explicitly selects **AI background extraction**, disables the PixInsight module’s new sample-free default, and applies the correction to the workflow’s working copy so later stages use the corrected pixels. The source image remains unchanged.
+
+If GraXpert reports unrecognized `-interpolation sample-free` or `-sample_free_...` arguments, the module has requested a mode the selected executable does not support. The workflow’s GraXpert option uses AI extraction; sample-free processing is a separate mode and is not enabled here. This fix does not require replacing GraXpert or changing its global preferences. If running the GraXpert module manually, select **AI Background Extraction** and turn off **Sample-free Background Extraction**, or use an executable compatible with the mode you select.
+
 <a id="lighthouse-finishing"></a>
 
 ## New in v1.6.0 — Optional Lighthouse finishing handoff

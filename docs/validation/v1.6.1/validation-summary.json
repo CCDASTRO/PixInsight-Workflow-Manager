@@ -1,0 +1,10 @@
+{
+  "version": "1.6.1",
+  "regressionSuites": 32,
+  "regressionSuitesPassed": 32,
+  "scriptSignature": "valid, CCDASTRO",
+  "repositorySignature": "valid, CCDASTRO",
+  "nativeTest": "GraXpert 3.0.2 CPU AI background extraction on synthetic 256x256 RGB gradient; result changed working copy, source pixels preserved.",
+  "package": "Exact signed bytes and manifest checksum verified.",
+  "limits": "AI extraction only; sample-free mode is deliberately disabled. Synthetic test validates integration, not quality on all astronomical images."
+}

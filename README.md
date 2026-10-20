@@ -6,6 +6,7 @@ A configurable PixInsight workflow for integrated linear color images or separat
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
 
+CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
 ## New in v1.5.0 — Color & Tone Studio
 
 Finish stretched images with soft color and luminosity masks, tone and color sliders, and smooth master RGB or individual-channel curves. Pick a hue directly from the preview, inspect the mask or overlay, and apply independent passes on separate copies.
@@ -858,6 +859,29 @@ Developers with Node.js can validate the supplied workflow with:
 ```powershell
 node pixinsight/tools/validate-workflow.js
 ```
+
+<a id="acknowledgments"></a>
+
+## Acknowledgments and third-party tools
+
+This workflow builds on the work of the following authors and teams. Selecting a tool in the workflow does not transfer authorship of that tool or its algorithms to CCDASTRO.
+
+| Tool or contribution | Credit | How it is used |
+| --- | --- | --- |
+| PixInsight and its native processes | Pleiades Astrophoto / PixInsight Development Team — [PixInsight](https://pixinsight.com/) | The host application and native calibration, gradient, stretching, denoise, multiscale, masking and image-processing processes, including SPCC, PCC, SPFC, MGC, MLDenoise and PixelMath. |
+| ImageSolver | Andres del Pozo and Juan Conejero (PTeam) — [PixInsight](https://pixinsight.com/) | The workflow uses the ImageSolver library supplied with the installed PixInsight distribution. |
+| BlurXTerminator, NoiseXTerminator and StarXTerminator | Russell Croman / RC Astro — [RC Astro](https://www.rc-astro.com/) | Optional deconvolution, denoise and star-separation tools, installed and licensed independently. |
+| StarNet2 | Mikita Misiura / StarNet Software — [StarNet](https://starnetastro.com/) | Optional star separation through the installed PixInsight module. |
+| Parallax, Prism / DeepPrism and Starless | The SyQon development team — [SyQon](https://syqon.eu/) | Optional external processing applications and models. Their software and models are not bundled with this workflow. |
+| GraXpert | GraXpert Development Team — [GraXpert](https://graxpert.com/) | Optional gradient removal using the installed GraXpert process. |
+| GraXpert process for PixInsight | Joël Vallier / DeepSkyForge — [DeepSkyForge](https://www.deepskyforge.com/) | The PixInsight integration that provides access to GraXpert; distinct from development of the GraXpert application itself. |
+| Automatic DBE 1.6 | Franklin Marek / Seti Astro — [Seti Astro scripts](https://www.setiastro.com/pjsr-scripts) | An adapted processing engine is included, with its original attribution and CC BY-NC 4.0 notices retained. See the detailed change and license notices below. |
+| Star Method V2 and V3 PixelMath techniques | Bill Blanshan — [author resources via Cosmic Photons](https://cosmicphotons.com/scripts/) | Optional star-reduction expressions, attributed in the workflow source. The separate Cosmic Photons StarReduction script, produced with Bill Blanshan, is not bundled or invoked by this workflow. |
+| Lighthouse interface inspiration | Neven Krcmarek — [Lighthouse Suite](https://www.lighthousesuite.org/) | Inspiration for the slider-and-mask finishing interface requested for Color & Tone Studio. Lighthouse code is not bundled or executed; Color & Tone Studio is an original CCDASTRO implementation with its own processing math. |
+
+**CCDASTRO's contribution:** Chuck Faranda / CCDASTRO, Inc. develops the workflow orchestration, setup adapters, working-copy management, review dialogs, reports and original finishing controls. We thank the authors above for making these processing tools and techniques available to the astrophotography community.
+
+External tools retain their own installation, licensing and model requirements. Inclusion in this credits list does not imply endorsement by their authors. Detailed notices for the included AutoDBE adaptation and other dependencies are in [Third-party notices](docs/THIRD-PARTY-NOTICES.md).
 
 ## Revision history
 

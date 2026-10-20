@@ -47,3 +47,6 @@ The project-level acknowledgment table is in the [README](../README.md#acknowled
 Bill Blanshan is credited for both the Star Method V2 and V3 PixelMath techniques used by the workflow. The separately distributed Cosmic Photons StarReduction script is not bundled or executed here.
 
 Color & Tone Studio's slider-and-mask interface was inspired by Lighthouse by Neven Krcmarek ([Lighthouse Suite](https://www.lighthousesuite.org/)). Color & Tone Studio is original CCDASTRO code with its own processing math; no Lighthouse source code is included or executed. This acknowledgment does not imply endorsement or affiliation.
+## Optional Lighthouse integration
+
+Lighthouse is created by Neven Krčmarek. CCDASTRO can prepare a separate saved copy for the user to open in the separately installed Lighthouse interface. No Lighthouse code or signatures are included in CCDASTRO’s package. Installation, updates and applicable terms are supplied by [Lighthouse Suite](https://www.lighthousesuite.org/).

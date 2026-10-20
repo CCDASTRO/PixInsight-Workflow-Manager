@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.5.0"
+#define VERSION "1.6.0"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -4926,6 +4926,10 @@ function executeWorkflow(self, quiet)
       }
       else
          completion += "\n\nSeparate branches remain open; no final image was saved.";
+      if(advancedWorkflowSettings.colorToneEnabled&&advancedWorkflowSettings.colorToneTool==="Lighthouse"&&advancedLighthouseHandoffView){
+         self.lighthouseHandoffReady=true;
+         completion+="\n\nLighthouse handoff saved. This workflow will close. Choose Scripts > Lighthouse Suite > Lighthouse, select "+advancedLighthouseHandoffView.fullId+", and save Lighthouse edits under a new filename.";
+      }
       self.statusText.text = completion;
       logLine(completion);
       if(!quiet) (new MessageBox(completion, TITLE,
@@ -5024,6 +5028,7 @@ function main()
    for (;;)
    {
       dialog.runRequested = false;
+      dialog.lighthouseHandoffReady=false;advancedLighthouseHandoffView=null;
       dialog.launchCropRequested = false;
       dialog.execute();
       if (dialog.launchCropRequested)
@@ -5046,6 +5051,11 @@ function main()
       }
       if (!dialog.runRequested) break;
       executeWorkflow(dialog);
+      if(dialog.lighthouseHandoffReady){
+         if(advancedLighthouseHandoffView&&!advancedLighthouseHandoffView.isNull)advancedLighthouseHandoffView.window.bringToFront();
+         (new MessageBox("Your separate Lighthouse handoff result has been saved and is open. The workflow will now close. Choose Scripts > Lighthouse Suite > Lighthouse and select "+advancedLighthouseHandoffView.fullId+". Save Lighthouse edits under a new filename. Reports and sharing exports created by this workflow describe the pre-Lighthouse result.",TITLE,StdIcon.Information,StdButton.Ok)).execute();
+         break;
+      }
    }
 }
 

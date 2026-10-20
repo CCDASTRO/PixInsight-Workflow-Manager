@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.5.0
+# CCDASTRO PixInsight Workflow Manager v1.6.0
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,16 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
+## New in v1.6.0 — Optional Lighthouse finishing handoff
+
+Under **Pass sequences and optional finishing**, enable **Review selected color / tone finishing panel** and choose **CCDASTRO Color & Tone Studio** or **Lighthouse (separately installed)**. Existing presets keep Color & Tone Studio. Both choices require a workflow stretch.
+
+Install Lighthouse from its author's [Lighthouse Suite](https://www.lighthousesuite.org/) repository. The standard installed `src/scripts/Lighthouse/Lighthouse.js` is detected; **Locate Lighthouse...** supports custom installations. The path is a local setting, not part of shared workflow presets. A missing installation is reported during preflight.
+
+**Lighthouse is an assisted handoff, with manual launch.** At the selected finishing stage the workflow makes a separate copy, then performs its normal save, report and export steps. After successful completion it closes the workflow window and identifies the saved handoff view. Choose **Scripts > Lighthouse Suite > Lighthouse**, select that view, edit in Lighthouse, and save under a new filename. With dual output, both results are prepared separately; the recombined companion is brought forward last when created. Select the desired saved image in Lighthouse. Reports and sharing exports describe the pre-Lighthouse result; regenerate exports afterward if needed. There is no automatic launch, return, or import of Lighthouse edits.
+
+Lighthouse is not bundled, imported, modified or updated by CCDASTRO. Its installation, signature and processing remain separate. Credit belongs to **Neven Krčmarek**. Lighthouse keeps its own slider settings; CCDASTRO records only the handoff, not Lighthouse processing. Original source pixels and previously accepted images remain preserved. If saving/export fails, the workflow remains open to report the error rather than announcing a completed handoff.
+
 ## New in v1.5.0 — Color & Tone Studio
 
 Finish stretched images with soft color and luminosity masks, tone and color sliders, and smooth master RGB or individual-channel curves. Pick a hue directly from the preview, inspect the mask or overlay, and apply independent passes on separate copies.

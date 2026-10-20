@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.5.0',
+    [string] $Version = '1.6.0',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -145,10 +145,10 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.5.0 adds optional Color &amp; Tone Studio with soft hue and luminosity masks, tone and color sliders, RGB curves, live previews and repeated reviewed passes.</p>
+        <p>v1.6.0 adds an optional finishing-panel choice: CCDASTRO Color &amp; Tone Studio or an assisted handoff to separately installed Lighthouse. The workflow saves a separate stretched copy and closes; launch Lighthouse manually from its Scripts menu. Reports and sharing exports describe the pre-Lighthouse result.</p>
         <ul>
           <li>v1.2.2 adds per-pass Parallax, MLDenoise, Prism, StarNet2, SyQon Starless, ACDNR and MLT with independent settings and stage-aware execution.</li>
-          <li>26 regression suites and native editor, classic-denoise and mixed-remover layer tests passed; additional model inference remains installation-dependent.</li>
+          <li>31 regression suites passed, including preset migration, Lighthouse detection and handoff source preservation. Lighthouse remains independently installed and updated.</li>
           <li>v1.2.1 saves independent starless and recombined finals, protects their filenames and exports/reports each result.</li>
           <li>Native paired save/reopen and starless/original pixel-preservation checks passed.</li>
           <li>v1.2.0 adds independent multipass BlurX/NoiseX/StarX, accumulated stars, post-stretch cleanup, reference RGB matching, reviewed repairs, TIFF and run reports.</li>

@@ -106,7 +106,7 @@ function defaultAdvancedWorkflowSettings() {
    return {useLinearPasses:false,
       linearPasses:[defaultRCPass("BlurXTerminator"), defaultRCPass("StarXTerminator"), defaultRCPass("NoiseXTerminator")],
       keepStarless:false, saveBoth:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
-      colorToneEnabled:false, autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
+      colorToneEnabled:false, colorToneTool:"CCDASTRO", autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
       reports:true, tiff:false};
 }
 var advancedWorkflowSettings = defaultAdvancedWorkflowSettings();
@@ -151,6 +151,7 @@ function restoreAdvancedWorkflowSettings(value) {
       for (var k in candidate) if (Object.prototype.hasOwnProperty.call(value,k)) candidate[k]=advancedCopy(value[k]);
       for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","metadataFinishingEnabled","autoEnhanceEnabled","colorToneEnabled","reports","tiff"];i<flags.length;i++)
          if(typeof candidate[flags[i]]!=="boolean") throw new Error("Invalid advanced workflow flag: "+flags[i]);
+      if(["CCDASTRO","Lighthouse"].indexOf(candidate.colorToneTool)<0)throw new Error("Invalid finishing panel choice.");
       if(!finiteNumber(candidate.referenceStrength)||candidate.referenceStrength<0||candidate.referenceStrength>100) throw new Error("Invalid reference match strength.");
       if(!finiteNumber(candidate.starlessTarget)||candidate.starlessTarget<0.01||candidate.starlessTarget>0.50) throw new Error("Starless histogram target must be 1-50 percent.");
       if(candidate.useLinearPasses) validateRCPasses(candidate.linearPasses,"linear");
@@ -496,13 +497,18 @@ function installAdvancedWorkflowControls(dialog) {
    var metadata=advancedCheck(box,box.sizer,"Review optional masked finishing: SCNR, multiscale, blends, lightness, V3 and retouch",false);
    metadata.toolTip="After normal finishing and luminance combination, review optional operations on separate copies. Each pass selects its own tool, settings and mask. Nothing is applied automatically.";
    var autoEnhance=advancedCheck(box,box.sizer,"Review Auto Image Enhance at the end (Tone / Contrast / Color / Auto All)",false);
-   var colorTone=advancedCheck(box,box.sizer,"Review Color & Tone Studio (color masks / curves / sliders)",false);
-   colorTone.toolTip="After stretching and other finishing, refine selected hues and tones with live mask and curve previews. Apply commits a separate copy.";
+   var colorTone=advancedCheck(box,box.sizer,"Review selected color / tone finishing panel",false);
+   colorTone.toolTip="Choose CCDASTRO Color & Tone Studio for an in-workflow review, or prepare a saved copy for finishing in separately installed Lighthouse after this workflow closes.";
+   var toneRow=new HorizontalSizer;toneRow.spacing=6;
+   var toneLabel=new Label(box);toneLabel.text="Finishing panel:";toneRow.add(toneLabel);
+   var toneTool=new ComboBox(box);toneTool.addItem("CCDASTRO Color & Tone Studio");toneTool.addItem("Lighthouse (separately installed)");toneRow.add(toneTool,100);
+   var locateLighthouse=new PushButton(box);locateLighthouse.text="Locate Lighthouse...";toneRow.add(locateLighthouse);box.sizer.add(toneRow);
+   toneTool.toolTip="Lighthouse handoff saves a separate stretched copy and closes this workflow. Launch Lighthouse from Scripts afterward and select that copy. Install/update it separately from Lighthouse Suite.";
    var reports=advancedCheck(box,box.sizer,"Save step-by-step report and sampled final checks",true);
    var tiff=advancedCheck(box,box.sizer,"Also export a full-resolution 16-bit TIFF",false);
    var note=new Label(box);note.wordWrapping=true;note.text="Gradients and color calibration run first. The custom linear sequence replaces the ordinary deblur, denoise and separation rows. Every pass has its own settings. Reference matching and local repairs are optional, previewed edits.";box.sizer.add(note);
    dialog.advancedValues=function(){return advancedCopy(advancedWorkflowSettings);};
-   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;colorTone.checked=a.colorToneEnabled;autoEnhance.checked=a.autoEnhanceEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
+   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;colorTone.checked=a.colorToneEnabled;toneTool.currentItem=a.colorToneTool==="Lighthouse"?1:0;toneTool.enabled=a.colorToneEnabled;locateLighthouse.enabled=a.colorToneEnabled&&a.colorToneTool==="Lighthouse";autoEnhance.checked=a.autoEnhanceEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
       summary.text=advancedLinearToolSummary(dialog,a);edit.enabled=a.useLinearPasses;postEdit.enabled=a.postEnabled;
       ["deconvolution","noiseReduction","starSeparation"].forEach(function(id){dialog.rowsById[id].enabled.enabled=!a.useLinearPasses;dialog.rowsById[id].choice.enabled=!a.useLinearPasses;});
       target.value=Math.round(a.starlessTarget*100);target.enabled=a.keepStarless||a.saveBoth;
@@ -510,6 +516,8 @@ function installAdvancedWorkflowControls(dialog) {
       if(a.keepStarless||a.saveBoth){dialog.recombine.checked=false;dialog.finishStarless.checked=false;dialog.starlessStretch.currentItem=0;dialog.starsStretch.currentItem=0;if(a.keepStarless)dialog.starReduction.checked=false;}dialog.finalStretchControl.label.text=(a.keepStarless||a.saveBoth)?"Starless final stretch:":"Final image stretch:";dialog.recombine.toolTip=a.saveBoth?"Dual output saves the stretched starless result first, then reviews stars recombination separately.":a.keepStarless?"Starless-only output does not recombine stars.":"Recombine star and starless branches before the final stretch.";dialog.recombine.enabled=dialog.finishStarless.enabled=dialog.starlessStretch.enabled=dialog.starsStretch.enabled=!(a.keepStarless||a.saveBoth);
    };
    function changed(){dialog.refreshAdvancedControls();saveWorkflowState(dialog,false);}
+   toneTool.onItemSelected=function(i){advancedWorkflowSettings.colorToneTool=i===1?"Lighthouse":"CCDASTRO";changed();};
+   locateLighthouse.onClick=function(){var file=new OpenFileDialog;file.caption="Select your installed Lighthouse.js";file.filters=[["JavaScript","*.js"]];file.initialPath=lighthouseScriptPath();if(file.execute()){if(!/Lighthouse\.js$/i.test(file.fileName)){(new MessageBox("Select the installed Lighthouse.js script.",TITLE,StdIcon.Error,StdButton.Ok)).execute();return;}Settings.write(SETTINGS_MODULE+"/LighthouseScriptPath",DataType.String,file.fileName);changed();}};
    colorTone.onCheck=function(v){advancedWorkflowSettings.colorToneEnabled=v;changed();};
    autoEnhance.onCheck=function(v){advancedWorkflowSettings.autoEnhanceEnabled=v;changed();};
    metadata.onCheck=function(v){advancedWorkflowSettings.metadataFinishingEnabled=v;changed();};
@@ -527,7 +535,8 @@ function advancedPreflight(dialog,result,window) {
       if((a.keepStarless||a.saveBoth)&&!advancedSeparationEnabled(dialog))throw new Error("Starless output requires an enabled StarX / star-separation pass.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&dialog.finalStretch.currentItem===0&&dialog.starlessStretch.currentItem===0)throw new Error("Post-stretch cleanup, reference matching and local repairs require a workflow stretch.");
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&advancedSeparationEnabled(dialog)&&!dialog.recombine.checked&&!a.keepStarless&&!a.saveBoth)throw new Error("Enable Finish and save the starless branch, or recombine, for advanced finishing.");
-      if(a.colorToneEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Color & Tone Studio requires a stretched final image.");
+      if(a.colorToneEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Color / tone finishing requires a stretched final image.");
+      if(a.colorToneEnabled&&a.colorToneTool==="Lighthouse"&&!lighthouseScriptPath())throw new Error("Lighthouse is not installed or its configured script is missing. Install it separately or use Locate Lighthouse.");
       if(a.autoEnhanceEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Auto Image Enhance requires a stretched final image.");
       if(a.metadataFinishingEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Optional finishing tools require a stretched final image.");
       if(a.saveBoth&&dialog.finalStretch.currentItem===0)throw new Error("Saving both final images requires a final stretch before stars recombination.");
@@ -953,6 +962,7 @@ function saveColorToneMask(view,settings) {
    }}finally{w.mainView.endProcess();}return w;}catch(e){w.forceClose();throw e;}
 }
 function reviewColorTone(view) {
+   if(advancedWorkflowSettings.colorToneTool==="Lighthouse")return reviewLighthouse(view);
    var current=view,pass=1;
    for(;;){var d=createColorToneDialog(current,pass);
       try{executeAdvancedDialog(d);if(!d.accepted||!d.colorToneResult)return current;
@@ -960,4 +970,21 @@ function reviewColorTone(view) {
          if(!d.again)return current;pass++;
       }finally{d.disposePreviews();if(d.colorToneResult)d.colorToneResult.forceClose();}
    }
+}
+
+// Optional handoff to the separately installed Lighthouse. No third-party code is loaded.
+var advancedLighthouseHandoffView=null;
+function lighthouseScriptPath() {
+   var configured=Settings.read(SETTINGS_MODULE+"/LighthouseScriptPath",DataType.String);
+   if(typeof configured==="string"&&configured.length)return File.exists(configured)?configured:"";
+   var path=CoreApplication.srcDirPath+"/scripts/Lighthouse/Lighthouse.js";
+   return File.exists(path)?path:"";
+}
+function reviewLighthouse(view) {
+   if(!lighthouseScriptPath())throw new Error("Install Lighthouse separately or locate Lighthouse.js in finishing setup.");
+   checkAbortRequested();
+   var copy=cloneHDRView(view,"_LighthouseHandoff");
+   copy.show();advancedLighthouseHandoffView=copy.mainView;
+   advancedRecord("Lighthouse finishing handoff",{tool:"Lighthouse",view:copy.mainView.fullId,status:"Prepared copy; manual launch after workflow save",settingsRecorded:false});
+   return copy.mainView;
 }

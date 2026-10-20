@@ -5,13 +5,13 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.5.0.zip" sha1="4ceb3be05485398132dd041b344ac70960b0a3dd" type="script" releaseDate="20261019210037">
-         <title>CCDASTRO Workflow Manager 1.5.0</title>
+      <package fileName="CCDASTROWorkflowManager-1.6.0.zip" sha1="055314f771a539e90f9a6ecb339e0e9df95f9d89" type="script" releaseDate="20261020213256">
+         <title>CCDASTRO Workflow Manager 1.6.0</title>
          <description>
-            <p>v1.5.0 adds optional Color &amp; Tone Studio with soft hue and luminosity masks, tone and color sliders, RGB curves, live previews and repeated reviewed passes.</p>
+            <p>v1.6.0 adds an optional finishing-panel choice: CCDASTRO Color &amp; Tone Studio or an assisted handoff to separately installed Lighthouse. The workflow saves a separate stretched copy and closes; launch Lighthouse manually from its Scripts menu. Reports and sharing exports describe the pre-Lighthouse result.</p>
             <ul>
                <li>v1.2.2 adds per-pass Parallax, MLDenoise, Prism, StarNet2, SyQon Starless, ACDNR and MLT with independent settings and stage-aware execution.</li>
-               <li>26 regression suites and native editor, classic-denoise and mixed-remover layer tests passed; additional model inference remains installation-dependent.</li>
+               <li>31 regression suites passed, including preset migration, Lighthouse detection and handoff source preservation. Lighthouse remains independently installed and updated.</li>
                <li>v1.2.1 saves independent starless and recombined finals, protects their filenames and exports/reports each result.</li>
                <li>Native paired save/reopen and starless/original pixel-preservation checks passed.</li>
                <li>v1.2.0 adds independent multipass BlurX/NoiseX/StarX, accumulated stars, post-stretch cleanup, reference RGB matching, reviewed repairs, TIFF and run reports.</li>
@@ -78,4 +78,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-19T21:00:55.680Z" encoding="Base64">2BopPg0SlK/XjTVq32+MClmsKL2vUJokm19hhSaMcbcmT8TgpnnMUhpv4biM9OFFRhU2XnKuHV+IuMuCgFL8CA==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-20T21:36:01.802Z" encoding="Base64">l2SElUY5tp0/ckhAzsEzGwiRndaVr+8dD/Q7n2LFhlipqbPK5/0weUp8gPbf3JTpIff+LzVwogB/M6EczqXoDw==</Signature>

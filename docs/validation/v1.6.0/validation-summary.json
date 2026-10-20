@@ -1,0 +1,10 @@
+{
+  "version": "1.6.0",
+  "regressionSuites": 31,
+  "regressionSuitesPassed": 31,
+  "nativeHandoff": "Installed Lighthouse detected; choice restored in native interface; separate 40x32 RGB copy tracked; source preserved after editing the copy.",
+  "scriptSignature": "PixInsight Security.getScriptSignature valid=true, developer CCDASTRO",
+  "package": "ZIP source/signature bytes match; manifest SHA-1 matches ZIP.",
+  "limits": "Assisted handoff, manual Lighthouse launch after workflow completes. No automatic third-party launch, processing or round trip.",
+  "repositorySignature": "PixInsight Security.getXMLSignature valid=true, developer CCDASTRO"
+}

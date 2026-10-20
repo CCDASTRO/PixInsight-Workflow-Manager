@@ -7,9 +7,13 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
+<a id="lighthouse-finishing"></a>
+
 ## New in v1.6.0 — Optional Lighthouse finishing handoff
 
 Under **Pass sequences and optional finishing**, enable **Review selected color / tone finishing panel** and choose **CCDASTRO Color & Tone Studio** or **Lighthouse (separately installed)**. Existing presets keep Color & Tone Studio. Both choices require a workflow stretch.
+
+**Different approaches:** Color & Tone Studio provides CCDASTRO’s own hue-and-luminosity masks, tone/color sliders and RGB/channel curves within the workflow’s reviewed passes. Lighthouse offers a separate Lightroom-style finishing environment with luminosity/regional masking and tools such as texture, clarity and dehaze. Their processing math and slider responses differ, so matching values need not produce matching results. Choose the controls that suit the image; neither approach is universally better.
 
 Install Lighthouse from its author's [Lighthouse Suite](https://www.lighthousesuite.org/) repository. The standard installed `src/scripts/Lighthouse/Lighthouse.js` is detected; **Locate Lighthouse...** supports custom installations. The path is a local setting, not part of shared workflow presets. A missing installation is reported during preflight.
 
@@ -711,6 +715,10 @@ skips L addition also skips this review sequence. Each adjustment can be skipped
 
 ## Final inspection and optional finishing
 
+### Choosing a color / tone finishing panel
+
+The separate **Review selected color / tone finishing panel** option complements the inspection sequence below. **Color & Tone Studio** emphasizes selective hue/tonal masks, channel curves and repeatable Apply/Skip passes inside the workflow; its settings and mask coverage are recorded in the run report. **Lighthouse** provides its own finishing controls and luminosity/regional masking after a saved-copy handoff. Its slider math and strengths differ from CCDASTRO’s, and its edits happen after workflow reports/exports. Launch it manually, then save and export the edited result separately. See [the v1.6.0 handoff instructions](#lighthouse-finishing).
+
 Enable **Final inspection, local contrast, noise cleanup, saturation and sharing
 export** for the sequence below. It is enabled by default and remembered with
 workflow settings. Each processing stage has **Update Preview**, **Apply** and
@@ -910,6 +918,8 @@ Enable **Review Color & Tone Studio (color masks / curves / sliders)** under **P
 - **Create mask image** creates a full-resolution grayscale selection image. White selects and black protects. It does not write a file or alter the source image.
 - **Apply and add another pass** explicitly accepts a separate result and starts a neutral new pass from it. This allows independent red-nebula, cyan-nebula or background adjustments. Recalculating a preview always starts from the same Before image; it never stacks changes accidentally. Skipping a later pass retains earlier accepted passes.
 - Monochrome inputs support tonal controls and the master curve. Hue, color controls and individual RGB curves require RGB. Curves preserve monotonicity. These are CCDASTRO's own aesthetic finishing operations, not photometric calibration and not a reproduction of Lighthouse's algorithms. Local clarity, texture and noise reduction remain separate workflow tools.
+
+Compared with Lighthouse, this panel focuses on CCDASTRO’s own feathered hue/tonal selection and smooth channel curves within reviewed workflow passes. Lighthouse supplies a broader separate finishing environment, including luminosity/regional masks and local-detail controls. Similar slider names do not imply identical algorithms or strengths; Color & Tone Studio’s RGB adjustments can affect color relationships differently.
 
 Mask selection uses the unmodified input of each accepted pass; masks are not recomputed from partially adjusted pixels. Input pixels and metadata stay on the original view, while results inherit the workflow's copy/metadata preservation behavior. Adjustment parameters and mask coverage are included in the run report.
 

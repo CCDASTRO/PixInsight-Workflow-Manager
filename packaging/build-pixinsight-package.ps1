@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.6.1',
+    [string] $Version = '1.6.2',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -145,7 +145,7 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.6.1 explicitly selects GraXpert AI background extraction and disables the module’s sample-free default for compatibility with older GraXpert CLIs. Corrected pixels replace only the workflow working copy so later stages receive the result. v1.6.0 adds an optional finishing-panel choice: CCDASTRO Color &amp; Tone Studio or an assisted handoff to separately installed Lighthouse. The workflow saves a separate stretched copy and closes; launch Lighthouse manually from its Scripts menu. Reports and sharing exports describe the pre-Lighthouse result.</p>
+        <p>v1.6.2 opens separately installed signed Lighthouse automatically after the workflow exits, with the exact final image selected and short image/file names; manual launch remains optional. v1.6.1 explicitly selects GraXpert AI background extraction and disables the module’s sample-free default for compatibility with older GraXpert CLIs. Corrected pixels replace only the workflow working copy so later stages receive the result. v1.6.0 adds an optional finishing-panel choice: CCDASTRO Color &amp; Tone Studio or an assisted handoff to separately installed Lighthouse. The workflow saves a separate stretched copy and closes; launch Lighthouse manually from its Scripts menu. Reports and sharing exports describe the pre-Lighthouse result.</p>
         <ul>
           <li>v1.2.2 adds per-pass Parallax, MLDenoise, Prism, StarNet2, SyQon Starless, ACDNR and MLT with independent settings and stage-aware execution.</li>
           <li>32 regression suites passed, including preset migration, Lighthouse detection and handoff source preservation. Lighthouse remains independently installed and updated.</li>

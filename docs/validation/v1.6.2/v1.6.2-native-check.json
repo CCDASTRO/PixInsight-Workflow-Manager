@@ -1,0 +1,10 @@
+{
+  "selected": 1,
+  "automatic": true,
+  "enabled": true,
+  "shortId": "Lighthouse_Final",
+  "shortPath": "C:/Users/chuck/Documents/Codex/2026-10-18/s/work/Lighthouse_Final.xisf",
+  "command": "run -x --require-signature -p=\"isGlobalTarget,false\" -p=\"isViewTarget,true\" -p=\"targetView,Lighthouse_Final\" \"C:/Program Files/PixInsight/src/scripts/Lighthouse/Lighthouse.js\"\n",
+  "sourcePreserved": true,
+  "success": true
+}

@@ -1,0 +1,11 @@
+{
+  "signature": {
+    "scriptId": "Lighthouse",
+    "developerId": "NevenKrcmarek",
+    "entitlements": "com.pixinsight.security.pjsr.*,com.pixinsight.security.pcl.*",
+    "timestamp": "2026-10-08T17:47:25.645Z",
+    "valid": true
+  },
+  "pid": "23836",
+  "target": "Lighthouse_AutoLaunch_Test"
+}

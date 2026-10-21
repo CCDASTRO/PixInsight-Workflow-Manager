@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.6.1"
+#define VERSION "1.6.2"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -4389,6 +4389,8 @@ function saveFinalImage(view, sourcePath, sourceId, outputKind, protectedPath)
       save.initialPath=protectedPath.replace(/_Starless\.xisf$/i,"_Recombined.xisf");
       if(save.initialPath===protectedPath)save.initialPath=protectedPath.replace(/\.xisf$/i,"_Recombined.xisf");
    }
+   if(advancedWorkflowSettings.colorToneEnabled&&advancedWorkflowSettings.colorToneTool==="Lighthouse"&&view===advancedLighthouseHandoffView)
+      save.initialPath=lighthouseOutputPath(sourcePath,outputKind||"Final");
    save.filters = [["XISF images", "*.xisf"]];
    save.overwritePrompt = true;
    for (;;)
@@ -4942,11 +4944,11 @@ function executeWorkflow(self, quiet)
          completion += "\n\nSeparate branches remain open; no final image was saved.";
       if(advancedWorkflowSettings.colorToneEnabled&&advancedWorkflowSettings.colorToneTool==="Lighthouse"&&advancedLighthouseHandoffView){
          self.lighthouseHandoffReady=true;
-         completion+="\n\nLighthouse handoff saved. This workflow will close. Choose Scripts > Lighthouse Suite > Lighthouse, select "+advancedLighthouseHandoffView.fullId+", and save Lighthouse edits under a new filename.";
+         completion+="\n\nLighthouse target: "+advancedLighthouseHandoffView.fullId+". "+(advancedWorkflowSettings.lighthouseAutoLaunch?"Lighthouse will open automatically after this workflow exits.":"Choose Scripts > Lighthouse Suite > Lighthouse and select this image.")+" Save Lighthouse edits under a new filename.";
       }
       self.statusText.text = completion;
       logLine(completion);
-      if(!quiet) (new MessageBox(completion, TITLE,
+      if(!quiet&&!(self.lighthouseHandoffReady&&advancedWorkflowSettings.lighthouseAutoLaunch)) (new MessageBox(completion, TITLE,
          StdIcon.Information, StdButton.Ok)).execute();
    }
    catch (e)
@@ -5067,7 +5069,10 @@ function main()
       executeWorkflow(dialog);
       if(dialog.lighthouseHandoffReady){
          if(advancedLighthouseHandoffView&&!advancedLighthouseHandoffView.isNull)advancedLighthouseHandoffView.window.bringToFront();
-         (new MessageBox("Your separate Lighthouse handoff result has been saved and is open. The workflow will now close. Choose Scripts > Lighthouse Suite > Lighthouse and select "+advancedLighthouseHandoffView.fullId+". Save Lighthouse edits under a new filename. Reports and sharing exports created by this workflow describe the pre-Lighthouse result.",TITLE,StdIcon.Information,StdButton.Ok)).execute();
+         if(advancedWorkflowSettings.lighthouseAutoLaunch){
+            try{queueLighthouseLaunch(advancedLighthouseHandoffView);}
+            catch(e){(new MessageBox("Automatic Lighthouse launch could not be queued: "+errorMessage(e)+"\nYour result remains open. Choose Scripts > Lighthouse Suite > Lighthouse and select "+advancedLighthouseHandoffView.fullId+".",TITLE,StdIcon.Warning,StdButton.Ok)).execute();}
+         }else (new MessageBox("Your Lighthouse result is open. Choose Scripts > Lighthouse Suite > Lighthouse and select "+advancedLighthouseHandoffView.fullId+". Reports and sharing exports created by this workflow describe the pre-Lighthouse result.",TITLE,StdIcon.Information,StdButton.Ok)).execute();
          break;
       }
    }

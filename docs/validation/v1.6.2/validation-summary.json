@@ -1,0 +1,9 @@
+{
+  "version": "1.6.2",
+  "regressionSuites": 32,
+  "regressionSuitesPassed": 32,
+  "nativeUI": "Automatic launch enabled/restored; short identifiers/filenames and source preservation passed.",
+  "nativeLaunch": "Deferred launch into same PixInsight instance passed an exact target to separate runtime. Installed signed Lighthouse opened on synthetic Lighthouse_AutoLaunch_Test; user confirmed correct image selected.",
+  "limits": "Launch occurs after workflow releases the runtime. Reports/exports precede Lighthouse edits; no automatic return. Source and other open images preserved.",
+  "release": "Script and repository signatures verified valid by PixInsight for CCDASTRO; ZIP signed bytes and manifest checksum verified."
+}

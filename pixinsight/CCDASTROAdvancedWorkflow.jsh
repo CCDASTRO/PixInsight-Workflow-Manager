@@ -106,7 +106,7 @@ function defaultAdvancedWorkflowSettings() {
    return {useLinearPasses:false,
       linearPasses:[defaultRCPass("BlurXTerminator"), defaultRCPass("StarXTerminator"), defaultRCPass("NoiseXTerminator")],
       keepStarless:false, saveBoth:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
-      colorToneEnabled:false, colorToneTool:"CCDASTRO", autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
+      colorToneEnabled:false, colorToneTool:"CCDASTRO", lighthouseAutoLaunch:true, autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
       reports:true, tiff:false};
 }
 var advancedWorkflowSettings = defaultAdvancedWorkflowSettings();
@@ -149,7 +149,7 @@ function restoreAdvancedWorkflowSettings(value) {
    var candidate=defaultAdvancedWorkflowSettings();
    if (value) {
       for (var k in candidate) if (Object.prototype.hasOwnProperty.call(value,k)) candidate[k]=advancedCopy(value[k]);
-      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","metadataFinishingEnabled","autoEnhanceEnabled","colorToneEnabled","reports","tiff"];i<flags.length;i++)
+      for (var i=0, flags=["useLinearPasses","keepStarless","saveBoth","postEnabled","referenceEnabled","repairsEnabled","metadataFinishingEnabled","autoEnhanceEnabled","colorToneEnabled","lighthouseAutoLaunch","reports","tiff"];i<flags.length;i++)
          if(typeof candidate[flags[i]]!=="boolean") throw new Error("Invalid advanced workflow flag: "+flags[i]);
       if(["CCDASTRO","Lighthouse"].indexOf(candidate.colorToneTool)<0)throw new Error("Invalid finishing panel choice.");
       if(!finiteNumber(candidate.referenceStrength)||candidate.referenceStrength<0||candidate.referenceStrength>100) throw new Error("Invalid reference match strength.");
@@ -503,12 +503,14 @@ function installAdvancedWorkflowControls(dialog) {
    var toneLabel=new Label(box);toneLabel.text="Finishing panel:";toneRow.add(toneLabel);
    var toneTool=new ComboBox(box);toneTool.addItem("CCDASTRO Color & Tone Studio");toneTool.addItem("Lighthouse (separately installed)");toneRow.add(toneTool,100);
    var locateLighthouse=new PushButton(box);locateLighthouse.text="Locate Lighthouse...";toneRow.add(locateLighthouse);box.sizer.add(toneRow);
-   toneTool.toolTip="Lighthouse handoff saves a separate stretched copy and closes this workflow. Launch Lighthouse from Scripts afterward and select that copy. Install/update it separately from Lighthouse Suite.";
+   toneTool.toolTip="Finishes on a separate stretched copy. Lighthouse opens automatically after the workflow exits, with that exact image selected. Optional manual launch is available; install/update Lighthouse separately.";
+   var autoLighthouse=advancedCheck(box,box.sizer,"Open Lighthouse automatically with the final image selected",true);
+   autoLighthouse.toolTip="Starts Lighthouse in this PixInsight instance after the workflow exits. Turn off for manual launch. Other images stay open.";
    var reports=advancedCheck(box,box.sizer,"Save step-by-step report and sampled final checks",true);
    var tiff=advancedCheck(box,box.sizer,"Also export a full-resolution 16-bit TIFF",false);
    var note=new Label(box);note.wordWrapping=true;note.text="Gradients and color calibration run first. The custom linear sequence replaces the ordinary deblur, denoise and separation rows. Every pass has its own settings. Reference matching and local repairs are optional, previewed edits.";box.sizer.add(note);
    dialog.advancedValues=function(){return advancedCopy(advancedWorkflowSettings);};
-   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;colorTone.checked=a.colorToneEnabled;toneTool.currentItem=a.colorToneTool==="Lighthouse"?1:0;toneTool.enabled=a.colorToneEnabled;locateLighthouse.enabled=a.colorToneEnabled&&a.colorToneTool==="Lighthouse";autoEnhance.checked=a.autoEnhanceEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
+   dialog.refreshAdvancedControls=function(){var a=advancedWorkflowSettings;use.checked=a.useLinearPasses;keep.checked=a.keepStarless;both.checked=a.saveBoth;post.checked=a.postEnabled;ref.checked=a.referenceEnabled;repairs.checked=a.repairsEnabled;colorTone.checked=a.colorToneEnabled;toneTool.currentItem=a.colorToneTool==="Lighthouse"?1:0;autoLighthouse.checked=a.lighthouseAutoLaunch;autoLighthouse.enabled=a.colorToneEnabled&&a.colorToneTool==="Lighthouse";toneTool.enabled=a.colorToneEnabled;locateLighthouse.enabled=a.colorToneEnabled&&a.colorToneTool==="Lighthouse";autoEnhance.checked=a.autoEnhanceEnabled;metadata.checked=a.metadataFinishingEnabled;reports.checked=a.reports;tiff.checked=a.tiff;
       summary.text=advancedLinearToolSummary(dialog,a);edit.enabled=a.useLinearPasses;postEdit.enabled=a.postEnabled;
       ["deconvolution","noiseReduction","starSeparation"].forEach(function(id){dialog.rowsById[id].enabled.enabled=!a.useLinearPasses;dialog.rowsById[id].choice.enabled=!a.useLinearPasses;});
       target.value=Math.round(a.starlessTarget*100);target.enabled=a.keepStarless||a.saveBoth;
@@ -518,6 +520,7 @@ function installAdvancedWorkflowControls(dialog) {
    function changed(){dialog.refreshAdvancedControls();saveWorkflowState(dialog,false);}
    toneTool.onItemSelected=function(i){advancedWorkflowSettings.colorToneTool=i===1?"Lighthouse":"CCDASTRO";changed();};
    locateLighthouse.onClick=function(){var file=new OpenFileDialog;file.caption="Select your installed Lighthouse.js";file.filters=[["JavaScript","*.js"]];file.initialPath=lighthouseScriptPath();if(file.execute()){if(!/Lighthouse\.js$/i.test(file.fileName)){(new MessageBox("Select the installed Lighthouse.js script.",TITLE,StdIcon.Error,StdButton.Ok)).execute();return;}Settings.write(SETTINGS_MODULE+"/LighthouseScriptPath",DataType.String,file.fileName);changed();}};
+   autoLighthouse.onCheck=function(v){advancedWorkflowSettings.lighthouseAutoLaunch=v;changed();};
    colorTone.onCheck=function(v){advancedWorkflowSettings.colorToneEnabled=v;changed();};
    autoEnhance.onCheck=function(v){advancedWorkflowSettings.autoEnhanceEnabled=v;changed();};
    metadata.onCheck=function(v){advancedWorkflowSettings.metadataFinishingEnabled=v;changed();};
@@ -537,6 +540,7 @@ function advancedPreflight(dialog,result,window) {
       if((a.postEnabled||a.referenceEnabled||a.repairsEnabled)&&advancedSeparationEnabled(dialog)&&!dialog.recombine.checked&&!a.keepStarless&&!a.saveBoth)throw new Error("Enable Finish and save the starless branch, or recombine, for advanced finishing.");
       if(a.colorToneEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Color / tone finishing requires a stretched final image.");
       if(a.colorToneEnabled&&a.colorToneTool==="Lighthouse"&&!lighthouseScriptPath())throw new Error("Lighthouse is not installed or its configured script is missing. Install it separately or use Locate Lighthouse.");
+      if(a.colorToneEnabled&&a.colorToneTool==="Lighthouse"&&a.lighthouseAutoLaunch){var signature=Security.getScriptSignature(lighthouseScriptPath());if(!signature||!signature.valid)throw new Error("Lighthouse needs a valid installed signature for automatic launch. Reinstall Lighthouse or disable automatic launch.");}
       if(a.autoEnhanceEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Auto Image Enhance requires a stretched final image.");
       if(a.metadataFinishingEnabled&&dialog.finalStretch.currentItem===0)throw new Error("Optional finishing tools require a stretched final image.");
       if(a.saveBoth&&dialog.finalStretch.currentItem===0)throw new Error("Saving both final images requires a final stretch before stars recombination.");
@@ -984,7 +988,38 @@ function reviewLighthouse(view) {
    if(!lighthouseScriptPath())throw new Error("Install Lighthouse separately or locate Lighthouse.js in finishing setup.");
    checkAbortRequested();
    var copy=cloneHDRView(view,"_LighthouseHandoff");
+   var kind=advancedRunAudit&&advancedRunAudit.outputKind==="Recombined"?"Recombined":advancedWorkflowSettings.saveBoth?"Starless":"Final";
+   copy.mainView.id=uniqueMainViewId("Lighthouse_"+kind);
    copy.show();advancedLighthouseHandoffView=copy.mainView;
-   advancedRecord("Lighthouse finishing handoff",{tool:"Lighthouse",view:copy.mainView.fullId,status:"Prepared copy; manual launch after workflow save",settingsRecorded:false});
+   advancedRecord("Lighthouse finishing handoff",{tool:"Lighthouse",view:copy.mainView.fullId,status:advancedWorkflowSettings.lighthouseAutoLaunch?"Prepared copy; automatic launch after workflow exits":"Prepared copy; manual launch after workflow save",settingsRecorded:false});
    return copy.mainView;
+}
+
+function lighthouseOutputPath(sourcePath,kind) {
+   var normalized=sourcePath.replace(/\\/g,"/"),slash=normalized.lastIndexOf("/"),directory=slash>=0?normalized.substring(0,slash+1):"";
+   var base=directory+"Lighthouse_"+(kind||"Final"),path=base+".xisf",number=2;
+   while(File.exists(path))path=base+"_"+(number++)+".xisf";
+   return path;
+}
+function lighthouseLaunchCommand(path,viewId) {
+   if(typeof path!=="string"||!path.length||/["\r\n]/.test(path))throw new Error("Invalid Lighthouse script path.");
+   if(typeof viewId!=="string"||!/^[A-Za-z_][A-Za-z0-9_]*$/.test(viewId))throw new Error("Invalid Lighthouse target image identifier.");
+   return 'run -x --require-signature -p="isGlobalTarget,false" -p="isViewTarget,true" -p="targetView,'+viewId+'" "'+path.replace(/\\/g,"/")+'"\n';
+}
+function queueLighthouseLaunch(view) {
+   if(!view||view.isNull||!view.window||view.window.isNull)throw new Error("The Lighthouse target image is no longer open.");
+   var path=lighthouseScriptPath();if(!path)throw new Error("The installed Lighthouse script is missing.");
+   var signature=Security.getScriptSignature(path);
+   if(!signature||!signature.valid)throw new Error("The installed Lighthouse signature is not valid. Reinstall it from Lighthouse Suite.");
+   var command=lighthouseLaunchCommand(path,view.id);
+   var shell=File.systemTempDirectory+"/CCDASTRO_LighthouseLaunch_"+Date.now()+"_"+Math.floor(Math.random()*1000000000)+".scp";
+   File.writeTextFile(shell,command);
+   try{
+      // The IPC request runs after this script returns: never execute a nested
+      // Script process. Explicit instance and target prevent active-view races.
+      var pid=ExternalProcess.startDetached(CoreApplication.filePath,["--execute="+CoreApplication.instance+":"+shell]);
+      if(!(pid>0))throw new Error("PixInsight did not start the Lighthouse launcher.");
+      logLine("Lighthouse queued for "+view.fullId+" in PixInsight instance "+CoreApplication.instance+".");
+      return {view:view.fullId,instance:CoreApplication.instance,pid:String(pid)};
+   }catch(e){try{File.remove(shell);}catch(ignore){}throw e;}
 }

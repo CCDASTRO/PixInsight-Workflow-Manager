@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.6.1
+# CCDASTRO PixInsight Workflow Manager v1.6.2
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,14 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
+## New in v1.6.2 — Automatic Lighthouse launch and short names
+
+When **Lighthouse (separately installed)** is the selected finishing panel, **Open Lighthouse automatically with the final image selected** is enabled by default. After normal save/report/export steps, the workflow exits and starts the signed installed Lighthouse in the same PixInsight instance, passing the exact image as its target. No manual image search is needed. Other open images are preserved. Disable the checkbox for manual launch.
+
+Handoff views use short names such as `Lighthouse_Final`, `Lighthouse_Starless` and `Lighthouse_Recombined`, with numbered suffixes when names are already in use. Suggested XISF filenames follow the same short pattern and avoid existing files. You can still choose your own filename. With dual output, the recombined companion is selected when created; otherwise the starless result is selected. Open the other saved result in Lighthouse yourself when needed.
+
+Lighthouse remains separately installed and unmodified. Its signature is checked before automatic launch, and launch is deferred until the workflow has released PixInsight’s script runtime. If dispatch fails, the result stays open with manual-launch instructions. Edits happen in Lighthouse after workflow reports/exports; save them under a new filename and regenerate sharing exports as needed. This is automatic launch and target selection, not an automatic processing round trip.
+
 ## New in v1.6.1 — GraXpert compatibility fix
 
 The workflow now explicitly selects **AI background extraction**, disables the PixInsight module’s new sample-free default, and applies the correction to the workflow’s working copy so later stages use the corrected pixels. The source image remains unchanged.
@@ -23,7 +31,7 @@ Under **Pass sequences and optional finishing**, enable **Review selected color 
 
 Install Lighthouse from its author's [Lighthouse Suite](https://www.lighthousesuite.org/) repository. The standard installed `src/scripts/Lighthouse/Lighthouse.js` is detected; **Locate Lighthouse...** supports custom installations. The path is a local setting, not part of shared workflow presets. A missing installation is reported during preflight.
 
-**Lighthouse is an assisted handoff, with manual launch.** At the selected finishing stage the workflow makes a separate copy, then performs its normal save, report and export steps. After successful completion it closes the workflow window and identifies the saved handoff view. Choose **Scripts > Lighthouse Suite > Lighthouse**, select that view, edit in Lighthouse, and save under a new filename. With dual output, both results are prepared separately; the recombined companion is brought forward last when created. Select the desired saved image in Lighthouse. Reports and sharing exports describe the pre-Lighthouse result; regenerate exports afterward if needed. There is no automatic launch, return, or import of Lighthouse edits.
+**In v1.6.0–v1.6.1 Lighthouse used a manual handoff; v1.6.2 adds automatic launch and target selection by default.** At the selected finishing stage the workflow makes a separate copy, then performs its normal save, report and export steps. After successful completion it closes the workflow window and identifies the saved handoff view. Choose **Scripts > Lighthouse Suite > Lighthouse**, select that view, edit in Lighthouse, and save under a new filename. With dual output, both results are prepared separately; the recombined companion is brought forward last when created. Select the desired saved image in Lighthouse. Reports and sharing exports describe the pre-Lighthouse result; regenerate exports afterward if needed. There is no automatic return or import of Lighthouse edits; see v1.6.2 above for automatic launch.
 
 Lighthouse is not bundled, imported, modified or updated by CCDASTRO. Its installation, signature and processing remain separate. Credit belongs to **Neven Krčmarek**. Lighthouse keeps its own slider settings; CCDASTRO records only the handoff, not Lighthouse processing. Original source pixels and previously accepted images remain preserved. If saving/export fails, the workflow remains open to report the error rather than announcing a completed handoff.
 
@@ -723,7 +731,7 @@ skips L addition also skips this review sequence. Each adjustment can be skipped
 
 ### Choosing a color / tone finishing panel
 
-The separate **Review selected color / tone finishing panel** option complements the inspection sequence below. **Color & Tone Studio** emphasizes selective hue/tonal masks, channel curves and repeatable Apply/Skip passes inside the workflow; its settings and mask coverage are recorded in the run report. **Lighthouse** provides its own finishing controls and luminosity/regional masking after a saved-copy handoff. Its slider math and strengths differ from CCDASTRO’s, and its edits happen after workflow reports/exports. Launch it manually, then save and export the edited result separately. See [the v1.6.0 handoff instructions](#lighthouse-finishing).
+The separate **Review selected color / tone finishing panel** option complements the inspection sequence below. **Color & Tone Studio** emphasizes selective hue/tonal masks, channel curves and repeatable Apply/Skip passes inside the workflow; its settings and mask coverage are recorded in the run report. **Lighthouse** provides its own finishing controls and luminosity/regional masking after a saved-copy handoff. Its slider math and strengths differ from CCDASTRO’s, and its edits happen after workflow reports/exports. It now opens automatically with the final result selected unless manual launch is chosen; save and export the edited result separately. See [the v1.6.0 handoff instructions](#lighthouse-finishing).
 
 Enable **Final inspection, local contrast, noise cleanup, saturation and sharing
 export** for the sequence below. It is enabled by default and remembered with

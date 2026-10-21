@@ -1,0 +1,14 @@
+{
+  "script": {
+    "scriptId": "CCDASTROWorkflowManager",
+    "developerId": "CCDASTRO",
+    "entitlements": "com.pixinsight.security.pjsr.*,com.pixinsight.security.pcl.*",
+    "timestamp": "2026-10-21T00:18:27.045Z",
+    "valid": true
+  },
+  "manifest": {
+    "developerId": "CCDASTRO",
+    "timestamp": "2026-10-21T00:19:18.383Z",
+    "valid": true
+  }
+}

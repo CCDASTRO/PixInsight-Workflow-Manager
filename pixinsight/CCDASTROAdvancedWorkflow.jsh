@@ -123,6 +123,10 @@ function advancedToolInfo(tool) {
       BlurXTerminator:{label:"BlurXTerminator",kind:"sharpen",linearOnly:true},
       NoiseXTerminator:{label:"NoiseXTerminator",kind:"noise"},
       StarXTerminator:{label:"StarXTerminator",kind:"stars"},
+      StudioParallax:{label:"SyQon Studio Parallax",kind:"sharpen",studio:"parallax"},
+      StudioPrism:{label:"SyQon Studio Prism",kind:"noise",studio:"prism"},
+      StudioAxiom:{label:"SyQon Studio Axiom",kind:"stars",studio:"axiom"},
+      StudioGradient:{label:"SyQon Studio DeepGradient",kind:"gradient",linearOnly:true,studio:"gradient"},
       SyQonParallax:{label:"SyQon Parallax",kind:"sharpen",linearOnly:true,syqon:"syqonParallax"},
       MLDenoise:{label:"MLDenoise",kind:"noise",nativeKey:"mlDenoise"},
       SyQonPrism:{label:"SyQon Prism / DeepPrism",kind:"noise",syqon:"syqonPrism"},
@@ -134,11 +138,12 @@ function advancedToolInfo(tool) {
    return definitions[tool]||null;
 }
 function advancedToolNames(scope) {
-   return ["BlurXTerminator","SyQonParallax","NoiseXTerminator","MLDenoise","SyQonPrism","StarXTerminator","StarNet2","SyQonStarless","ACDNR","MultiscaleLinearTransform"].filter(function(t){return scope!=="stretched"||!advancedToolInfo(t).linearOnly;});
+   return ["BlurXTerminator","SyQonParallax","NoiseXTerminator","MLDenoise","SyQonPrism","StarXTerminator","StarNet2","SyQonStarless","ACDNR","MultiscaleLinearTransform","StudioGradient","StudioParallax","StudioPrism","StudioAxiom"].filter(function(t){return scope!=="stretched"||!advancedToolInfo(t).linearOnly;});
 }
 function advancedIsStarRemoval(tool) {var d=advancedToolInfo(tool);return d&&d.kind==="stars";}
 function advancedDefaultToolConfig(tool) {
    var d=advancedToolInfo(tool);
+   if(d&&d.studio)return studioSettingsFor(d.studio);
    if(d&&d.syqon){try{var v=configuredSyQonExecutable(d.syqon);v.useIcon=false;return advancedCopy(v);}catch(e){return advancedCopy(syqonSettings[d.syqon]);}}
    if(d&&d.nativeKey)return advancedCopy(nativeSettings[d.nativeKey]);
    return null;
@@ -153,6 +158,7 @@ function advancedWithToolConfig(pass,callback) {
    }finally{nativeSettings=oldNative;syqonSettings=oldSyqon;nativeSettingsOwner=oldOwner;}
 }
 function configureAdvancedToolPass(pass) {
+   var info=advancedToolInfo(pass.tool);if(info&&info.studio){var config=configureStudio(info.studio,pass.config);if(!config)return false;pass.config=config;return true;}
    return advancedWithToolConfig(pass,function(d){
       if(d.nativeKey){if(!configureNativeProcess(d.nativeKey))return false;pass.config=advancedCopy(nativeSettings[d.nativeKey]);return true;}
       if(d.syqon){var fake={rememberSettings:{checked:false},refreshSyQonControls:function(){}};
@@ -168,6 +174,7 @@ function advancedProcessIcon(name,expectedClass) {
 }
 function advancedOtherProcessForPass(pass,scope) {
    var d=advancedToolInfo(pass.tool),p;
+   if(d.studio){var config=advancedCopy(pass.config);return {toSource:function(){return JSON.stringify({tool:pass.tool,scope:scope,settings:config});},validateSetup:function(view){prepareStudio(d.studio,config,view,scope);},executeOn:function(view){executeStudio(d.studio,config,view,scope);return true;}};}
    if(d.syqon)return advancedWithToolConfig(pass,function(){
       var v=configuredSyQonExecutable(d.syqon);v.useIcon=false;
       return {toSource:function(){return JSON.stringify({tool:pass.tool,scope:scope,settings:v});},
@@ -207,11 +214,11 @@ function defaultRCPass(tool) {
       denoise:0.55, detail:0.30, iterations:1,
       aureoles:true, reflections:false, spikes:false};
    var d=advancedToolInfo(tool);pass.processIcon="";
-   if(d&&(d.nativeKey||d.syqon))pass.config=advancedDefaultToolConfig(tool);
+   if(d&&(d.nativeKey||d.syqon||d.studio))pass.config=advancedDefaultToolConfig(tool);
    return pass;
 }
 function defaultAdvancedWorkflowSettings() {
-   return {useLinearPasses:false,
+   return {syqonStudio:defaultStudioWorkflowSettings(),useLinearPasses:false,
       linearPasses:[defaultRCPass("BlurXTerminator"), defaultRCPass("StarXTerminator"), defaultRCPass("NoiseXTerminator")],
       keepStarless:false, saveBoth:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
       colorToneEnabled:false, colorToneTool:"CCDASTRO", lighthouseAutoLaunch:true, autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
@@ -225,6 +232,7 @@ function validateRCPass(pass, scope) {
    if(scope!=="linear"&&scope!=="stretched")throw new Error("Invalid pass scope.");
    if(scope==="stretched"&&definition.linearOnly)throw new Error(definition.label+" passes belong in the linear sequence.");
    if(pass.processIcon!==undefined&&(typeof pass.processIcon!=="string"||pass.processIcon.length>256))throw new Error("Invalid process icon name.");
+   if(definition.studio){if(pass.processIcon)throw new Error("Studio passes use CLI settings, not process icons.");validateStudioSettings(definition.studio,pass.config,scope);}
    if(definition.nativeKey)validateNativeSettings(definition.nativeKey,pass.config);
    if(definition.syqon)validateSyQonSettings(definition.syqon,pass.config);
    if (typeof pass.enabled!=="boolean" || typeof pass.review!=="boolean" || typeof pass.label!=="string" || pass.label.length>120)
@@ -266,6 +274,8 @@ function restoreAdvancedWorkflowSettings(value) {
       if(candidate.postEnabled) validateRCPasses(candidate.postPasses,"stretched");
       if(!Array.isArray(candidate.repairs)||candidate.repairs.length>32) throw new Error("Invalid repair list.");
    }
+   if(!candidate.syqonStudio||Object.keys(candidate.syqonStudio).sort().join(",")!=="axiom,gradient,parallax,prism")throw new Error("Invalid Studio workflow settings.");
+   Object.keys(studioModelFamilies()).forEach(function(k){validateStudioSettings(k,candidate.syqonStudio[k]);});
    validateChannelStretch(candidate.channelStretch);
    if(candidate.saveBoth)candidate.keepStarless=false;
    advancedWorkflowSettings=candidate;
@@ -401,8 +411,8 @@ function editRCPass(value,scope) {
    var specific=new Label(d);specific.wordWrapping=true;d.sizer.add(specific);
    var configTool=p.tool;
    setup.onClick=function(){try{p.tool=tools[tool.currentItem];configureAdvancedToolPass(p);specific.text="Independent settings: "+JSON.stringify(p.config);}catch(e){(new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok)).execute();}};
-   var note=new Label(d);note.wordWrapping=true;note.text=scope==="linear"?"All passes stay linear. After the first star-removal pass, later passes process the starless branch; removed stars layers are accumulated.":"These passes process the stretched result. BlurX and Parallax are available only in the linear sequence.";d.sizer.add(note);
-   function update(){var selected=tools[tool.currentItem],info=advancedToolInfo(selected);if(configTool!==selected){p.config=advancedDefaultToolConfig(selected);processIcon.text="";if(name.text===configTool)name.text=selected;configTool=selected;}p.tool=selected;setup.visible=!!(info.nativeKey||info.syqon);processIcon.visible=!!info.nativeKey||selected==="StarNet2";specific.visible=setup.visible||selected==="StarNet2";specific.text=selected==="StarNet2"?"Installed defaults or an optional per-pass process icon. Linear/mask flags follow this stage.":JSON.stringify(p.config||{});overlap.visible=["BlurXTerminator","NoiseXTerminator","StarXTerminator"].indexOf(selected)>=0;overlap.workflowLabel.visible=overlap.visible;processIconLabel.visible=processIcon.visible;bx.visible=tools[tool.currentItem]==="BlurXTerminator";nx.visible=tools[tool.currentItem]==="NoiseXTerminator";sx.visible=tools[tool.currentItem]==="StarXTerminator";stars.enabled=nonstellar.enabled=halos.enabled=!correct.checked;d.adjustToContents();}
+   var note=new Label(d);note.wordWrapping=true;note.text=scope==="linear"?"All passes stay linear. After the first star-removal pass, later passes process the starless branch; removed stars layers are accumulated.":"These passes process the stretched result. BlurX and legacy Parallax are linear-only. Studio Parallax supports both domains; Studio Prism requires a domain-compatible model.";d.sizer.add(note);
+   function update(){var selected=tools[tool.currentItem],info=advancedToolInfo(selected);if(configTool!==selected){p.config=advancedDefaultToolConfig(selected);processIcon.text="";if(name.text===configTool)name.text=selected;configTool=selected;}p.tool=selected;setup.visible=!!(info.nativeKey||info.syqon||info.studio);processIcon.visible=!!info.nativeKey||selected==="StarNet2";specific.visible=setup.visible||selected==="StarNet2";specific.text=selected==="StarNet2"?"Installed defaults or an optional per-pass process icon. Linear/mask flags follow this stage.":JSON.stringify(p.config||{});overlap.visible=["BlurXTerminator","NoiseXTerminator","StarXTerminator"].indexOf(selected)>=0;overlap.workflowLabel.visible=overlap.visible;processIconLabel.visible=processIcon.visible;bx.visible=tools[tool.currentItem]==="BlurXTerminator";nx.visible=tools[tool.currentItem]==="NoiseXTerminator";sx.visible=tools[tool.currentItem]==="StarXTerminator";stars.enabled=nonstellar.enabled=halos.enabled=!correct.checked;d.adjustToContents();}
    tool.onItemSelected=update;correct.onCheck=update;advancedButtons(d,d.sizer,"Save pass","Cancel");update();
    if(!executeAdvancedDialog(d))return null;
    p.processIcon=processIcon.text.trim();p.tool=tools[tool.currentItem];p.label=name.text.trim()||p.tool;p.enabled=enabled.checked;p.review=review.checked;p.overlap=overlap.value/100;
@@ -411,7 +421,7 @@ function editRCPass(value,scope) {
    return validateRCPass(p,scope);
 }
 function rcPassSummary(pass) {
-   var info=advancedToolInfo(pass.tool);if(info&&(info.nativeKey||info.syqon))return (pass.processIcon?"Icon "+pass.processIcon:JSON.stringify(pass.config||{}));if(pass.tool==="StarNet2")return pass.processIcon?"Icon "+pass.processIcon:"Installed defaults; stage-aware";
+   var info=advancedToolInfo(pass.tool);if(info&&(info.nativeKey||info.syqon||info.studio))return (pass.processIcon?"Icon "+pass.processIcon:JSON.stringify(pass.config||{}));if(pass.tool==="StarNet2")return pass.processIcon?"Icon "+pass.processIcon:"Installed defaults; stage-aware";
    if(pass.tool==="BlurXTerminator")return pass.correctOnly?"Correct Only":"Stars "+Math.round(pass.stars*100)+"%, nonstellar "+Math.round(pass.nonstellar*100)+"%";
    if(pass.tool==="NoiseXTerminator")return "Denoise "+Math.round(pass.denoise*100)+"%, detail "+Math.round(pass.detail*100)+"%, "+pass.iterations+" iteration(s)";
    return "Overlap "+Math.round(pass.overlap*100)+"%; aureoles "+(pass.aureoles?"on":"off");
@@ -1131,4 +1141,169 @@ function queueLighthouseLaunch(view) {
       logLine("Lighthouse queued for "+view.fullId+" in PixInsight instance "+CoreApplication.instance+".");
       return {view:view.fullId,instance:CoreApplication.instance,pid:String(pid)};
    }catch(e){try{File.remove(shell);}catch(ignore){}throw e;}
+}
+
+
+// Studio's public CLI is separate from the retained legacy standalone adapters.
+function studioModelFamilies() {return {gradient:["deep-gradient"],prism:["prism-essential","prism-advanced","prism-ultra","prism-max","prism-legacy-v1","prism-legacy-v2"],parallax:["parallax-nano","parallax"],axiom:["axiom-mini","axiom"]};}
+function defaultStudioSettings(family) {
+   return {path:"",timeout:20,model:studioModelFamilies()[family][0],amount:1,correction:true,reduction:true,deblur:true,reductionLevel:3,deblurStrength:0.5,family:"aesthetics"};
+}
+function defaultStudioWorkflowSettings() {var p={};Object.keys(studioModelFamilies()).forEach(function(k){p[k]=defaultStudioSettings(k);});return p;}
+function validateStudioSettings(family,p,scope) {
+   var models=studioModelFamilies()[family];
+   if(!models||!p||typeof p.path!=="string"||p.path.indexOf("\n")>=0||p.path.indexOf("\r")>=0||models.indexOf(p.model)<0)throw new Error("Invalid SyQon Studio path or model.");
+   if(!finiteNumber(p.amount)||p.amount<0||p.amount>1||!Number.isInteger(p.timeout)||p.timeout<1||p.timeout>120)throw new Error("Studio amount must be 0-1 and timeout 1-120 minutes.");
+   if(["correction","reduction","deblur"].some(function(k){return typeof p[k]!=="boolean";})||!finiteNumber(p.reductionLevel)||p.reductionLevel<0||p.reductionLevel>10||!finiteNumber(p.deblurStrength)||p.deblurStrength<0||p.deblurStrength>1||["aesthetics","classic"].indexOf(p.family)<0)throw new Error("Invalid Studio Parallax settings.");
+   if(family==="parallax"&&!p.correction&&!p.reduction&&!p.deblur)throw new Error("Enable at least one Parallax stage.");
+   if(scope!==undefined&&scope!=="linear"&&scope!=="stretched")throw new Error("Invalid Studio input domain.");
+   if(scope==="stretched"&&["deep-gradient","prism-essential","prism-advanced","prism-legacy-v2"].indexOf(p.model)>=0)throw new Error(p.model+" requires linear input.");
+   if(scope==="linear"&&p.model==="prism-legacy-v1")throw new Error("Prism Legacy V1 requires nonlinear input; choose a linear Prism model.");
+}
+function studioEnvironment(name) {try{return System.getEnvironmentVariable(name)||"";}catch(e){return "";}}
+function normalizeStudioPath(path) {
+   path=String(path||"").trim().replace(/^"(.*)"$/,"$1").split("\\").join("/");
+   if(path&&File.directoryExists(path)) {
+      for(var suffix of ["/syqon-cli.exe","/syqon-cli","/Contents/MacOS/syqon-cli"])
+         if(File.exists(path+suffix)&&!File.directoryExists(path+suffix))return path+suffix;
+   }
+   return path;
+}
+var studioRegistryCandidate;
+function discoverStudioPath(configured) {
+   if(configured&&String(configured).trim())return normalizeStudioPath(configured);
+   var local=studioEnvironment("LOCALAPPDATA"),home=studioEnvironment("HOME");
+   var paths=[studioEnvironment("SYQON_CLI_PATH"),local?local+"/Programs/SyQon Studio/syqon-cli.exe":"","/Applications/SyQon Studio.app/Contents/MacOS/syqon-cli",home?home+"/Applications/SyQon Studio.app/Contents/MacOS/syqon-cli":""];
+   for(var path of paths){path=normalizeStudioPath(path);if(path&&File.exists(path)&&!File.directoryExists(path))return path;}
+   if(studioRegistryCandidate===undefined) {
+      studioRegistryCandidate="";
+      var reg=(studioEnvironment("SystemRoot")||"C:/Windows")+"/System32/reg.exe";
+      if(File.exists(reg)&&typeof ExternalProcess!=="undefined")try {
+         var result=runStudioProcess(reg,["query","HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\syqon-cli.exe","/ve"],10,false);
+         var match=/REG_SZ\s+([^\r\n]+)/.exec(result.stdout);if(result.code===0&&match)studioRegistryCandidate=normalizeStudioPath(match[1]);
+      }catch(e){}
+   }
+   return studioRegistryCandidate&&File.exists(studioRegistryCandidate)?studioRegistryCandidate:"";
+}
+function runStudioProcess(executable,args,timeoutSeconds,progress) {
+   var p=new ExternalProcess,stdout="",stderr="",finished=false,status=-1,started=Date.now();
+   function output(){stdout=(stdout+p.standardOutput.toString()).slice(-1048576);}
+   function error(){var chunk=p.standardError.toString();stderr=(stderr+chunk).slice(-1048576);if(progress&&chunk.trim())logLine("SyQon Studio: "+chunk.trim());}
+   p.onStandardOutputDataAvailable=output;p.onStandardErrorDataAvailable=error;
+   p.onFinished=function(code,exitStatus){finished=true;status=exitStatus;};
+   try {
+      p.workingDirectory=File.extractDrive(executable)+File.extractDirectory(executable);
+      p.start(executable,args);if(!p.waitForStarted(10000))throw new Error("Studio CLI could not start: "+executable);
+      while(!finished) {
+         if(p.waitForFinished(100)){finished=true;status=p.exitStatus;}
+         checkAbortRequested();
+         if(Date.now()-started>timeoutSeconds*1000)throw new Error("Studio CLI timed out; workflow pixels were not changed.");
+      }
+      output();error();return {code:p.exitCode,status:status,stdout:stdout,stderr:stderr};
+   }finally{if(p.isRunning){p.terminate();if(!p.waitForFinished(2000)){p.kill();p.waitForFinished(5000);}}if(p.isRunning){var stopError=new Error("Studio process has not stopped; temporary files retained.");stopError.studioProcessStillRunning=true;throw stopError;}}
+}
+function studioCatalog(path) {
+   path=discoverStudioPath(path);
+   if(!path||!File.exists(path)||File.directoryExists(path))throw new Error("Install SyQon Studio or select its syqon-cli executable in Studio setup.");
+   var version=runStudioProcess(path,["--version"],25,false);
+   if(version.code!==0||!/SyQon Studio/i.test(version.stdout))throw new Error("Select the Studio syqon-cli executable, not a legacy SyQon program.");
+   var listing=runStudioProcess(path,["--list-models"],25,false);
+   if(listing.code!==0)throw new Error("Studio model discovery failed. Sign in and finish Required Items in Studio. "+listing.stderr.slice(-700));
+   var models=listing.stdout.split(/\r?\n/).map(function(s){return s.trim().split(/\s+/)[0];}).filter(function(s){return !!s;});
+   return {path:path,version:version.stdout.trim(),models:models};
+}
+function studioArguments(family,p,input,output,stars,scope) {
+   validateStudioSettings(family,p,scope);
+   var args=["--model",p.model,"--precision","f32","--domain",scope==="stretched"?"nonlinear":"linear","--application",String(p.amount)];
+   if(family==="axiom") {
+      args.push("--axiom-stretch",scope==="stretched"?"identity":"auto");
+      if(stars)args.push("--stars-output",stars);
+   }
+   if(family==="parallax") {
+      if(p.model==="parallax")args.push("--family",p.family);
+      for(var key of ["correction","reduction","deblur"])args.push("--"+key,String(p[key]));
+      args.push("--reduction-level",String(p.reductionLevel),"--deblur-strength",String(p.deblurStrength));
+   }
+   return args.concat([input,output]);
+}
+function studioSettingsFor(family) {return advancedCopy(advancedWorkflowSettings.syqonStudio[family]);}
+function prepareStudio(family,p,view,scope) {
+   validateStudioSettings(family,p,scope);
+   if(!view||!view.isMainView)throw new Error("Studio requires a main image view.");
+   var catalog=studioCatalog(p.path);
+   if(catalog.models.indexOf(p.model)<0)throw new Error("Installed Studio CLI does not advertise "+p.model+". Update Studio or choose another model.");
+   return catalog;
+}
+function executeStudio(family,p,view,scope) {
+   scope=scope||"linear";
+   var catalog=prepareStudio(family,p,view,scope),folder=File.uniqueFileName(File.systemTempDirectory,12,"CCDASTRO_Studio_","");
+   var input=folder+"/input.xisf",output=folder+"/result.xisf",starsPath=folder+"/stars.xisf",copy=null,opened=[],starWindows=[],stars=null,success=false,created=false,canClean=true;
+   try {
+      File.createDirectory(folder);created=true;copy=cloneHDRView(view,"_StudioInput");
+      if(!copy.saveAs(input,false,false,false,false))throw new Error("Cannot save temporary Studio input.");
+      var args=studioArguments(family,p,input,output,family==="axiom"?starsPath:null,scope);
+      logLine("Running "+catalog.version+" model "+p.model+" on a temporary "+scope+" copy.");
+      var result=runStudioProcess(catalog.path,args,p.timeout*60,true);
+      if(result.code!==0||result.status!==0) {
+         if(result.code===4)throw new Error("Studio denied model access. Sign in, install Required Items and verify the entitlement in Studio. Workflow pixels unchanged. "+result.stderr.slice(-1000));
+         if(result.code===130)throw new Error("Studio processing cancelled; workflow pixels unchanged.");
+         throw new Error("Studio failed (exit "+result.code+"); workflow pixels unchanged. "+result.stderr.slice(-1600));
+      }
+      if(!File.exists(output))throw new Error("Studio returned without the requested output; workflow pixels unchanged.");
+      opened=ImageWindow.open(output);
+      function verify(windows,label) {
+         if(!windows||windows.length!==1)throw new Error("Expected one Studio "+label+" image.");
+         var image=windows[0].mainView.image;
+         if(image.width!==view.image.width||image.height!==view.image.height||image.numberOfChannels!==view.image.numberOfChannels||image.isColor!==view.image.isColor||!finiteNumber(image.minimum())||!finiteNumber(image.maximum()))throw new Error("Studio "+label+" has invalid pixels or mismatched geometry; workflow pixels unchanged.");
+      }
+      verify(opened,"result");
+      if(family==="axiom") {
+         if(!File.exists(starsPath))throw new Error("Studio did not return the requested stars image; workflow pixels unchanged.");
+         starWindows=ImageWindow.open(starsPath);verify(starWindows,"stars");
+         if(scope==="linear") {
+            // The linear pipeline pairs its original input with subtraction stars.
+            stars=cloneHDRView(view,"_stars");var subtract=new PixelMath;subtract.use64BitWorkingImage=true;subtract.useSingleExpression=true;subtract.expression="max(0,"+view.fullId+"-"+opened[0].mainView.fullId+")";subtract.createNewImage=false;subtract.rescale=false;subtract.truncate=true;
+            if(!subtract.executeOn(stars.mainView))throw new Error("Could not prepare linear Studio stars layer.");
+         }
+      }
+      checkAbortRequested();
+      var commit=new PixelMath;commit.use64BitWorkingImage=true;commit.useSingleExpression=true;commit.expression=opened[0].mainView.fullId;commit.createNewImage=false;commit.rescale=false;commit.truncate=false;
+      if(!commit.executeOn(view))throw new Error("Could not commit Studio result.");
+      if(stars)stars.show();success=true;
+      advancedRecord("SyQon Studio",{family:family,model:p.model,version:catalog.version,scope:scope,settings:p,stars:!!stars});
+   }catch(e){if(e.studioProcessStillRunning)canClean=false;throw e;}finally {
+      if(copy)copy.forceClose();for(var w of opened)w.forceClose();for(var w of starWindows)w.forceClose();if(stars&&!success)stars.forceClose();
+      if(created&&canClean){for(var path of [input,output,starsPath])if(File.exists(path))try{File.remove(path);}catch(e){logLine("Temporary file retained: "+path);}try{File.removeDirectory(folder);}catch(e){logLine("Temporary directory retained: "+folder);}}
+   }
+}
+function StudioAdapter(id,label,family) {this.id=id;this.label=label;this.family=family;}
+StudioAdapter.prototype.available=function(){try{var path=discoverStudioPath(studioSettingsFor(this.family).path);return !!path&&File.exists(path)&&!File.directoryExists(path)&&typeof ExternalProcess!=="undefined";}catch(e){return false;}};
+StudioAdapter.prototype.requirement=function(){return "Install SyQon Studio, sign in, install Required Items, then choose syqon-cli in SyQon Studio setup. Model listing does not prove model installation or account access.";};
+StudioAdapter.prototype.validateSetup=function(view){prepareStudio(this.family,studioSettingsFor(this.family),view,"linear");};
+StudioAdapter.prototype.execute=function(view){executeStudio(this.family,studioSettingsFor(this.family),view,"linear");};
+function configureStudio(family,settings) {
+   var p=advancedCopy(settings||studioSettingsFor(family)),d=new Dialog;d.windowTitle="SyQon Studio - "+family;
+   d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=7;
+   var note=new Label(d);note.wordWrapping=true;note.text="Use the authenticated Studio syqon-cli, not a legacy executable. Sign in and install Required Items in Studio. Models run on temporary copies; Studio manages device selection and licensing. No vendor models are bundled.";d.sizer.add(note);
+   var row=new HorizontalSizer;row.spacing=8;var path=new Edit(d);path.text=discoverStudioPath(p.path);path.setMinWidth(440);row.add(path,100);
+   var browse=new PushButton(d);browse.text="Browse CLI...";browse.onClick=function(){var f=new OpenFileDialog;f.caption="Select Studio syqon-cli";f.initialPath=path.text;if(f.execute())path.text=f.fileName;};row.add(browse);d.sizer.add(row);
+   var models=studioModelFamilies()[family],model=labeledCombo(d,"Model:",models,Math.max(0,models.indexOf(p.model)),"The CLI checks support and entitlements at run time.");d.sizer.add(model.sizer);
+   colorToneSlider(d,d.sizer,"Application amount",0,1,p.amount,2,function(v){p.amount=v;});
+   if(family==="parallax") {
+      var familyChoice=labeledCombo(d,"Premium family:",["aesthetics","classic"],p.family==="classic"?1:0,"Ignored for the free Nano model.");d.sizer.add(familyChoice.sizer);
+      for(var key of ["correction","reduction","deblur"])(function(k){var box=new CheckBox(d);box.text="Enable "+k;box.checked=p[k];box.onCheck=function(v){p[k]=v;};d.sizer.add(box);})(key);
+      colorToneSlider(d,d.sizer,"Reduction level",0,10,p.reductionLevel,1,function(v){p.reductionLevel=v;});
+      colorToneSlider(d,d.sizer,"Deblur strength",0,1,p.deblurStrength,2,function(v){p.deblurStrength=v;});
+   }
+   var timeout=new SpinBox(d);timeout.minValue=1;timeout.maxValue=120;timeout.value=p.timeout;var timeoutRow=new HorizontalSizer;var label=new Label(d);label.text="Timeout (minutes):";timeoutRow.add(label);timeoutRow.add(timeout);timeoutRow.addStretch();d.sizer.add(timeoutRow);
+   var status=new Label(d);status.wordWrapping=true;status.text="Models requiring linear input belong before stretching. Legacy Prism V1 is for nonlinear passes.";d.sizer.add(status);
+   var buttons=new HorizontalSizer;buttons.addStretch();var accepted=null,save=new PushButton(d);save.text="Save settings";save.onClick=function(){try{p.path=path.text.trim();p.model=models[model.combo.currentItem];p.timeout=timeout.value;if(family==="parallax")p.family=familyChoice.combo.currentItem===1?"classic":"aesthetics";validateStudioSettings(family,p);var catalog=studioCatalog(p.path);if(catalog.models.indexOf(p.model)<0)throw new Error("Selected model is not advertised by this CLI.");p.path=catalog.path;accepted=advancedCopy(p);d.ok();}catch(e){status.text=errorMessage(e);}};
+   var cancel=new PushButton(d);cancel.text="Cancel";cancel.onClick=function(){d.cancel();};buttons.add(save);buttons.add(cancel);d.sizer.add(buttons);d.adjustToContents();
+   return executeAdvancedDialog(d)&&accepted?accepted:null;
+}
+function installStudioControls(dialog) {
+   var box=new GroupBox(dialog.content);box.title="SyQon Studio CLI (separate from legacy programs)";box.sizer=new HorizontalSizer;box.sizer.margin=8;box.sizer.spacing=8;
+   var definitions=[["gradient","gradient","studioGradient","DeepGradient setup..."],["parallax","deconvolution","studioParallax","Studio Parallax setup..."],["prism","noiseReduction","studioPrism","Studio Prism setup..."],["axiom","starSeparation","studioAxiom","Studio Axiom setup..."]];
+   definitions.forEach(function(def){var b=new PushButton(box);b.text=def[3];box.sizer.add(b);b.onClick=function(){var p=configureStudio(def[0]);if(p){advancedWorkflowSettings.syqonStudio[def[0]]=p;dialog.rowsById[def[1]].refreshStatus();saveWorkflowState(dialog,false);}};});
+   return box;
 }

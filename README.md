@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.7.0
+# CCDASTRO PixInsight Workflow Manager v1.8.0
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,20 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
+## New in v1.8.0 — SyQon Studio CLI
+
+The workflow now offers **SyQon Studio DeepGradient** at Gradient correction, **SyQon Studio Parallax** at Deblur / structure recovery, **SyQon Studio Prism** at Noise reduction, and **SyQon Studio Axiom** at Star separation. Existing legacy SyQon adapters remain separate. These choices use the public authenticated Studio `syqon-cli` and stable model IDs, not vendor scripts or model files. Studio sign-in, Required Items, device selection and entitlements remain under Studio’s control. See [SyQon’s official integration guide](https://syqon.eu/develop).
+
+1. Install/update Studio separately, sign in, and finish Required Items.
+2. Select a **SyQon Studio** choice at the desired workflow stage. Use the matching button in **SyQon Studio CLI (separate from legacy programs)**. DeepGradient also has the gradient row’s Setup button.
+3. Review the detected `syqon-cli` path or browse to it. Discovery supports `SYQON_CLI_PATH`, standard Windows/macOS locations and the registered Windows application path. Choose the model and amount; configure independent correction/reduction/deblur stages for Parallax. Nano requires no family selection; premium Parallax supports Aesthetics/Classic. Save settings, then Validate.
+4. Run the workflow on confirmed linear input. The new adapter exchanges scientific float32 XISF copies and explicitly declares the domain; it does not apply the legacy adapters’ temporary display stretch. Axiom uses Studio’s automatic linear-input preparation and returns its linear result. The workflow derives a nonnegative subtraction stars layer for its normal linear branch pairing. Neural changes can affect recombination; exact reconstruction is not promised.
+5. Studio tools are also available in ordered processing passes, with independent per-pass settings and optional Before/After review. Post-stretch passes require a compatible model: Studio Parallax and Axiom support both domains; Prism Ultra/Max support nonlinear data, while Essential/Advanced, Legacy V2 and DeepGradient require linear data. Legacy V1 requires nonlinear input. DeepGradient is restricted to the linear sequence.
+
+Studio errors, missing output, mismatched geometry, timeouts, cancellation or denied access stop before replacing working pixels. Original input images remain unchanged. Reports record the Studio version, model, domain and controls. Model listing shows supported identifiers; it does not establish installed assets or a model entitlement. The workflow does not use `--gui`, `--open-in-studio` or shell commands to run inference. Pano Studio, stacking and Observatory 3D remain separate Studio workspaces.
+
+Tested with Studio **1.1.9** on Windows using synthetic DeepGradient, Prism Essential, Parallax Nano and Axiom Mini inputs. Native checks cover source preservation, linear Axiom subtraction stars, CLI cancellation/timeout handling, failed-model preservation and settings UI. Licensed variants follow the documented contract but were not individually tested.
+
 ## New in v1.7.0 — Independent channel stretch review
 
 Select **Final image stretch > Independent channel stretch (review RGB)** to adjust the R/G/B channels independently before they are recombined with stars or passed to final finishing. The existing linked stretch remains the default. The review starts all channels at median target **0.23**, with independent target (0.01–0.50) and amount (0–100%) sliders, Before/After comparison, individual grayscale channel views and a recombined RGB view. Zero amount preserves that channel. Confirm linear input, click **Update Preview**, inspect, then **Apply channel stretch**. Settings changes require a fresh preview. Closing the review or choosing **Use shared stretch instead** applies the workflow’s normal linked stretch so later nonlinear stages still receive stretched data.
@@ -392,7 +406,13 @@ its installed process checks models and licensing.
 
 ## Configure SyQon choices
 
-The workflow uses the independently installed **parallax_cli**, **prism_cli** and
+### Studio unified CLI
+
+Use the **SyQon Studio** stage choices and setup buttons described under **New in v1.8.0** above. Studio settings are independent of the legacy executable paths and icon overrides below.
+
+### Legacy standalone executables
+
+The legacy adapters use the independently installed **parallax_cli**, **prism_cli** and
 **SyQonStarless** executables directly. It does not execute their PixInsight scripts,
 load their models into PixInsight, install runtimes, or download software. This
 adapter targets the individual CLI contracts shipped with the Parallax/Prism

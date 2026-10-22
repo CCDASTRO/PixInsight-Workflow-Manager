@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.7.0"
+#define VERSION "1.8.0"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -1320,6 +1320,10 @@ function configureWorkflowGraXpert(process)
 }
 
 var adapters = {
+   studioGradient:new StudioAdapter("studioGradient","SyQon Studio DeepGradient","gradient"),
+   studioPrism:new StudioAdapter("studioPrism","SyQon Studio Prism","prism"),
+   studioParallax:new StudioAdapter("studioParallax","SyQon Studio Parallax","parallax"),
+   studioAxiom:new StudioAdapter("studioAxiom","SyQon Studio Axiom","axiom"),
    mgc: new MGCAdapter,
    autoDBE: new AutoDBEAdapter,
    interactiveCrop: new InteractiveCropAdapter,
@@ -1401,7 +1405,7 @@ function defaultWorkflow()
          ["interactiveCrop"], "interactiveCrop",
          "Optional: rectangular crop preview; Apply or Skip returns to workflow settings.", false),
       new WorkflowStep("gradient", "1. Gradient correction",
-         ["gradientCorrection", "graxpert", "mgc", "autoDBE"], "gradientCorrection",
+         ["gradientCorrection", "graxpert", "mgc", "autoDBE", "studioGradient"], "gradientCorrection",
          "Runs before color calibration. MGC includes an earlier plate solve and SPFC prerequisite."),
       new WorkflowStep("plateSolve", "2. Plate solve if needed",
          ["plateSolve"], "plateSolve",
@@ -1409,13 +1413,13 @@ function defaultWorkflow()
       new WorkflowStep("colorCalibration", "3. Color calibration",
          ["spcc", "pcc"], "spcc", "SPCC and PCC require a solved color image. PCC uses workflow settings or an optional icon override."),
       new WorkflowStep("deconvolution", "4. Deblur / structure recovery",
-         ["blurXTerminator", "syqonParallax"], "blurXTerminator",
+         ["blurXTerminator", "syqonParallax", "studioParallax"], "blurXTerminator",
          "Runs on linear data before the main denoise pass."),
       new WorkflowStep("noiseReduction", "5. Noise reduction",
-         ["noiseXTerminator", "mlDenoise", "syqonPrism"], "noiseXTerminator",
+         ["noiseXTerminator", "mlDenoise", "syqonPrism", "studioPrism"], "noiseXTerminator",
          "Can run before separation or on the starless branch."),
       new WorkflowStep("starSeparation", "6. Star separation",
-         ["starXTerminator", "starNet2", "syqonStarless"], "starXTerminator",
+         ["starXTerminator", "starNet2", "syqonStarless", "studioAxiom"], "starXTerminator",
          "Creates starless and stars-only workflow branches.")
    ];
 }
@@ -1901,7 +1905,7 @@ PreflightValidator.prototype.validate = function()
    if (mgcSelected)
    {
       if (WORKFLOW_PROFILES[this.dialog.imageType.currentItem].id === "emissionMapped")
-         result.errors.push("MGC is not supported on arbitrary mapped narrowband color palettes. Select GradientCorrection or GraXpert for this profile.");
+         result.errors.push("MGC is not supported on arbitrary mapped narrowband color palettes. Select GradientCorrection, GraXpert or SyQon Studio DeepGradient for this profile.");
       result.warnings.push("MGC runs Plate Solve if needed before SPFC and gradient correction, even if the separate plate-solve checkbox is off. " +
          "Confirm matching SPFC filter/QE curves and MARS filters, installed Gaia/MARS data, and suitable sky coverage. " +
          "Catalog coverage and preprocessing provenance are checked by the native processes during execution, not certified by this preflight.");
@@ -2190,7 +2194,7 @@ function WorkflowRow(parent, step, dialog)
    this.refreshStatus = function()
    {
       if (this.step.id === "gradient")
-         this.setup.enabled = this.enabled.checked && (this.adapterId() === "mgc" || this.adapterId() === "autoDBE");
+         this.setup.enabled = this.enabled.checked && (this.adapterId() === "mgc" || this.adapterId() === "autoDBE" || this.adapterId() === "studioGradient");
       if (!this.enabled.checked)
       {
          this.status.text = this.suspendedSelection ? "Unavailable saved choice" : (this.step.id === "crop" ? "Optional" : "Skipped");
@@ -2236,6 +2240,9 @@ function WorkflowRow(parent, step, dialog)
       {
          try
          {
+            if(self.step.id==="gradient"&&self.adapterId()==="studioGradient"){
+               var settings=configureStudio("gradient");if(settings){advancedWorkflowSettings.syqonStudio.gradient=settings;if(self.dialog)saveWorkflowState(self.dialog,false);}self.refreshStatus();return;
+            }
             if (self.step.id === "gradient" && self.adapterId() === "autoDBE")
             {
                (new MessageBox(adapters.autoDBE.requirement()+"\n\nUses vendor defaults, replaces only the workflow copy and discards models. Custom settings can be read from CCDASTRO_AutoDBE; its script is never executed. No installed AutoDBE script is required.", "Automatic DBE Setup", StdIcon.Information, StdButton.Ok)).execute();
@@ -2761,6 +2768,7 @@ constructor()
    this.blurXBox=installBlurXControls(this);
    this.stepsBox.sizer.add(this.blurXBox);
    this.syqonBox=installSyQonControls(this);this.stepsBox.sizer.add(this.syqonBox);
+   this.studioBox=installStudioControls(this);this.stepsBox.sizer.add(this.studioBox);
    this.nativeBox=installNativeControls(this);this.stepsBox.sizer.add(this.nativeBox);
    var noisePlacementControl = labeledCombo(this.content, "Noise placement:",
       ["Before star separation", "Starless branch"], 1,

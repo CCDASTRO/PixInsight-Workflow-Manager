@@ -1,0 +1,61 @@
+{
+  "tests": [
+    {
+      "family": "gradient",
+      "model": "deep-gradient",
+      "passed": true,
+      "min": 0.026899980381131172,
+      "max": 0.03110009990632534,
+      "sourcePreserved": true
+    },
+    {
+      "family": "prism",
+      "model": "prism-essential",
+      "passed": true,
+      "min": 0.020128492265939713,
+      "max": 0.03800642117857933,
+      "sourcePreserved": true
+    },
+    {
+      "family": "parallax",
+      "model": "parallax-nano",
+      "passed": true,
+      "min": 0.019943075254559517,
+      "max": 0.03827540948987007,
+      "sourcePreserved": true
+    },
+    {
+      "family": "axiom",
+      "model": "axiom-mini",
+      "passed": true,
+      "min": 0.02432459220290184,
+      "max": 0.03799529746174812,
+      "sourcePreserved": true,
+      "starlessMedian": 0.02698116283863783,
+      "sourceMedian": 0.026999788358807564,
+      "maxRecombinationDifference": 0.004324592649936676,
+      "subtractionStarsError": 0
+    }
+  ],
+  "catalog": {
+    "path": "C:/Users/chuck/AppData/Local/Programs/SyQon Studio/syqon-cli.exe",
+    "version": "SyQon Studio 1.1.9",
+    "models": [
+      "axiom-mini",
+      "axiom",
+      "prism-essential",
+      "prism-advanced",
+      "prism-ultra",
+      "prism-max",
+      "prism-legacy-v1",
+      "prism-legacy-v2",
+      "parallax-nano",
+      "parallax",
+      "deep-gradient"
+    ]
+  },
+  "cancellationPassed": true,
+  "timeoutPassed": true,
+  "entitlementFailurePreservesWorkingCopy": true,
+  "success": true
+}

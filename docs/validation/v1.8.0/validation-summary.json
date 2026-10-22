@@ -1,0 +1,21 @@
+{
+  "version": "1.8.0",
+  "date": "2026-10-22",
+  "regressionSuitesPassed": 34,
+  "nativeStudioVersion": "1.1.9",
+  "nativeModels": [
+    "deep-gradient",
+    "prism-essential",
+    "parallax-nano",
+    "axiom-mini"
+  ],
+  "validated": [
+    "original preservation",
+    "linear subtraction stars",
+    "CLI cancellation and timeout",
+    "denied-model working-copy preservation",
+    "settings UI"
+  ],
+  "scope": "Native synthetic Windows tests. Licensed variants not individually exercised.",
+  "release": "Script and update-manifest signatures verified valid for CCDASTRO by PixInsight. Signed package bytes and repository checksum verified."
+}

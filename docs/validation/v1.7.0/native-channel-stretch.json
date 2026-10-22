@@ -1,0 +1,15 @@
+{
+  "medians": [
+    0.22999999994362005,
+    0.22999999987730757,
+    0.22999999986818723
+  ],
+  "grayBitmap": true,
+  "zeroAmount64BitExact": true,
+  "cachedAfterAssign": 0.22999999994362005,
+  "deleteMedian": true,
+  "cachedAfterDelete": 0.22999999994362005,
+  "acceptedMedian": 0.22999999994362005,
+  "sourcePreserved": true,
+  "success": true
+}

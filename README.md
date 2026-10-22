@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.6.2
+# CCDASTRO PixInsight Workflow Manager v1.7.0
 
 ![CCDASTRO Workflow Manager interface in PixInsight](docs/images/workflow-manager.png)
 
@@ -7,6 +7,14 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
+## New in v1.7.0 — Independent channel stretch review
+
+Select **Final image stretch > Independent channel stretch (review RGB)** to adjust the R/G/B channels independently before they are recombined with stars or passed to final finishing. The existing linked stretch remains the default. The review starts all channels at median target **0.23**, with independent target (0.01–0.50) and amount (0–100%) sliders, Before/After comparison, individual grayscale channel views and a recombined RGB view. Zero amount preserves that channel. Confirm linear input, click **Update Preview**, inspect, then **Apply channel stretch**. Settings changes require a fresh preview. Closing the review or choosing **Use shared stretch instead** applies the workflow’s normal linked stretch so later nonlinear stages still receive stretched data.
+
+Use linear RGB or the existing **separate R/G/B/L** input mode with registered mono masters mapped to the desired output slots. For example, map SII/Ha/OIII to R/G/B for SHO. The workflow first assembles the linear mapping; this review transforms its three planes independently and recombines them. This is mathematically equivalent to applying the same independent transforms to those mapped mono channels before combination; no registration or filter inference is performed. Optional luminance preparation remains separate. When starless final-output mode is enabled, review the starless branch before the stars companion is recombined; otherwise review the final combined/active image at its existing final-stretch stage.
+
+Each plane uses its median/MAD black-point estimate and its own midtones transfer function, blended with the original channel by the amount slider. PixInsight uses full-image statistics and a full-resolution review candidate. Lower the R target or amount if red dominates. Equal targets are an artistic choice that changes relative emission brightness, not physical flux calibration or a guaranteed narrowband palette. Original input images remain unchanged. Accepted controls are remembered in workflow settings/presets and recorded with the actual transform in reports. For already stretched data, use CCDASTRO Color & Tone or Lighthouse instead; those finishing controls adjust the existing stretch with color/tone masks rather than independently balancing linear channel stretches.
+
 ## New in v1.6.2 — Automatic Lighthouse launch and short names
 
 When **Lighthouse (separately installed)** is the selected finishing panel, **Open Lighthouse automatically with the final image selected** is enabled by default. After normal save/report/export steps, the workflow exits and starts the signed installed Lighthouse in the same PixInsight instance, passing the exact image as its target. No manual image search is needed. Other open images are preserved. Disable the checkbox for manual launch.

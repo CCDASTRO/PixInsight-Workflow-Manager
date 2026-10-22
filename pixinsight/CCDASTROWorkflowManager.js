@@ -19,7 +19,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.6.2"
+#define VERSION "1.7.0"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -1627,7 +1627,8 @@ function installFinalStretchSetup(dialog, row)
    function refresh()
    {
       var selection = dialog.finalStretch.currentItem;
-      button.enabled = selection >= 3;
+      button.enabled = selection === 3 || selection === 4;
+      if(selection===5){status.text="Independent R/G/B targets and amounts are reviewed during processing, before recombination. Use linear RGB input.";return;}
       if (selection < 3) { status.text = "Automatic stretch uses calculated settings; Keep linear applies no stretch."; return; }
       try { configuredFinalStretch(selection); status.text = "Ready: " + finalStretchDefinition(selection).processId + " workflow settings."; }
       catch(e) { status.text = "Setup needed: " + errorMessage(e); }
@@ -1650,6 +1651,8 @@ function applySelectedAutoHistogram(view, selection, targetBackground)
       applyLinkedAutoHistogram(view, targetBackground);
    else if (selection === 2)
       applyUnlinkedAutoHistogram(view, targetBackground);
+   else if(selection===5)
+      reviewIndependentChannelStretch(view,targetBackground);
    else if (selection === 3 || selection === 4)
    {
       var process = configuredFinalStretch(selection);
@@ -1862,7 +1865,7 @@ PreflightValidator.prototype.validate = function()
          logLine("Integration-border check could not be completed: " + errorMessage(e));
       }
 
-   if (this.dialog.finalStretch.currentItem >= 3)
+   if (this.dialog.finalStretch.currentItem === 3 || this.dialog.finalStretch.currentItem === 4)
       try { configuredFinalStretch(this.dialog.finalStretch.currentItem); }
       catch(e) { result.errors.push("Final image stretch: " + errorMessage(e)); }
 
@@ -2801,7 +2804,7 @@ constructor()
    this.recombine.checked = true;
    this.recombine.toolTip = "Recombine stars with linear addition when both branches remain linear, or screen blending after a stretch.";
    var finalStretchControl = labeledCombo(this.content, "Final image stretch:",
-      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram", "HistogramTransformation (workflow settings)", "MultiscaleAdaptiveStretch (workflow settings)"], 1,
+      ["Keep linear", "Linked Auto Histogram", "Unlinked Auto Histogram", "HistogramTransformation (workflow settings)", "MultiscaleAdaptiveStretch (workflow settings)", "Independent channel stretch (review RGB)"], 1,
       "With starless enhancement enabled, stretches the starless branch before reviews and recombination. Otherwise stretches the combined image or the active image without separation.");
    this.finalStretch = finalStretchControl.combo;
    installFinalStretchSetup(this, finalStretchControl.sizer);

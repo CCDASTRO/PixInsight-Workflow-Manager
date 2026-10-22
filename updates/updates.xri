@@ -5,10 +5,10 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.5">
-      <package fileName="CCDASTROWorkflowManager-1.6.2.zip" sha1="267c4b83d047d39b2cd75aa0eafb9b48dc6d943b" type="script" releaseDate="20261021001845">
-         <title>CCDASTRO Workflow Manager 1.6.2</title>
+      <package fileName="CCDASTROWorkflowManager-1.7.0.zip" sha1="ef8fe0a4a855a22067526254d1fdb700d43d9115" type="script" releaseDate="20261022115509">
+         <title>CCDASTRO Workflow Manager 1.7.0</title>
          <description>
-            <p>v1.6.2 opens separately installed signed Lighthouse automatically after the workflow exits, with the exact final image selected and short image/file names; manual launch remains optional. v1.6.1 explicitly selects GraXpert AI background extraction and disables the module’s sample-free default for compatibility with older GraXpert CLIs. Corrected pixels replace only the workflow working copy so later stages receive the result. v1.6.0 adds an optional finishing-panel choice: CCDASTRO Color &amp; Tone Studio or an assisted handoff to separately installed Lighthouse. The workflow saves a separate stretched copy and closes; launch Lighthouse manually from its Scripts menu. Reports and sharing exports describe the pre-Lighthouse result.</p>
+            <p>v1.7.0 adds optional independent channel stretch review with R/G/B median targets and amount sliders, individual channel and recombined previews, linear-input confirmation and explicit acceptance. Equal targets change relative emission brightness. v1.6.2 opens separately installed signed Lighthouse automatically after the workflow exits, with the exact final image selected and short image/file names; manual launch remains optional. v1.6.1 explicitly selects GraXpert AI background extraction and disables the module’s sample-free default for compatibility with older GraXpert CLIs. Corrected pixels replace only the workflow working copy so later stages receive the result. v1.6.0 adds an optional finishing-panel choice: CCDASTRO Color &amp; Tone Studio or an assisted handoff to separately installed Lighthouse. The workflow saves a separate stretched copy and closes; launch Lighthouse manually from its Scripts menu. Reports and sharing exports describe the pre-Lighthouse result.</p>
             <ul>
                <li>v1.2.2 adds per-pass Parallax, MLDenoise, Prism, StarNet2, SyQon Starless, ACDNR and MLT with independent settings and stage-aware execution.</li>
                <li>32 regression suites passed, including preset migration, Lighthouse detection and handoff source preservation. Lighthouse remains independently installed and updated.</li>
@@ -78,4 +78,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-21T00:19:18.383Z" encoding="Base64">yQg9611yDoAhRyOeALiEZQj/fopPI1bd3sKTBgSRdeG9gHy6ysm0GeJJPuK2AoruDfEEpaOvukpLbMpwdeJrCg==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-22T11:55:47.924Z" encoding="Base64">qfYHZnmNmDmLbTJTowQoP7YUC8Luc4qNgmAV0HqKXlJ0On/sC/tTtNH+WnKqmovvDrgd3tuciI9m7l2fg6TZAQ==</Signature>

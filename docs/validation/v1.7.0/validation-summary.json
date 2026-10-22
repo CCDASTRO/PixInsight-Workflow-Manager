@@ -1,0 +1,10 @@
+{
+  "version": "1.7.0",
+  "date": "2026-10-22",
+  "regressionSuites": 33,
+  "allPassed": true,
+  "nativeSyntheticCheck": true,
+  "tested": "Independent RGB targets; zero-amount identity; per-channel native grayscale render; explicit linear confirmation; full-resolution review; acceptance; statistics invalidation; shared-stretch fallback; original source preservation.",
+  "release": "Script and update manifest signatures verified valid for CCDASTRO by PixInsight. Signed package payload bytes and manifest checksum verified.",
+  "precision": "Native 32-bit and 64-bit synthetic checks passed; zero-amount 64-bit identity verified exactly."
+}

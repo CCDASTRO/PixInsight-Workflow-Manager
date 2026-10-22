@@ -1,3 +1,111 @@
+
+function channelStretchDefaults() {return {targets:[0.23,0.23,0.23],amounts:[100,100,100]};}
+function validateChannelStretch(p) {
+   if(!p||Object.keys(p).sort().join(",")!=="amounts,targets")throw new Error("Invalid channel stretch settings.");
+   ["targets","amounts"].forEach(function(k){
+      if(!Array.isArray(p[k])||p[k].length!==3)throw new Error("Three channel values are required.");
+      p[k].forEach(function(v){if(typeof v!=="number"||!isFinite(v)||v<(k==="targets"?0.01:0)||v>(k==="targets"?0.5:100))throw new Error("Invalid channel "+k+".");});
+   });
+}
+function channelStretchPlan(medians,mads,p) {
+   validateChannelStretch(p);
+   return p.targets.map(function(target,c){
+      var amount=p.amounts[c]/100;
+      if(amount===0)return {black:0,midtones:0.5,amount:0};
+      var center=medians[c],black=Math.max(0,Math.min(0.95,center-2.8*mads[c]*1.4826));
+      if(!isFinite(center)||!isFinite(mads[c])||mads[c]<0||!(black<center&&center<1))throw new Error("RGB"[c]+": insufficient tonal range; set its amount to zero or choose another input.");
+      var v=(center-black)/(1-black),m=v*(target-1)/(2*target*v-target-v);
+      return {black:black,midtones:m,amount:amount};
+   });
+}
+function buildChannelStretchCandidate(view,p) {
+   if(!view.image.isColor||view.image.numberOfNominalChannels!==3)throw new Error("Independent channel stretch requires linear RGB; map registered mono masters into RGB first.");
+   if(view.image.minimum()<0||view.image.maximum()>1)throw new Error("Channel stretching requires normalized samples in 0-1.");
+   var med=view.computeProperty("Median"),mad=view.computeProperty("MAD");
+   var plan=channelStretchPlan([med.at(0),med.at(1),med.at(2)],[mad.at(0),mad.at(1),mad.at(2)],p);
+   var w=cloneHDRView(view,"_ChannelStretch");
+   try {
+      clearDisplaySTF(w.mainView);
+      var h=new HistogramTransformation,identity=[0,0.5,1,0,1];
+      h.H=plan.map(function(v){return v.amount===0?identity:[v.black,v.midtones,1,0,1];}).concat([identity,identity]);
+      if(!h.executeOn(w.mainView))throw new Error("Independent channel histogram failed.");
+      if(plan.some(function(v){return v.amount!==1;})) {
+         var pm=new PixelMath;pm.use64BitWorkingImage=true;pm.useSingleExpression=false;pm.createNewImage=false;pm.rescale=false;pm.truncate=true;
+         var expressions=plan.map(function(v,c){return v.amount===0?view.fullId+"["+c+"]":"("+v.amount+")*$T["+c+"]+("+(1-v.amount)+")*"+view.fullId+"["+c+"]";});
+         pm.expression=expressions[0];pm.expression1=expressions[1];pm.expression2=expressions[2];
+         if(!pm.executeOn(w.mainView))throw new Error("Channel stretch amount blend failed.");
+      }
+      w.channelStretchPlan=plan;return w;
+   }catch(e){w.forceClose();throw e;}
+}
+function channelStretchBitmap(view,channel) {
+   if(channel<0)return view.image.render(1,false);
+   var image=new Image(view.image.width,view.image.height,1,ColorSpace.Gray,32,PixelSampleType.Float);
+   try {
+      var samples=new Float32Array(view.image.width*view.image.height);
+      view.image.getSamples(samples,view.image.bounds,channel);
+      image.setSamples(samples);return image.render(1,false);
+   }finally{image.free();}
+}
+function channelStretchReviewDialog(view) {
+   var d=new FinishingReviewDialog(view,"Inspection");
+   d.windowTitle="Independent channel stretch - linear RGB";
+   d.instructions.text="Stretch R / G / B independently, then inspect recombined RGB. For narrowband, use output slots (for example SHO = SII / Ha / OIII). Equal targets change relative emission brightness; lower R target or amount if red dominates. Originals remain unchanged.";
+   d.instructions.wordWrapping=true;
+   d.settings=advancedCopy(advancedWorkflowSettings.channelStretch);
+   d.confirmLinear=new CheckBox(d);d.confirmLinear.text="I confirm this input is linear and its channels are registered";
+   d.sizer.insert(1,d.confirmLinear);
+   d.channelMode=new ComboBox(d);["Recombined RGB","R channel","G channel","B channel"].forEach(function(s){d.channelMode.addItem(s);});
+   d.sizer.insert(2,d.channelMode);
+   d.zoomMode.currentItem=0;d.displayMode.enabled=true;d.updateButton.visible=true;d.applyButton.text="Apply channel stretch";d.applyButton.enabled=false;
+   d.skipButton.visible=true;d.skipButton.text="Use shared stretch instead";d.buttons.add(d.skipButton);
+   d.keepComparison.visible=true;d.keepComparison.text="Keep a before-channel-stretch comparison";d.keepComparison.checked=false;
+   function dirty(){d.applyButton.enabled=false;d.previewStatus.text="Settings changed. Update Preview before applying.";}
+   d.confirmLinear.onCheck=dirty;
+   var controls=new VerticalSizer;controls.spacing=3;
+   ["R","G","B"].forEach(function(name,c){
+      colorToneSlider(d,controls,name+" median target",0.01,0.5,d.settings.targets[c],3,function(v){d.settings.targets[c]=v;dirty();});
+      colorToneSlider(d,controls,name+" stretch amount (%)",0,100,d.settings.amounts[c],1,function(v){d.settings.amounts[c]=v;dirty();});
+   });
+   d.sizer.insert(5,controls);
+   function updateBitmaps(){
+      var channel=d.channelMode.currentItem-1;
+      d.beforeBitmap=channelStretchBitmap(view,channel);
+      d.afterBitmap=d.candidate?channelStretchBitmap(d.candidate.mainView,channel):null;
+      d.differenceBitmap=null;d.preview.repaint();
+   }
+   d.channelMode.onItemSelected=updateBitmaps;
+   // Difference is not useful across channel display modes. Keep Before/After.
+   d.displayMode.clear();d.displayMode.addItem("Before");d.displayMode.addItem("After");
+   d.updateButton.onClick=function(){
+      d.applyButton.enabled=false;
+      try {
+         if(!d.confirmLinear.checked)throw new Error("Confirm linear input and registration first.");
+         if(d.candidate){d.candidate.forceClose();d.candidate=null;}
+         d.candidate=buildChannelStretchCandidate(view,d.settings);updateBitmaps();
+         d.displayMode.currentItem=1;d.applyButton.enabled=true;d.previewStatus.text="Full-resolution preview ready. Review channels and recombined RGB before applying.";
+      }catch(e){d.displayMode.currentItem=0;d.previewStatus.text=errorMessage(e);}
+      d.preview.repaint();
+   };
+   d.resize(900,850);return d;
+}
+function reviewIndependentChannelStretch(view,targetBackground) {
+   if(!view.image.isColor)throw new Error("Independent channel stretch requires linear RGB.");
+   var d=channelStretchReviewDialog(view);
+   try {
+      if(executeAdvancedDialog(d)&&d.candidate&&d.applyButton.enabled&&d.confirmLinear.checked) {
+         if(d.keepComparison.checked){var before=cloneHDRView(view,"_BeforeChannelStretch");before.show();}
+         var commit=new PixelMath;commit.use64BitWorkingImage=true;commit.useSingleExpression=true;commit.expression=d.candidate.mainView.fullId;commit.createNewImage=false;commit.rescale=false;commit.truncate=false;
+         if(!commit.executeOn(view))throw new Error("Could not commit channel stretch.");
+         clearDisplaySTF(view);advancedWorkflowSettings.channelStretch=advancedCopy(d.settings);
+         advancedRecord("Independent channel stretch",{settings:d.settings,plan:d.candidate.channelStretchPlan,source:view.fullId});
+      }else {
+         advancedRecord("Independent channel stretch fallback",{method:"linked",targetMedian:targetBackground});
+         applyLinkedAutoHistogram(view,targetBackground);
+      }
+   }finally{if(d.candidate)d.candidate.forceClose();}
+}
+
 /* Optional ordered processing passes, reference tone matching, and local repairs.
  * Copyright (c) 2026 Chuck Faranda / CCDASTRO, Inc.
  * Included by CCDASTROWorkflowManager; all edits operate on working copies.
@@ -107,7 +215,7 @@ function defaultAdvancedWorkflowSettings() {
       linearPasses:[defaultRCPass("BlurXTerminator"), defaultRCPass("StarXTerminator"), defaultRCPass("NoiseXTerminator")],
       keepStarless:false, saveBoth:false, starlessTarget:0.23, postEnabled:false, postPasses:[defaultRCPass("StarXTerminator")],
       colorToneEnabled:false, colorToneTool:"CCDASTRO", lighthouseAutoLaunch:true, autoEnhanceEnabled:false, metadataFinishingEnabled:false, referenceEnabled:false, referenceStrength:100, repairsEnabled:false, repairs:[],
-      reports:true, tiff:false};
+      channelStretch:channelStretchDefaults(), reports:true, tiff:false};
 }
 var advancedWorkflowSettings = defaultAdvancedWorkflowSettings();
 
@@ -158,6 +266,7 @@ function restoreAdvancedWorkflowSettings(value) {
       if(candidate.postEnabled) validateRCPasses(candidate.postPasses,"stretched");
       if(!Array.isArray(candidate.repairs)||candidate.repairs.length>32) throw new Error("Invalid repair list.");
    }
+   validateChannelStretch(candidate.channelStretch);
    if(candidate.saveBoth)candidate.keepStarless=false;
    advancedWorkflowSettings=candidate;
 }

@@ -22,12 +22,6 @@ The adapter enforces replacement of its candidate copy and discards model images
 The author and PTeam do not endorse this adaptation. The engine is a fixed copy
 and does not automatically inherit updates to the installed vendor script.
 
-## External SyQon applications
-
-SyQon Parallax, Prism and Starless, their models and runtime libraries are not
-redistributed or loaded inside PixInsight by this package. Users install/license
-them independently and choose the executable. The workflow's direct argument/file
-adapter is CCDASTRO code. Vendor terms and entitlements continue to apply.
 
 ## PixInsight libraries
 
@@ -42,7 +36,7 @@ Bill Blanshan Star Method V3: the optional finishing operation preserves the att
 
 ## Additional tool and interface credits
 
-The project-level acknowledgment table is in the [README](../README.md#acknowledgments). Native processes are credited to Pleiades Astrophoto / the PixInsight Development Team; the installed ImageSolver library credits Andres del Pozo and Juan Conejero (PTeam). RC Astro tools are by Russell Croman; StarNet2 is by Mikita Misiura / StarNet Software; SyQon tools and models are by the SyQon development team. GraXpert is by the GraXpert Development Team, while its PixInsight process integration is by Joël Vallier / DeepSkyForge. These external tools are independently installed and are not redistributed in the workflow package.
+The project-level acknowledgment table is in the [README](../README.md#acknowledgments). Native processes are credited to Pleiades Astrophoto / the PixInsight Development Team; the installed ImageSolver library credits Andres del Pozo and Juan Conejero (PTeam). RC Astro tools are by Russell Croman; StarNet2 is by Mikita Misiura / StarNet Software; these native modules are independently installed and are not redistributed in the workflow package.
 
 Bill Blanshan is credited for both the Star Method V2 and V3 PixelMath techniques used by the workflow. The separately distributed Cosmic Photons StarReduction script is not bundled or executed here.
 

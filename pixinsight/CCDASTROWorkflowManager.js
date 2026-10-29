@@ -19,33 +19,26 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.8.0"
+#define VERSION "1.9.0"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
 var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
 
-var SYQON_PARALLAX_ICON = "CCDASTRO_Parallax";
-var SYQON_PRISM_ICON = "CCDASTRO_Prism";
-var SYQON_STARLESS_ICON = "CCDASTRO_Starless";
 
 var adapterHelp = {
    interactiveCrop: "Review a rectangular crop on a separate linear copy and return to workflow settings.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    autoDBE: "Runs the bundled, signed AutoDBE engine, licensed CC BY-NC 4.0 for noncommercial use. No runtime vendor-script loading.",
-   graxpert: "Use the installed GraXpert process for AI-assisted gradient correction.",
    mgc: "Runs Plate Solve if needed, configured SPFC, then MultiscaleGradientCorrection. Configure camera/filter curves and MARS files through gradient Setup; advanced icons are optional. SPCC remains separate.",
    plateSolve: "Add an astrometric solution only when the active image is not already solved.",
    spcc: "Use SpectrophotometricColorCalibration. The image must have an astrometric solution.",
    pcc: "Configure PCC white-reference, catalog and background settings in workflow setup; an advanced icon override is optional. Requires a solved image.",
    blurXTerminator: "Use workflow BlurX settings (Correct Only by default), or explicitly select the optional CCDASTRO_BlurX icon override. Runs on linear data before denoise.",
-   syqonParallax: "Use remembered SyQon Parallax workflow settings, or an optional CCDASTRO_Parallax icon override.",
    noiseXTerminator: "Use NoiseXTerminator for the main noise-reduction pass.",
    mlDenoise: "Set MLDenoise model path and strength in workflow setup; an advanced icon override is optional.",
-   syqonPrism: "Use remembered SyQon Prism workflow settings, or an optional CCDASTRO_Prism icon override.",
    starXTerminator: "Use StarXTerminator and request a separate stars-only image.",
    starNet2: "Use StarNet2 in linear mode and request a separate stars-only image.",
-   syqonStarless: "Use remembered SyQon Starless workflow settings, or an optional CCDASTRO_Starless icon override; a linear subtraction stars layer is generated."
 };
 
 function imageHasAstrometricSolution(window)
@@ -139,7 +132,6 @@ function captureWorkflowState(dialog, resumeAfterCrop)
       schemaVersion: 12,
       advanced: advancedCopy(advancedWorkflowSettings),
       native: dialog.nativeValues ? dialog.nativeValues() : null,
-      syqon: dialog.syqonValues ? dialog.syqonValues() : null,
       blurX: dialog.blurXValues ? dialog.blurXValues() : null,
       finishStarless: dialog.finishStarless.checked,
       starBrightness: dialog.starBrightness.value,
@@ -183,7 +175,7 @@ function captureWorkflowState(dialog, resumeAfterCrop)
 
 function saveWorkflowState(dialog, resumeAfterCrop)
 {
-   if (!dialog.rememberSettings.checked)
+   if (!dialog.rememberSettings.checked || dialog.complianceReviewRequired)
       return;
    try
    {
@@ -194,6 +186,15 @@ function saveWorkflowState(dialog, resumeAfterCrop)
    {
       logLine("Workflow settings could not be saved: " + errorMessage(e));
    }
+}
+
+function validateWorkflowComplianceState(state) {
+   function removed(name) { return /^(syqon|studio|graxpert)/i.test(String(name || "")); }
+   var selected=[];
+   if(state && state.steps) Object.keys(state.steps).forEach(function(k){if(removed(state.steps[k].adapterId))selected.push(state.steps[k].adapterId);});
+   var advanced=state && state.advanced;
+   if(advanced) ["linearPasses","postPasses"].forEach(function(k){if(Array.isArray(advanced[k]))advanced[k].forEach(function(p){if(removed(p.tool))selected.push(p.tool);});});
+   if(selected.length) { var e=new Error("External processing options were removed for CPD rules compliance: "+selected.join(", ")+". Reset settings and select supported PixInsight tools.");e.complianceRemoved=true;throw e; }
 }
 
 function restoreWorkflowState(dialog)
@@ -208,6 +209,7 @@ function restoreWorkflowState(dialog)
       var state = JSON.parse(text);
       if (!state || ([4,5,6,7,8,9,10,11,12].indexOf(state.schemaVersion) < 0) || !state.steps)
          return false;
+      validateWorkflowComplianceState(state);
       if (state.schemaVersion >= 5 && state.imageType >= 0 &&
           state.imageType < WORKFLOW_PROFILES.length)
          dialog.imageType.currentItem = state.imageType;
@@ -256,7 +258,6 @@ function restoreWorkflowState(dialog)
       if (state.starReductionIterations >= 1 && state.starReductionIterations <= 3)
          dialog.starReductionIterations.value = state.starReductionIterations;
       if (dialog.restoreNative && state.native) dialog.restoreNative(state.native);
-      if (dialog.restoreSyQon && state.syqon) dialog.restoreSyQon(state.syqon);
       if (dialog.restoreBlurX && state.blurX) dialog.restoreBlurX(state.blurX);
       restoreAdvancedWorkflowSettings(state.advanced);
       dialog.refreshStarReductionControls();
@@ -283,6 +284,7 @@ function restoreWorkflowState(dialog)
    }
    catch (e)
    {
+      dialog.complianceReviewRequired = e.complianceRemoved === true;
       logLine("Saved workflow settings could not be restored: " + errorMessage(e));
       return false;
    }
@@ -290,6 +292,7 @@ function restoreWorkflowState(dialog)
 
 function resetWorkflowControls(dialog)
 {
+   dialog.complianceReviewRequired = false;
    restoreAdvancedWorkflowSettings(null);
    Settings.remove(WORKFLOW_STATE_KEY);
    Settings.remove(WORKFLOW_REMEMBER_KEY);
@@ -311,7 +314,6 @@ function resetWorkflowControls(dialog)
       row.refreshStatus();
    }
    if (dialog.restoreNative) dialog.restoreNative(defaultNativeSettings());
-   if (dialog.restoreSyQon) dialog.restoreSyQon(defaultSyQonSettings());
    if (dialog.restoreBlurX) dialog.restoreBlurX(defaultBlurXSettings());
    dialog.finishStarless.checked = false;
    dialog.starBrightness.value = 70;
@@ -505,295 +507,12 @@ ProcessAdapter.prototype.execute = function(view)
    var className = this.className();
    if (className === null)
       throw new Error(this.label + " is not installed or is unavailable to scripts.");
-   if(this.id === "graxpert") {
-      var precisionError=workflowPrecisionError(view.image);
-      if(precisionError)throw new Error(precisionError);
-   }
    var process = createProcess(className);
    this.configure(process);
    logLine("Running " + this.label + " on " + view.fullId + "; samples=" + view.image.bitsPerSample + "-bit " + (view.image.isReal ? "floating point" : "integer"));
    if (!process.executeOn(view))
       throw new Error(this.label + " did not complete successfully.");
 };
-
-function ProcessIconAdapter(id, label, iconId)
-{
-   this.id = id;
-   this.label = label;
-   this.iconId = iconId;
-}
-
-function defaultSyQonSettings()
-{
-   return {
-      syqonParallax:{useIcon:false,path:"",correct:true,sharpen:0,reduction:0,mode:"classic",linked:true,cpu:false,timeout:20},
-      syqonPrism:{useIcon:false,path:"",strength:85,model:"prism_deep",cpu:false,timeout:20},
-      syqonStarless:{useIcon:false,path:"",overlap:64,timeout:20}
-   };
-}
-var syqonSettings = defaultSyQonSettings();
-
-function validateSyQonSettings(id, settings)
-{
-   if (!settings || typeof settings.useIcon !== "boolean" || typeof settings.path !== "string" ||
-       !finiteNumber(settings.timeout) || settings.timeout<1 || settings.timeout>120 || settings.timeout!==Math.round(settings.timeout))
-      throw new Error("Invalid SyQon settings: executable path and timeout 1-120 minutes are required.");
-   function range(value, low, high) { return finiteNumber(value) && value>=low && value<=high; }
-   if (id === "syqonParallax" && (typeof settings.correct!=="boolean" || typeof settings.linked!=="boolean" || typeof settings.cpu!=="boolean" ||
-       !range(settings.sharpen,0,100) || !range(settings.reduction,0,6) || settings.reduction!==Math.round(settings.reduction) ||
-       ["classic","aesthetics"].indexOf(settings.mode)<0)) throw new Error("Invalid Parallax correction/sharpening/star-reduction settings.");
-   if (id === "syqonPrism" && (typeof settings.cpu!=="boolean" || !range(settings.strength,0,100) ||
-       ["prism_mini","prism_deep"].indexOf(settings.model)<0)) throw new Error("Invalid Prism strength/model settings.");
-   if (id === "syqonStarless" && [64,128].indexOf(settings.overlap)<0) throw new Error("Starless overlap must be 64 or 128 pixels.");
-   return settings;
-}
-
-function discoverSyQonPath(id, configuredOnly)
-{
-   var name=syqonEngineDefinition(id).name;
-   var config=File.systemTempDirectory + "/SyQon" + name + "CLI/syqon_" + name.toLowerCase() + "_config.csv";
-   if (File.exists(config))
-   {
-      var path=normalizeSyQonPath(id,File.readTextFile(config).split(/\r?\n/)[0]);
-      if (path && File.exists(path) && !File.directoryExists(path)) return path;
-   }
-   if (configuredOnly) return "";
-   if (id === "syqonStarless")
-   {
-      var candidates=["C:/Program Files/SyQon/Starless/SyQonStarless.exe", "/Applications/SyQonStarless.app/Contents/MacOS/SyQonStarless"];
-      for (var i=0;i<candidates.length;++i) if (File.exists(candidates[i])) return candidates[i];
-   }
-   return "";
-}
-
-ProcessIconAdapter.prototype.configuredProcess = function() { return configuredSyQonExecutable(this.id); };
-ProcessIconAdapter.prototype.available = function()
-{
-   try { this.configuredProcess(); return true; } catch(e) { return false; }
-};
-ProcessIconAdapter.prototype.requirement = function()
-{
-   try { this.configuredProcess(); return "SyQon settings are ready."; } catch(e) { return errorMessage(e); }
-};
-ProcessIconAdapter.prototype.execute = function(view)
-{
-   var process=this.configuredProcess();
-   logLine(this.label + ": selected external executable; settings=" + JSON.stringify(process));
-   executeSyQonEngine(this.id,process,view);
-};
-ProcessIconAdapter.prototype.validateSetup = function(view)
-{
-   prepareSyQonEngine(this.id,this.configuredProcess(),view);
-};
-
-function configureSyQon(dialog, id)
-{
-   var definition=syqonEngineDefinition(id), current=syqonSettings[id];
-   var d=new Dialog; d.windowTitle="SyQon " + definition.name + " settings";
-   d.sizer=new VerticalSizer; d.sizer.margin=10; d.sizer.spacing=8;
-   var icon=new CheckBox(d); icon.text="Use " + adapters[id].iconId + " icon override (optional)"; icon.checked=current.useIcon;
-   d.sizer.add(icon);
-   var hint=new Label(d); hint.wordWrapping=true;
-   hint.text="Uses the workflow executable path first; an empty path uses your existing vendor configuration (read only). Browse to override it. Remember workflow settings retains your selection. Icon override ignores these fields.";
-   d.sizer.add(hint);
-   var pathRow=new HorizontalSizer; pathRow.spacing=8;
-   var path=new Edit(d); path.text=current.path || discoverSyQonPath(id); path.setMinWidth(440);
-   var browse=new PushButton(d); browse.text="Browse executable...";
-   browse.onClick=function(){var file=new OpenFileDialog; file.caption="Select SyQon " + definition.name + " executable"; file.initialPath=path.text;
-      if(file.execute()) path.text=file.fileName;};
-   pathRow.add(path,100); pathRow.add(browse); d.sizer.add(pathRow);
-   var fields=[], controls={};
-   function spin(key,label,low,high,value) {var row=new HorizontalSizer;row.spacing=8;var l=new Label(d);l.text=label;var c=new SpinBox(d);c.minValue=low;c.maxValue=high;c.value=value;
-      row.add(l);row.addStretch();row.add(c);d.sizer.add(row);controls[key]=c;fields.push(c);}
-   function check(key,label,value) {var c=new CheckBox(d);c.text=label;c.checked=value;controls[key]=c;fields.push(c);d.sizer.add(c);}
-   function combo(key,label,items,index) {var row=labeledCombo(d,label,items,index,"");controls[key]=row.combo;fields.push(row.combo);d.sizer.add(row.sizer);}
-   if(id==="syqonParallax") {
-      check("correct","Correct aberrations",current.correct);spin("sharpen","Sharpen (%):",0,100,current.sharpen);
-      spin("reduction","Star reduction level (0 disables):",0,6,current.reduction);combo("mode","Mode:",["Natural (classic)","Defined (aesthetics)"],current.mode==="aesthetics"?1:0);
-      check("linked","Use linked temporary stretch",current.linked);check("cpu","Use CPU",current.cpu);
-   } else if(id==="syqonPrism") {
-      spin("strength","Denoise strength (%):",0,100,current.strength);combo("model","Model:",["Prism Mini","DeepPrism"],current.model==="prism_mini"?0:1);check("cpu","Use CPU",current.cpu);
-   } else combo("overlap","Overlap:",["64 pixels","128 pixels"],current.overlap===128?1:0);
-   spin("timeout","Output timeout (minutes):",1,120,current.timeout);
-   var note=new Label(d);note.wordWrapping=true;note.text="Installed vendor defaults retain advanced tiling/device options. Parallax/Prism use a reversible PI temporary stretch. Starless generates a subtraction stars layer for the linear workflow.";d.sizer.add(note);
-   function refresh(){path.enabled=browse.enabled=!icon.checked;for(var i=0;i<fields.length;++i)fields[i].enabled=!icon.checked;}
-   icon.onCheck=refresh;refresh();
-   var buttons=new HorizontalSizer;buttons.spacing=8;buttons.addStretch();
-   var save=new PushButton(d);save.text="Save settings";var cancel=new PushButton(d);cancel.text="Cancel";cancel.onClick=function(){d.cancel();};buttons.add(save);buttons.add(cancel);d.sizer.add(buttons);
-   var accepted=null;
-   save.onClick=function(){
-      try {
-         var v=JSON.parse(JSON.stringify(current));v.useIcon=icon.checked;v.path=path.text.trim();v.timeout=controls.timeout.value;
-         if(id==="syqonParallax") {v.correct=controls.correct.checked;v.sharpen=controls.sharpen.value;v.reduction=controls.reduction.value;
-            v.mode=controls.mode.currentItem===1?"aesthetics":"classic";v.linked=controls.linked.checked;v.cpu=controls.cpu.checked;}
-         else if(id==="syqonPrism") {v.strength=controls.strength.value;v.model=controls.model.currentItem===0?"prism_mini":"prism_deep";v.cpu=controls.cpu.checked;}
-         else v.overlap=controls.overlap.currentItem===0?64:128;
-         validateSyQonSettings(id,v);
-         if(!v.useIcon){v.path=resolveSyQonPath(id,v.path);if(!v.path||!File.exists(v.path)||File.directoryExists(v.path))throw new Error("Executable not found: "+(v.path||"<empty>")+". Select the .exe file or its containing folder.");}
-         accepted=v;d.ok();
-      } catch(e) {(new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok)).execute();}
-   };
-   d.adjustToContents();if(executeAdvancedDialog(d) && accepted) {syqonSettings[id]=accepted;dialog.refreshSyQonControls();saveWorkflowState(dialog,false);return true;}return false;
-}
-
-function installSyQonControls(dialog)
-{
-   var box=new GroupBox(dialog.content);box.title="SyQon external-program settings";box.sizer=new HorizontalSizer;box.sizer.margin=8;box.sizer.spacing=8;
-   var definitions=[["syqonParallax","deconvolution","Parallax setup..."],["syqonPrism","noiseReduction","Prism setup..."],["syqonStarless","starSeparation","Starless setup..."]];
-   var buttons=[];
-   for(var i=0;i<definitions.length;++i) {
-      var b=new PushButton(box);b.text=definitions[i][2];buttons.push(b);box.sizer.add(b);
-      b.onClick=(function(id){return function(){configureSyQon(dialog,id);};})(definitions[i][0]);
-   }
-   dialog.syqonValues=function(){return JSON.parse(JSON.stringify(syqonSettings));};
-   dialog.refreshSyQonControls=function(){for(var i=0;i<definitions.length;++i){var row=dialog.rowsById[definitions[i][1]];buttons[i].enabled=row.enabled.checked && row.adapterId()===definitions[i][0];row.refreshStatus();}};
-   dialog.restoreSyQon=function(settings){var copy=JSON.parse(JSON.stringify(settings));for(var i=0;i<definitions.length;++i)validateSyQonSettings(definitions[i][0],copy[definitions[i][0]]);syqonSettings=copy;dialog.refreshSyQonControls();};
-   for(var i=0;i<definitions.length;++i)(function(index){var row=dialog.rowsById[definitions[index][1]], refresh=row.refreshStatus;
-      row.refreshStatus=function(){refresh.call(row);buttons[index].enabled=row.enabled.checked && row.adapterId()===definitions[index][0];};})(i);
-   dialog.restoreSyQon(defaultSyQonSettings());return box;
-}
-
-// Tool names only; installed vendor scripts are never executed.
-function syqonEngineDefinition(id)
-{
-   var definitions = {
-      syqonParallax: { name: "Parallax", version: "v1.5" },
-      syqonPrism: { name: "Prism", version: "v1.5" },
-      syqonStarless: { name: "Starless", version: "v3.0.2" }
-   };
-   if (!definitions[id])
-      throw new Error("Unsupported SyQon adapter: " + id);
-   return definitions[id];
-}
-
-// Normalize only paths, never commands or executable code.
-function normalizeSyQonPath(id,path)
-{
-   path=String(path||"").trim();
-   if(path.length>1 && ((path.charAt(0)==='"' && path.charAt(path.length-1)==='"') || (path.charAt(0)==="'" && path.charAt(path.length-1)==="'")))path=path.substring(1,path.length-1).trim();
-   path=path.split("\\").join("/");
-   if(path && File.directoryExists(path)) {
-      var names=id==="syqonParallax"?["parallax_cli.exe","parallax_cli"]:id==="syqonPrism"?["prism_cli.exe","prism_cli"]:["SyQonStarless.exe","SyQonStarless","Contents/MacOS/SyQonStarless"];
-      for(var i=0;i<names.length;++i){var candidate=path+"/"+names[i];if(File.exists(candidate)&&!File.directoryExists(candidate))return candidate;}
-   }
-   return path;
-}
-function resolveSyQonPath(id,path)
-{
-   var selected=normalizeSyQonPath(id,path);
-   return selected || discoverSyQonPath(id,true);
-}
-
-// Direct SyQon file-interface adapter. No vendor script code is loaded at runtime.
-function configuredSyQonExecutable(id)
-{
-   var values=JSON.parse(JSON.stringify(syqonSettings[id]));
-   validateSyQonSettings(id,values);
-   if(values.useIcon) {
-      var iconId=adapters[id].iconId;
-      if(ProcessInstance.icons().indexOf(iconId)<0)throw new Error("Optional override missing: "+iconId);
-      var icon=ProcessInstance.fromIcon(iconId);
-      if(!icon||icon.processId()!=="Script"||!Array.isArray(icon.parameters))throw new Error("Override must contain SyQon settings.");
-      var rows=icon.parameters,keys={parallaxExePath:"path",prismExePath:"path",starlessExePath:"path",outputTimeoutMinutes:"timeout",correctAberration:"correct",linkedStretch:"linked",useCPU:"cpu",mode:"mode",modelKind:"model",overlap:"overlap"};
-      for(var i=0;i<rows.length;++i){var key=rows[i][0],value=rows[i][1];if(keys[key]){var target=keys[key],kind=typeof values[target];
-         if(kind==="boolean"){if(value!==true&&value!==false&&value!=="true"&&value!=="false"&&value!=="1"&&value!=="0")throw new Error("Invalid SyQon boolean "+key);values[target]=value===true||value==="true"||value==="1";}
-         else values[target]=kind==="number"?Number(value):String(value);}
-
-         if(key==="sharpen")values.sharpen=Number(value)*100;if(key==="starReduction")values.reduction=Number(value);if(key==="strength")values.strength=Number(value)*100;}
-      validateSyQonSettings(id,values);
-   }
-   // A previously selected vendor path is allowed for an explicitly selected workflow tool.
-   values.path=resolveSyQonPath(id,values.path);
-   if(!values.path||!File.exists(values.path)||File.directoryExists(values.path))throw new Error("SyQon "+syqonEngineDefinition(id).name+" executable not found: "+(values.path||"<empty; no saved vendor executable found>")+". Browse to its executable in workflow setup and Save settings.");
-   return values;
-}
-function syqonCommandArguments(id,values,input,output)
-{
-   if(id==="syqonStarless")return ["-i",input,"-o",output,"-v",String(values.overlap),"-c","pixinsight","--gui"];
-   var args=id==="syqonParallax"?["--i",input,"--o",output]:["--input",input,"--output",output,"--model-kind",values.model,"--strength",String(values.strength/100),"--use-amp","--amp-dtype","fp16"];
-   if(id==="syqonParallax") {
-      if(values.correct)args.push("--correct-aberration");
-      if(values.reduction>0)args.push("--star-reduction",String(values.reduction));
-      if(values.sharpen>0)args.push("--sharpen",String(values.sharpen/100));
-      if(values.mode!=="classic")args.push("--mode",values.mode);
-   }
-   args.push("--tile","512","--overlap","64","--pad","96");
-   if(values.cpu)args.push("--cpu");return args;
-}
-function prepareSyQonEngine(id,values,view)
-{
-   if(!view || !view.isMainView)throw new Error("SyQon requires a main image view.");
-   if(typeof ExternalProcess==="undefined")throw new Error("PixInsight external-program support is unavailable.");
-   if(!File.exists(values.path))throw new Error("Selected SyQon executable is missing.");
-   return values;
-}
-function applySyQonTransfer(view,midtones,inverse)
-{
-   var p=new HistogramTransformation;
-   var rows=[[0,0.5,1,0,1],[0,0.5,1,0,1],[0,0.5,1,0,1],[0,0.5,1,0,1],[0,0.5,1,0,1]];
-   if(midtones.length===1)rows[3][1]=inverse?1-midtones[0]:midtones[0];
-   else for(var c=0;c<3;++c)rows[c][1]=inverse?1-midtones[c]:midtones[c];
-   p.H=rows;if(!p.executeOn(view))throw new Error("SyQon temporary transfer failed.");
-}
-function syqonTemporaryTransfer(view,id,values)
-{
-   if(id==="syqonStarless")return [];
-   var median=view.computeOrFetchProperty("Median"),channels=view.image.isColor?3:1;
-   var linked=id==="syqonPrism"||values.linked,result=[],target=id==="syqonPrism"?0.15:0.12;
-   if(linked){var center=0;for(var c=0;c<channels;++c)center+=median.at(c);center/=channels;
-      if(center<=0||center>=1)throw new Error("Cannot calculate reversible SyQon stretch.");result.push(Math.mtf(target,center));}
-   else for(var c=0;c<channels;++c){var center=median.at(c);if(center<=0||center>=1)throw new Error("Cannot calculate reversible SyQon stretch.");result.push(Math.mtf(target,center));}
-   applySyQonTransfer(view,result,false);return result;
-}
-function executeSyQonEngine(id,values,view,scope)
-{
-   prepareSyQonEngine(id,values,view);
-   var directory=File.uniqueFileName(File.systemTempDirectory,12,"CCDASTRO_SyQon_",""),extension=id==="syqonStarless"?".tif":".fits",input=directory+"/input"+extension,output=directory+"/output"+extension;
-   var copy=null,opened=[],stars=null,process=null,created=false,success=false;
-   try {
-      File.createDirectory(directory);created=true;
-      copy=cloneHDRView(view,"_SyQonTransfer");
-      var transfer=scope==="stretched"?[]:syqonTemporaryTransfer(copy.mainView,id,values);
-      var writer=new FileFormatInstance(new FileFormat(extension,false,true));
-      try{var description=new ImageDescription;description.bitsPerSample=32;description.ieeefpSampleFormat=true;
-         if(!writer.create(input,"float 32")||!writer.setOptions(description)||!writer.writeImage(copy.mainView.image))throw new Error("Cannot write Float32 SyQon input image.");}finally{writer.close();}
-      var args=syqonCommandArguments(id,values,input,output),started=Date.now(),finished=false,exitStatus=-1;
-      process=new ExternalProcess;
-      process.onFinished=function(code,status){finished=true;exitStatus=status;};
-      process.onStandardOutputDataAvailable=function(){logLine(process.standardOutput.toString());};
-      process.onStandardErrorDataAvailable=function(){logLine(process.standardError.toString());};
-      logLine("Launching selected SyQon executable: "+values.path+"; files: "+directory);
-      if(id==="syqonStarless")logLine("In SyQon Starless click Generate Starless, then close its window when processing completes.");
-      process.start(values.path,args);
-      if(!process.waitForStarted(10000))throw new Error("SyQon executable did not start.");
-      while(!finished){if(process.waitForFinished(100)){finished=true;exitStatus=process.exitStatus;}checkAbortRequested();if(Date.now()-started>values.timeout*60000)throw new Error("SyQon timed out; target was not changed.");}
-      if(process.exitCode!==0||exitStatus!==0)throw new Error("SyQon failed, exit code "+process.exitCode+"; target was not changed.");
-      if(!File.exists(output))throw new Error("SyQon did not produce an output image; target was not changed.");
-      opened=ImageWindow.open(output);
-      if(!opened||opened.length!==1)throw new Error("Expected one SyQon output image.");
-      var image=opened[0].mainView.image;
-      if(image.width!==view.image.width||image.height!==view.image.height||image.numberOfChannels!==view.image.numberOfChannels||image.isColor!==view.image.isColor)throw new Error("SyQon output dimensions/channels differ from input.");
-      if(!finiteNumber(image.minimum())||!finiteNumber(image.maximum()))throw new Error("SyQon output contains invalid samples.");
-      if(transfer.length)applySyQonTransfer(opened[0].mainView,transfer,true);
-      if(id==="syqonStarless" && scope!=="stretched") {
-         stars=cloneHDRView(view,"_stars");var pm=new PixelMath;
-         pm.expression="max(0,"+view.fullId+"-"+opened[0].mainView.fullId+")";
-         pm.useSingleExpression=true;pm.createNewImage=false;pm.rescale=false;pm.truncate=true;pm.truncateLower=0;pm.truncateUpper=1;
-         if(!pm.executeOn(stars.mainView))throw new Error("Could not create linear stars layer.");
-      }
-      checkAbortRequested();
-      view.beginProcess(UndoFlag.NoSwapFile);try{view.image.assign(image);}finally{view.endProcess();}
-      if(stars)stars.show();success=true;
-   } finally {
-      if(process && process.isRunning){process.terminate();if(!process.waitForFinished(2000)){process.kill();process.waitForFinished(5000);}}
-      if(copy)copy.forceClose();if(opened)for(var i=0;i<opened.length;++i)opened[i].forceClose();if(stars&&!success)stars.forceClose();
-      // Never remove a directory recursively; remove only our known files after the child has stopped.
-      if(created && (!process||!process.isRunning)){
-         for(var file of [input,output])if(File.exists(file))try{File.remove(file);}catch(e){logLine("Temporary file retained: "+file);}
-         try{File.removeDirectory(directory);}catch(e){logLine("Temporary directory retained: "+directory);}
-      }
-   }
-}
 
 // Fixed licensed engine included in, and covered by, this workflow's signature.
 function createBundledAutoDBEEngine(Parameters)
@@ -1305,25 +1024,7 @@ InteractiveCropAdapter.prototype.requirement = function()
 
 var plateSolveSettings = new PlateSolveSettings;
 
-function configureWorkflowGraXpert(process)
-{
-   // The PixInsight module now defaults to sample-free extraction. The workflow
-   // promises AI extraction, including with CLIs that predate sample-free flags.
-   setFirstProperty(process,["backgroundExtractionSampleFree"],false);
-   requiredNativeProperty(process,"backgroundExtraction",true);
-   setFirstProperty(process,["denoising"],false);
-   setFirstProperty(process,["deconvolution"],false);
-   // executeOn must update the workflow's existing working copy, not create an
-   // unrelated result window that the following workflow stages would ignore.
-   requiredNativeProperty(process,"replaceImage",true);
-   setFirstProperty(process,["createBackground"],false);
-}
-
 var adapters = {
-   studioGradient:new StudioAdapter("studioGradient","SyQon Studio DeepGradient","gradient"),
-   studioPrism:new StudioAdapter("studioPrism","SyQon Studio Prism","prism"),
-   studioParallax:new StudioAdapter("studioParallax","SyQon Studio Parallax","parallax"),
-   studioAxiom:new StudioAdapter("studioAxiom","SyQon Studio Axiom","axiom"),
    mgc: new MGCAdapter,
    autoDBE: new AutoDBEAdapter,
    interactiveCrop: new InteractiveCropAdapter,
@@ -1334,8 +1035,6 @@ var adapters = {
          setFirstProperty(p, ["generateGradientModel"], false);
       }),
 
-   graxpert: new ProcessAdapter(
-      "graxpert", "GraXpert", ["GraXpert", "GraXpertProcess"], configureWorkflowGraXpert),
 
    plateSolve: new PlateSolveAdapter(plateSolveSettings),
 
@@ -1353,8 +1052,6 @@ var adapters = {
 
    blurXTerminator: new BlurXIconAdapter,
 
-   syqonParallax: new ProcessIconAdapter(
-      "syqonParallax", "SyQon Parallax", SYQON_PARALLAX_ICON),
 
    noiseXTerminator: new ProcessAdapter(
       "noiseXTerminator", "NoiseXTerminator", ["NoiseXTerminator"], function(p)
@@ -1367,8 +1064,6 @@ var adapters = {
    // Preserve the user-selected model and settings; defaults have no model path.
    mlDenoise: new MLDenoiseAdapter,
 
-   syqonPrism: new ProcessIconAdapter(
-      "syqonPrism", "SyQon Prism / DeepPrism", SYQON_PRISM_ICON),
 
    starXTerminator: new ProcessAdapter(
       "starXTerminator", "StarXTerminator", ["StarXTerminator"], function(p)
@@ -1384,8 +1079,6 @@ var adapters = {
          setFirstProperty(p, ["linear"], true);
       }),
 
-   syqonStarless: new ProcessIconAdapter(
-      "syqonStarless", "SyQon Starless", SYQON_STARLESS_ICON)
 };
 
 function WorkflowStep(id, label, adapterIds, defaultAdapter, note, enabled)
@@ -1405,7 +1098,7 @@ function defaultWorkflow()
          ["interactiveCrop"], "interactiveCrop",
          "Optional: rectangular crop preview; Apply or Skip returns to workflow settings.", false),
       new WorkflowStep("gradient", "1. Gradient correction",
-         ["gradientCorrection", "graxpert", "mgc", "autoDBE", "studioGradient"], "gradientCorrection",
+         ["gradientCorrection", "mgc", "autoDBE"], "gradientCorrection",
          "Runs before color calibration. MGC includes an earlier plate solve and SPFC prerequisite."),
       new WorkflowStep("plateSolve", "2. Plate solve if needed",
          ["plateSolve"], "plateSolve",
@@ -1413,13 +1106,13 @@ function defaultWorkflow()
       new WorkflowStep("colorCalibration", "3. Color calibration",
          ["spcc", "pcc"], "spcc", "SPCC and PCC require a solved color image. PCC uses workflow settings or an optional icon override."),
       new WorkflowStep("deconvolution", "4. Deblur / structure recovery",
-         ["blurXTerminator", "syqonParallax", "studioParallax"], "blurXTerminator",
+         ["blurXTerminator"], "blurXTerminator",
          "Runs on linear data before the main denoise pass."),
       new WorkflowStep("noiseReduction", "5. Noise reduction",
-         ["noiseXTerminator", "mlDenoise", "syqonPrism", "studioPrism"], "noiseXTerminator",
+         ["noiseXTerminator", "mlDenoise"], "noiseXTerminator",
          "Can run before separation or on the starless branch."),
       new WorkflowStep("starSeparation", "6. Star separation",
-         ["starXTerminator", "starNet2", "syqonStarless", "studioAxiom"], "starXTerminator",
+         ["starXTerminator", "starNet2"], "starXTerminator",
          "Creates starless and stars-only workflow branches.")
    ];
 }
@@ -1533,7 +1226,7 @@ function executeStarSeparation(adapter, targetView)
    var starsWindow = chooseStarsWindow(created);
    if (starsWindow === null)
       throw new Error(adapter.label + " did not create an identifiable stars-only view. " +
-         "For SyQon Starless, configure the process icon to generate stars by Subtraction.");
+         "Enable stars output in the selected PixInsight process.");
    starsWindow.mainView.id = uniqueMainViewId(targetView.id + "_stars");
    logLine("Starless branch: " + targetWindow.mainView.fullId);
    logLine("Stars branch: " + starsWindow.mainView.fullId);
@@ -1827,6 +1520,7 @@ PreflightValidator.prototype.validate = function()
 {
    if(this.dialog.refreshAdvancedControls) this.dialog.refreshAdvancedControls();
    var result = new PreflightResult;
+   if (this.dialog.complianceReviewRequired) { result.errors.push("Saved settings select removed external processing tools. Reset settings and choose supported PixInsight tools before running."); return result; }
    var window = ImageWindow.activeWindow;
    if (window.isNull)
    {
@@ -1905,7 +1599,7 @@ PreflightValidator.prototype.validate = function()
    if (mgcSelected)
    {
       if (WORKFLOW_PROFILES[this.dialog.imageType.currentItem].id === "emissionMapped")
-         result.errors.push("MGC is not supported on arbitrary mapped narrowband color palettes. Select GradientCorrection, GraXpert or SyQon Studio DeepGradient for this profile.");
+         result.errors.push("MGC is not supported on arbitrary mapped narrowband color palettes. Select GradientCorrection for this profile.");
       result.warnings.push("MGC runs Plate Solve if needed before SPFC and gradient correction, even if the separate plate-solve checkbox is off. " +
          "Confirm matching SPFC filter/QE curves and MARS filters, installed Gaia/MARS data, and suitable sky coverage. " +
          "Catalog coverage and preprocessing provenance are checked by the native processes during execution, not certified by this preflight.");
@@ -2146,7 +1840,7 @@ constructor(settings)
 }
 }
 
-function selectableWorkflowStep(step) { var copy=Object.assign({},step);copy.adapterIds=step.adapterIds.slice();return copy; }
+function selectableWorkflowStep(step) { var copy=Object.assign({},step);copy.adapterIds=step.adapterIds.filter(function(id){return !/^(syqon|studio|graxpert)/i.test(id);});return copy; }
 function WorkflowRow(parent, step, dialog)
 {
    this.dialog = dialog;
@@ -2194,7 +1888,7 @@ function WorkflowRow(parent, step, dialog)
    this.refreshStatus = function()
    {
       if (this.step.id === "gradient")
-         this.setup.enabled = this.enabled.checked && (this.adapterId() === "mgc" || this.adapterId() === "autoDBE" || this.adapterId() === "studioGradient");
+         this.setup.enabled = this.enabled.checked && (this.adapterId() === "mgc" || this.adapterId() === "autoDBE");
       if (!this.enabled.checked)
       {
          this.status.text = this.suspendedSelection ? "Unavailable saved choice" : (this.step.id === "crop" ? "Optional" : "Skipped");
@@ -2240,9 +1934,6 @@ function WorkflowRow(parent, step, dialog)
       {
          try
          {
-            if(self.step.id==="gradient"&&self.adapterId()==="studioGradient"){
-               var settings=configureStudio("gradient");if(settings){advancedWorkflowSettings.syqonStudio.gradient=settings;if(self.dialog)saveWorkflowState(self.dialog,false);}self.refreshStatus();return;
-            }
             if (self.step.id === "gradient" && self.adapterId() === "autoDBE")
             {
                (new MessageBox(adapters.autoDBE.requirement()+"\n\nUses vendor defaults, replaces only the workflow copy and discards models. Custom settings can be read from CCDASTRO_AutoDBE; its script is never executed. No installed AutoDBE script is required.", "Automatic DBE Setup", StdIcon.Information, StdButton.Ok)).execute();
@@ -2701,7 +2392,7 @@ constructor()
    this.help.wordWrapping = true;
    this.help.text = "Choose the desired tools. Plate Solve if needed uses metadata-derived " +
       "seed values and skips an image that already has an astrometric solution. " +
-      "SyQon settings select independently installed executables; no vendor scripts are loaded.";
+      "Processing uses installed PixInsight processes and included PJSR tools.";
    this.inputLabel = new Label(this.content);
    this.inputLabel.frameStyle = FrameStyle.Box;
    this.inputLabel.margin = 6;
@@ -2767,8 +2458,6 @@ constructor()
 
    this.blurXBox=installBlurXControls(this);
    this.stepsBox.sizer.add(this.blurXBox);
-   this.syqonBox=installSyQonControls(this);this.stepsBox.sizer.add(this.syqonBox);
-   this.studioBox=installStudioControls(this);this.stepsBox.sizer.add(this.studioBox);
    this.nativeBox=installNativeControls(this);this.stepsBox.sizer.add(this.nativeBox);
    var noisePlacementControl = labeledCombo(this.content, "Noise placement:",
       ["Before star separation", "Starless branch"], 1,

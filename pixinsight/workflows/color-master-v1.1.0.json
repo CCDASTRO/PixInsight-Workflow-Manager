@@ -6,19 +6,92 @@
   "description": "Profile-driven post-integration workflow for any integrated linear color master.",
   "defaultProfile": "generalColor",
   "profiles": [
-    { "id": "generalColor", "name": "General color image", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"] },
-    { "id": "emissionBroadband", "name": "Broadband color emission nebula", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"] },
-    { "id": "emissionMapped", "name": "Mapped narrowband color emission nebula", "visibleSteps": ["crop", "gradient", "deconvolution", "noiseReduction", "starSeparation"] },
-    { "id": "galaxy", "name": "Galaxy", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"] },
-    { "id": "starCluster", "name": "Star cluster", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction"] },
-    { "id": "custom", "name": "Custom workflow", "visibleSteps": ["crop", "gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"] }
+    {
+      "id": "generalColor",
+      "name": "General color image",
+      "visibleSteps": [
+        "crop",
+        "gradient",
+        "plateSolve",
+        "colorCalibration",
+        "deconvolution",
+        "noiseReduction",
+        "starSeparation"
+      ]
+    },
+    {
+      "id": "emissionBroadband",
+      "name": "Broadband color emission nebula",
+      "visibleSteps": [
+        "crop",
+        "gradient",
+        "plateSolve",
+        "colorCalibration",
+        "deconvolution",
+        "noiseReduction",
+        "starSeparation"
+      ]
+    },
+    {
+      "id": "emissionMapped",
+      "name": "Mapped narrowband color emission nebula",
+      "visibleSteps": [
+        "crop",
+        "gradient",
+        "deconvolution",
+        "noiseReduction",
+        "starSeparation"
+      ]
+    },
+    {
+      "id": "galaxy",
+      "name": "Galaxy",
+      "visibleSteps": [
+        "crop",
+        "gradient",
+        "plateSolve",
+        "colorCalibration",
+        "deconvolution",
+        "noiseReduction",
+        "starSeparation"
+      ]
+    },
+    {
+      "id": "starCluster",
+      "name": "Star cluster",
+      "visibleSteps": [
+        "crop",
+        "gradient",
+        "plateSolve",
+        "colorCalibration",
+        "deconvolution",
+        "noiseReduction"
+      ]
+    },
+    {
+      "id": "custom",
+      "name": "Custom workflow",
+      "visibleSteps": [
+        "crop",
+        "gradient",
+        "plateSolve",
+        "colorCalibration",
+        "deconvolution",
+        "noiseReduction",
+        "starSeparation"
+      ]
+    }
   ],
   "input": {
     "stage": "linear-integrated",
     "colorModel": "integrated-color-master",
     "sampleFormat": "any-float"
   },
-  "lanes": ["main", "starless", "stars"],
+  "lanes": [
+    "main",
+    "starless",
+    "stars"
+  ],
   "steps": [
     {
       "id": "crop",
@@ -28,11 +101,28 @@
       "lane": "main",
       "selectedAdapter": "interactiveCrop",
       "adapters": [
-        { "id": "interactiveCrop", "kind": "internal" }
+        {
+          "id": "interactiveCrop",
+          "kind": "internal"
+        }
       ],
-      "requires": ["linear", "rgb"],
-      "mustPrecede": ["gradient", "plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
-      "parameters": { "launchInterface": true, "autoSTF": true, "resume": "rerunWorkflow" }
+      "requires": [
+        "linear",
+        "rgb"
+      ],
+      "mustPrecede": [
+        "gradient",
+        "plateSolve",
+        "colorCalibration",
+        "deconvolution",
+        "noiseReduction",
+        "starSeparation"
+      ],
+      "parameters": {
+        "launchInterface": true,
+        "autoSTF": true,
+        "resume": "rerunWorkflow"
+      }
     },
     {
       "id": "gradient",
@@ -42,21 +132,49 @@
       "lane": "main",
       "selectedAdapter": "gradientCorrection",
       "adapters": [
-        { "id": "gradientCorrection", "kind": "process", "processClass": "GradientCorrection" },
-        { "id": "graxpert", "kind": "process", "processClass": "GraXpert" },
-        { "id": "mgc", "kind": "internal" }
+        {
+          "id": "gradientCorrection",
+          "kind": "process",
+          "processClass": "GradientCorrection"
+        },
+        {
+          "id": "mgc",
+          "kind": "internal"
+        }
       ],
-      "requires": ["linear", "rgb"],
-      "mustFollow": ["crop"],
-      "mustPrecede": ["plateSolve", "colorCalibration", "deconvolution", "noiseReduction", "starSeparation"],
+      "requires": [
+        "linear",
+        "rgb"
+      ],
+      "mustFollow": [
+        "crop"
+      ],
+      "mustPrecede": [
+        "plateSolve",
+        "colorCalibration",
+        "deconvolution",
+        "noiseReduction",
+        "starSeparation"
+      ],
       "parameters": {
         "mgc": {
-          "sequence": ["plateSolveIfNeeded", "spfc", "mgc"],
+          "sequence": [
+            "plateSolveIfNeeded",
+            "spfc",
+            "mgc"
+          ],
           "spfcIconId": "CCDASTRO_SPFC",
           "mgcIconId": "CCDASTRO_MGC",
           "skipSeparatePlateSolveStep": true,
-          "requires": ["astrometricSolution", "GaiaSpectrophotometricCatalog", "MARSDatabase", "matchingFilters"],
-          "unsupportedProfiles": ["emissionMapped"],
+          "requires": [
+            "astrometricSolution",
+            "GaiaSpectrophotometricCatalog",
+            "MARSDatabase",
+            "matchingFilters"
+          ],
+          "unsupportedProfiles": [
+            "emissionMapped"
+          ],
           "onFailure": "stop"
         }
       }
@@ -69,11 +187,23 @@
       "lane": "main",
       "selectedAdapter": "imageSolver",
       "adapters": [
-        { "id": "imageSolver", "kind": "internal" }
+        {
+          "id": "imageSolver",
+          "kind": "internal"
+        }
       ],
-      "requires": ["linear", "rgb", "approximateCoordinates", "imageScale"],
-      "mustFollow": ["gradient"],
-      "mustPrecede": ["colorCalibration"],
+      "requires": [
+        "linear",
+        "rgb",
+        "approximateCoordinates",
+        "imageScale"
+      ],
+      "mustFollow": [
+        "gradient"
+      ],
+      "mustPrecede": [
+        "colorCalibration"
+      ],
       "parameters": {
         "onlyIfNeeded": true,
         "metadataAutofill": true,
@@ -89,12 +219,30 @@
       "lane": "main",
       "selectedAdapter": "spcc",
       "adapters": [
-        { "id": "spcc", "kind": "process", "processClass": "SpectrophotometricColorCalibration" }
+        {
+          "id": "spcc",
+          "kind": "process",
+          "processClass": "SpectrophotometricColorCalibration"
+        }
       ],
-      "requires": ["linear", "rgb", "astrometricSolution"],
-      "mustFollow": ["gradient", "plateSolve"],
-      "mustPrecede": ["deconvolution", "noiseReduction", "starSeparation"],
-      "parameters": { "catalogId": "GaiaDR3SP", "autoLimitMagnitude": true }
+      "requires": [
+        "linear",
+        "rgb",
+        "astrometricSolution"
+      ],
+      "mustFollow": [
+        "gradient",
+        "plateSolve"
+      ],
+      "mustPrecede": [
+        "deconvolution",
+        "noiseReduction",
+        "starSeparation"
+      ],
+      "parameters": {
+        "catalogId": "GaiaDR3SP",
+        "autoLimitMagnitude": true
+      }
     },
     {
       "id": "deconvolution",
@@ -104,12 +252,24 @@
       "lane": "main",
       "selectedAdapter": "blurXTerminator",
       "adapters": [
-        { "id": "blurXTerminator", "kind": "process", "processClass": "BlurXTerminator" },
-        { "id": "syqonParallax", "kind": "processIcon", "iconId": "CCDASTRO_Parallax" }
+        {
+          "id": "blurXTerminator",
+          "kind": "process",
+          "processClass": "BlurXTerminator"
+        }
       ],
-      "requires": ["linear", "rgb", "starsPresent"],
-      "mustFollow": ["gradient"],
-      "mustPrecede": ["noiseReduction", "starSeparation"],
+      "requires": [
+        "linear",
+        "rgb",
+        "starsPresent"
+      ],
+      "mustFollow": [
+        "gradient"
+      ],
+      "mustPrecede": [
+        "noiseReduction",
+        "starSeparation"
+      ],
       "parameters": {}
     },
     {
@@ -120,12 +280,23 @@
       "lane": "starless",
       "selectedAdapter": "noiseXTerminator",
       "adapters": [
-        { "id": "noiseXTerminator", "kind": "process", "processClass": "NoiseXTerminator" },
-        { "id": "syqonPrism", "kind": "processIcon", "iconId": "CCDASTRO_Prism" }
+        {
+          "id": "noiseXTerminator",
+          "kind": "process",
+          "processClass": "NoiseXTerminator"
+        }
       ],
-      "requires": ["rgb"],
-      "mustFollow": ["deconvolution"],
-      "parameters": { "placement": "starless", "denoise": 0.75, "iterations": 2 }
+      "requires": [
+        "rgb"
+      ],
+      "mustFollow": [
+        "deconvolution"
+      ],
+      "parameters": {
+        "placement": "starless",
+        "denoise": 0.75,
+        "iterations": 2
+      }
     },
     {
       "id": "starSeparation",
@@ -135,13 +306,28 @@
       "lane": "main",
       "selectedAdapter": "starXTerminator",
       "adapters": [
-        { "id": "starXTerminator", "kind": "process", "processClass": "StarXTerminator" },
-        { "id": "starNet2", "kind": "process", "processClass": "StarNet2" },
-        { "id": "syqonStarless", "kind": "processIcon", "iconId": "CCDASTRO_Starless" }
+        {
+          "id": "starXTerminator",
+          "kind": "process",
+          "processClass": "StarXTerminator"
+        },
+        {
+          "id": "starNet2",
+          "kind": "process",
+          "processClass": "StarNet2"
+        }
       ],
-      "requires": ["linear", "rgb"],
-      "mustFollow": ["deconvolution"],
-      "parameters": { "generateStars": true, "linearSubtraction": true }
+      "requires": [
+        "linear",
+        "rgb"
+      ],
+      "mustFollow": [
+        "deconvolution"
+      ],
+      "parameters": {
+        "generateStars": true,
+        "linearSubtraction": true
+      }
     },
     {
       "id": "starlessStretch",
@@ -151,12 +337,25 @@
       "lane": "starless",
       "selectedAdapter": "linkedAutoHistogram",
       "adapters": [
-        { "id": "linkedAutoHistogram", "kind": "internal" },
-        { "id": "unlinkedAutoHistogram", "kind": "internal" }
+        {
+          "id": "linkedAutoHistogram",
+          "kind": "internal"
+        },
+        {
+          "id": "unlinkedAutoHistogram",
+          "kind": "internal"
+        }
       ],
-      "requires": ["starlessView"],
-      "mustFollow": ["starSeparation", "noiseReduction"],
-      "parameters": { "targetBackground": 0.18 }
+      "requires": [
+        "starlessView"
+      ],
+      "mustFollow": [
+        "starSeparation",
+        "noiseReduction"
+      ],
+      "parameters": {
+        "targetBackground": 0.18
+      }
     },
     {
       "id": "starsStretch",
@@ -166,12 +365,24 @@
       "lane": "stars",
       "selectedAdapter": "linkedAutoHistogram",
       "adapters": [
-        { "id": "linkedAutoHistogram", "kind": "internal" },
-        { "id": "unlinkedAutoHistogram", "kind": "internal" }
+        {
+          "id": "linkedAutoHistogram",
+          "kind": "internal"
+        },
+        {
+          "id": "unlinkedAutoHistogram",
+          "kind": "internal"
+        }
       ],
-      "requires": ["starsView"],
-      "mustFollow": ["starSeparation"],
-      "parameters": { "targetBackground": 0.08 }
+      "requires": [
+        "starsView"
+      ],
+      "mustFollow": [
+        "starSeparation"
+      ],
+      "parameters": {
+        "targetBackground": 0.08
+      }
     },
     {
       "id": "recombine",
@@ -181,11 +392,22 @@
       "lane": "main",
       "selectedAdapter": "pixelMathAdd",
       "adapters": [
-        { "id": "pixelMathAdd", "kind": "internal" }
+        {
+          "id": "pixelMathAdd",
+          "kind": "internal"
+        }
       ],
-      "requires": ["starlessView", "starsView"],
-      "mustFollow": ["starlessStretch", "starsStretch"],
-      "parameters": { "mode": "add" }
+      "requires": [
+        "starlessView",
+        "starsView"
+      ],
+      "mustFollow": [
+        "starlessStretch",
+        "starsStretch"
+      ],
+      "parameters": {
+        "mode": "add"
+      }
     },
     {
       "id": "finalStretch",
@@ -195,12 +417,24 @@
       "lane": "main",
       "selectedAdapter": "linkedAutoHistogram",
       "adapters": [
-        { "id": "linkedAutoHistogram", "kind": "internal" },
-        { "id": "unlinkedAutoHistogram", "kind": "internal" }
+        {
+          "id": "linkedAutoHistogram",
+          "kind": "internal"
+        },
+        {
+          "id": "unlinkedAutoHistogram",
+          "kind": "internal"
+        }
       ],
-      "requires": ["recombinedView"],
-      "mustFollow": ["recombine"],
-      "parameters": { "targetBackground": 0.15 }
+      "requires": [
+        "recombinedView"
+      ],
+      "mustFollow": [
+        "recombine"
+      ],
+      "parameters": {
+        "targetBackground": 0.15
+      }
     },
     {
       "id": "starReduction",
@@ -210,11 +444,22 @@
       "lane": "main",
       "selectedAdapter": "blanshanStarMethodV2",
       "adapters": [
-        { "id": "blanshanStarMethodV2", "kind": "internal" }
+        {
+          "id": "blanshanStarMethodV2",
+          "kind": "internal"
+        }
       ],
-      "requires": ["starlessView", "recombinedView"],
-      "mustFollow": ["finalStretch"],
-      "parameters": { "method": "moderate", "iterations": 1 }
+      "requires": [
+        "starlessView",
+        "recombinedView"
+      ],
+      "mustFollow": [
+        "finalStretch"
+      ],
+      "parameters": {
+        "method": "moderate",
+        "iterations": 1
+      }
     }
   ]
 }

@@ -1,3 +1,5 @@
+> Historical v1.2.2 feature notes. For current v1.9.0 choices, see [the README](../README.md). SyQon/Studio and GraXpert integrations are no longer available.
+
 # v1.2.2 — Ordered processing passes and paired final outputs
 
 ## What was added

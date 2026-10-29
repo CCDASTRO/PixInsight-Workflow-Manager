@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.8.0',
+    [string] $Version = '1.9.0',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -40,6 +40,12 @@ if (-not (Test-Path -LiteralPath $sourceSignature -PathType Leaf)) {
 
 if (-not (Test-Path -LiteralPath $sourceEngine -PathType Leaf)) {
     throw 'Included AutoDBE engine is missing. Restore the matching signed-release dependency.'
+}
+# A timestamp check rejects known-stale signatures; CodeSign verification is still required.
+foreach ($dependency in @($sourceScript, $sourceEngine, $sourceAdvanced)) {
+    if ((Get-Item -LiteralPath $sourceSignature).LastWriteTimeUtc -lt (Get-Item -LiteralPath $dependency).LastWriteTimeUtc) {
+        throw 'Source changed after signing. Sign the final workflow and verify its signature in PixInsight before packaging.'
+    }
 }
 $engineBytes = [System.IO.File]::ReadAllBytes($sourceEngine)
 $engineText = [System.IO.File]::ReadAllText($sourceEngine)
@@ -145,71 +151,12 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.8.0 adds direct SyQon Studio CLI choices for DeepGradient, Prism, Parallax and Axiom, with authenticated model discovery, explicit domains and preserved working-copy behavior. Legacy SyQon executables remain separate. v1.7.0 adds optional independent channel stretch review with R/G/B median targets and amount sliders, individual channel and recombined previews, linear-input confirmation and explicit acceptance. Equal targets change relative emission brightness. v1.6.2 opens separately installed signed Lighthouse automatically after the workflow exits, with the exact final image selected and short image/file names; manual launch remains optional. v1.6.1 explicitly selects GraXpert AI background extraction and disables the module’s sample-free default for compatibility with older GraXpert CLIs. Corrected pixels replace only the workflow working copy so later stages receive the result. v1.6.0 adds an optional finishing-panel choice: CCDASTRO Color &amp; Tone Studio or an assisted handoff to separately installed Lighthouse. The workflow saves a separate stretched copy and closes; launch Lighthouse manually from its Scripts menu. Reports and sharing exports describe the pre-Lighthouse result.</p>
+        <p>v1.9.0 removes external image-processing integrations for CPD execution policy compliance. Image processing stays within PixInsight through installed processes and included PJSR tools.</p>
         <ul>
-          <li>v1.2.2 adds per-pass Parallax, MLDenoise, Prism, StarNet2, SyQon Starless, ACDNR and MLT with independent settings and stage-aware execution.</li>
-          <li>32 regression suites passed, including preset migration, Lighthouse detection and handoff source preservation. Lighthouse remains independently installed and updated.</li>
-          <li>v1.2.1 saves independent starless and recombined finals, protects their filenames and exports/reports each result.</li>
-          <li>Native paired save/reopen and starless/original pixel-preservation checks passed.</li>
-          <li>v1.2.0 adds independent multipass BlurX/NoiseX/StarX, accumulated stars, post-stretch cleanup, reference RGB matching, reviewed repairs, TIFF and run reports.</li>
-          <li>Actual native RC Astro execution passed on a calibrated LDN1510 crop; all pass and repair settings remain optional.</li>
-          <li>v1.1.16 provides setup instructions for a missing optional final denoise icon</li>
-          <li>v1.1.15 simplifies inspection to one Continue button and displays Before until a preview result exists</li>
-          <li>v1.1.14 preserves the original input and adds optional finishing reviews plus separate resized sharing export</li>
-          <li>v1.1.13 fixes native CurvesTransformation interpolation enums for the V8 runtime</li>
-          <li>v1.1.12 replaces adaptive finishing with native CurvesTransformation, editable curve points, channel selection and amount controls</li>
-          <li>v1.1.11 adds same-position Before/After, centered zoom, and an inspection-only amplified difference view</li>
-          <li>v1.1.10 adds immediate preview repaint and measured pixel-change feedback for HDR and adaptive finishing</li>
-          <li>v1.1.9 uses a configured MLDenoise icon and validates the neural network model path before processing</li>
-          <li>v1.1.8 adds optional image-adaptive brightness and contrast with protected background/highlights, strength controls, preview and comparison</li>
-          <li>v1.1.7 fixes the HDR preview Graphics.fillRect Brush argument error</li>
-          <li>v1.1.6 adds optional native HDR with before/after preview, layers and blend controls, Apply/Skip, and retained comparison images</li>
-          <li>v1.1.5 offers final-image Save As with the original filename plus _CCDASTROWorkflow_Final.xisf, original-file protection, and overwrite confirmation</li>
-          <li>v1.1.4 refreshes signing dependencies for the ImageSolver engine shipped with PixInsight 1.9.5 build 1705</li>
-          <li>v1.1.3 adds MLDenoise to noise reduction, using installed process defaults and the selected denoise placement</li>
-          <li>v1.1.2 targets PixInsight 1.9.4 through 1.9.5 and enforces a script-only package layout</li>
-          <li>1.9.5 build 1702: plate solving, new astrometric properties, XISF save/reopen, SPFC/MGC, and SPCC tested successfully</li>
-          <li>v1.2.0 native RC Astro crop execution passed; full-image outcomes depend on selected settings and review.</li>
-          <li>v1.1.1 fixes recursive SyQon execution and keeps the Process Console accessible during processing</li>
-          <li>SyQon Starless requires clicking Generate Starless, monitoring the Process Console for completion, and closing its window before the workflow continues</li>
-          <li>v1.1.0 adds optional MGC with prerequisite plate solving, SPFC, configured process icons, and preflight checks</li>
-          <li>v1.0.0 is the first stable public release after successful end-to-end workflow and Update Manager testing</li>
-          <li>v0.6.3 keeps the dialog size stable when sections are toggled and uses a larger adaptive minimum height</li>
-          <li>v0.6.2 makes the workflow dialog resizable with collapsible sections and vertical scrolling for smaller displays</li>
-          <li>v0.6.1 adds prominent linear-master quality guidance while leaving calibration and integration method choices to the user</li>
-          <li>v0.6.0 adds object/image-type workflows for general color masters, broadband and mapped narrowband emission nebulae, galaxies, and star clusters</li>
-          <li>v0.6.0 shows only the stages appropriate to the selected image type and supports a direct full-image stretch when star separation is omitted</li>
-          <li>v0.5.15 recombines linear branches before one conservative final stretch to prevent washed-out star halos</li>
-          <li>v0.5.14 uses unscreened StarXTerminator stars for screen recombination and a darker starless stretch</li>
-          <li>v0.5.13 replaces deprecated event processing calls with the PixInsight 1.9.4 CoreApplication API</li>
-          <li>v0.5.12 prevents ImageSolver's apparent-coordinate fallback from using a missing observation time</li>
-          <li>v0.5.11 renames the retained stars-only branch to &lt;target&gt;_stars</li>
-          <li>v0.5.10 declares Star Method PixelMath variables with the PixInsight-compatible syntax</li>
-          <li>v0.5.9 embeds Star Method parameters directly for PixInsight 1.9.4 PixelMath compatibility</li>
-          <li>v0.5.8 fixes temporary starless-reference creation on the PixInsight 1.9.4 V8 API</li>
-          <li>v0.5.7 adds optional Bill Blanshan Star Method V2 reduction controls after recombination</li>
-          <li>v0.5.6 adds safe cancellation, resets the crop AutoSTF, and uses conservative stars-only stretching</li>
-          <li>v0.5.5 adds linked or unlinked automatic histogram stretch choices</li>
-          <li>v0.5.4 fixes persistent Settings data types for the PixInsight 1.9.4 V8 API</li>
-          <li>v0.5.3 restores last-used workflow selections and adds Reset to Defaults</li>
-          <li>v0.5.2 applies a display-only linked AutoSTF before opening DynamicCrop</li>
-          <li>v0.5.1 replaces the fixed crop icon with an interactive DynamicCrop handoff</li>
-          <li>v0.5.0 adds integration-border warnings and an optional configured DynamicCrop stage</li>
-          <li>v0.4.9 handles missing ImageSolver metadata and reports nonstandard exceptions</li>
-          <li>v0.4.8 refreshes the certified package and documents first-install script registration</li>
-          <li>v0.4.7 adds certified CCDASTRO code signing</li>
-          <li>v0.4.6 uses color-master terminology and adds contextual mouse-over help</li>
-          <li>v0.4.5 ports dialogs to V8 class inheritance</li>
-          <li>v0.4.4 uses native V8 UI classes and enumerations</li>
-          <li>v0.4.3 normalizes Windows script line endings for PixInsight preprocessing</li>
-          <li>v0.4.2 selects the required PixInsight V8 JavaScript engine</li>
-          <li>v0.4.1 ImageSolver preprocessing compatibility fix</li>
-          <li>Metadata-assisted ImageSolver adapter with setup dialog</li>
-          <li>GradientCorrection and GraXpert choices</li>
-          <li>BlurXTerminator and SyQon Parallax choices</li>
-          <li>NoiseXTerminator and SyQon Prism choices</li>
-          <li>Starless and stars-only workflow branches</li>
-          <li>Independent stretching and PixelMath recombination</li>
+          <li>Removed legacy SyQon, SyQon Studio CLI and GraXpert adapters, setup controls and executable discovery.</li>
+          <li>Saved settings referencing removed tools require Reset Defaults and review before processing.</li>
+          <li>Native processing, channel stretch, ordered passes and Color &amp; Tone review remain available.</li>
+          <li>Optional signed Lighthouse handoff uses the PixInsight core command-line/IPC interface.</li>
         </ul>
       </description>
     </package>

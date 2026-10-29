@@ -1,5 +1,7 @@
 # PixInsight Update Repository
 
+Current update: **v1.9.0**. External SyQon and GraXpert processing adapters have been removed. If saved settings reference removed tools, use Reset Defaults and choose supported PixInsight tools before running.
+
 Add this URL in **Resources > Updates > Manage Repositories**:
 
 ```text

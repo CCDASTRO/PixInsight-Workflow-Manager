@@ -1,14 +1,22 @@
-# PixInsight 1.9.6 compatibility — Workflow Manager 1.9.1
+# PixInsight 1.9.6 compatibility — Workflow Manager 1.9.2
 
-Status: source changes and all 32 mocked regression suites complete. The user
-signed the workflow and generated update manifest on 2026-10-30. The v1.9.1 ZIP
+Status: source changes and all 33 mocked regression suites complete. The user
+signed the workflow and generated update manifest on 2026-10-30. The v1.9.2 ZIP
 and signed manifest target PI 1.9.4–1.9.6; the manifest hash and packaged source/
 signature match were checked. Cryptographic verification and native image-processing
 validation on PI 1.9.6 remain pending.
 
+## v1.9.2 hotfix
+
+Corrects two unsupported #ifgte directives to the documented #ifgteq spelling.
+The user signed the corrected workflow on 2026-10-30. All 33 regression suites
+pass, including directive validation and conditional-version boundary checks.
+The v1.9.2 package and regenerated manifest have both been signed.
+Native PI launch and image-processing verification remain pending.
+
 ## Changes
 
-- Builder accepts 1.9.6 and defaults to 1.9.4:1.9.6; source/package version is 1.9.1.
+- Builder accepts 1.9.6 and defaults to 1.9.4:1.9.6; source/package version is 1.9.2.
 - Solver provenance VERSION is 6.6.0 on PI build >= 1707, 6.5.0 on builds
   1702–1706, and 6.4.2 on earlier builds.
   The installed ImageSolver.js declares 6.6.0 even though its engine header says 6.5.0.
@@ -24,7 +32,7 @@ validation on PI 1.9.6 remain pending.
 
 ## Automated validation
 
-All 32 Node regression suites pass, including test-plate-solve.js. Tests cover seeded
+All 33 Node regression suites pass, including test-plate-solve.js. Tests cover seeded
 and blind paths, trusted user provenance, missing index, old engine fallback,
 missing capture date, retained existing solutions, and solver failure detection.
 Workflow schema/order validation passes. These are mocked/API tests, not native
@@ -44,7 +52,7 @@ astrometric accuracy or final-image-quality validation.
    and direct settings. Review image quality; do not infer compatibility from DLL names.
 7. Verify seeded behavior and signatures on retained PI 1.9.4/1.9.5 installations.
    A signature bound to changed installed dependencies may require separate builds.
-8. Build with -Version 1.9.1 -MaximumPixInsightVersion 1.9.6, sign the generated
+8. Build with -Version 1.9.2 -MaximumPixInsightVersion 1.9.6, sign the generated
    updates.xri, then test Update Manager installation before publishing.
 
 Reference: https://pixinsight.net/dev/index.php?articles/pixinsight-1-9-6-lockhart-released.28/

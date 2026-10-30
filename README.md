@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.1
+# CCDASTRO PixInsight Workflow Manager v1.9.2
 
 
 
@@ -7,6 +7,14 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
+
+## New in v1.9.2 — preprocessor hotfix
+
+Fixes the unsupported `#ifgte` directives introduced in v1.9.1. PixInsight uses
+`#ifgteq`; the old spelling caused an unmatched else error before launch.
+A new preprocessor regression checks supported directives and solver version
+selection across PI builds. All 33 regression suites pass. The corrected script
+and regenerated update manifest have been signed for the CCDASTRO identity.
 
 ## New in v1.9.1 — PixInsight 1.9.6 compatibility
 
@@ -24,7 +32,7 @@ This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, 
 
 The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.
 
-**v1.9.1 update:** install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.
+**v1.9.2 update:** install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.
 
 ## New in v1.7.0 — Independent channel stretch review
 

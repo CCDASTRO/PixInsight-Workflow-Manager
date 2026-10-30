@@ -12,10 +12,10 @@
 
 #define SETTINGS_MODULE "CCDASTROWorkflowManager"
 #define SOLVER_SETTINGS_MODULE "ImageSolver"
-#ifgte __PI_BUILD__ 1707
+#ifgteq __PI_BUILD__ 1707
 #define VERSION "6.6.0"
 #else
-#ifgte __PI_BUILD__ 1702
+#ifgteq __PI_BUILD__ 1702
 #define VERSION "6.5.0"
 #else
 #define VERSION "6.4.2"
@@ -27,7 +27,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.1"
+#define VERSION "1.9.2"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";

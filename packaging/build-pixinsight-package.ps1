@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.1',
+    [string] $Version = '1.9.2',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -151,7 +151,7 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.9.1 adds PixInsight 1.9.6 compatibility and blind-solving fallback through the installed ImageSolver engine. Image processing stays within PixInsight.</p>
+        <p>v1.9.2 fixes a preprocessor directive error that prevented v1.9.1 from launching. Includes PixInsight 1.9.6 compatibility and blind-solving fallback through the installed ImageSolver engine.</p>
         <ul>
           <li>Blind solving when coordinates/scale are missing and an astrometric index is configured; actual capture date remains required.</li>
           <li>Saved settings referencing removed tools require Reset Defaults and review before processing.</li>

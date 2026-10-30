@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.9.1",
+    "softwareVersion": "1.9.2",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,18 +160,20 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.1">CCDASTRO PixInsight Workflow Manager v1.9.1</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.2">CCDASTRO PixInsight Workflow Manager v1.9.2</h1>
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
 <p>CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See <a href="#acknowledgments">Acknowledgments and third-party tools</a>.</p>
+<h2 id="new-in-v1.9.2-preprocessor-hotfix">New in v1.9.2 — preprocessor hotfix</h2>
+<p>Corrects the preprocessor comparison directives that prevented v1.9.1 from launching. All 33 regression suites pass, including a new check for directive syntax and solver-version selection. Retains PI 1.9.4–1.9.6 compatibility and blind-solving fallback. Native PI 1.9.6 image-processing validation remains pending.</p>
 <h2 id="new-in-v1.9.1-pixinsight-1.9.6-compatibility">New in v1.9.1 — PixInsight 1.9.6 compatibility</h2>
 <p>The signed v1.9.1 release targets PixInsight 1.9.4–1.9.6. On PI 1.9.6, the workflow can solve images without coordinate/scale seeds when an astrometric index is configured in ImageSolver/Gaia. Complete seeds retain seeded solving with the new solver's provenance flags. The actual capture observation date remains required.</p>
 <p>All 32 automated regression suites pass. Native PI 1.9.6 image-processing validation remains pending; see the <a href="https://github.com/CCDASTRO/PixInsight-Workflow-Manager/blob/main/docs/PIXINSIGHT-1.9.6.md">compatibility and validation checklist</a>.</p>
 <h2 id="new-in-v1.9.0-cpd-execution-policy-update">New in v1.9.0 — CPD execution policy update</h2>
 <p>This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, including executable discovery, setup controls and image-processing round trips. Processing stays inside PixInsight. Old saved settings selecting a removed adapter or pass are rejected; use Reset Defaults and select supported tools before running.</p>
 <p>The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.</p>
-<p><strong>v1.9.1 update:</strong> install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.</p>
+<p><strong>v1.9.2 update:</strong> install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.</p>
 <h2 id="new-in-v1.7.0-independent-channel-stretch-review">New in v1.7.0 — Independent channel stretch review</h2>
 <p>Select <strong>Final image stretch &gt; Independent channel stretch (review RGB)</strong> to adjust the R/G/B channels independently before they are recombined with stars or passed to final finishing. The existing linked stretch remains the default. The review starts all channels at median target <strong>0.23</strong>, with independent target (0.01–0.50) and amount (0–100%) sliders, Before/After comparison, individual grayscale channel views and a recombined RGB view. Zero amount preserves that channel. Confirm linear input, click <strong>Update Preview</strong>, inspect, then <strong>Apply channel stretch</strong>. Settings changes require a fresh preview. Closing the review or choosing <strong>Use shared stretch instead</strong> applies the workflow’s normal linked stretch so later nonlinear stages still receive stretched data.</p>
 <p>Use linear RGB or the existing <strong>separate R/G/B/L</strong> input mode with registered mono masters mapped to the desired output slots. For example, map SII/Ha/OIII to R/G/B for SHO. The workflow first assembles the linear mapping; this review transforms its three planes independently and recombines them. This is mathematically equivalent to applying the same independent transforms to those mapped mono channels before combination; no registration or filter inference is performed. Optional luminance preparation remains separate. When starless final-output mode is enabled, review the starless branch before the stars companion is recombined; otherwise review the final combined/active image at its existing final-stretch stage.</p>

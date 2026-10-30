@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.0
+# CCDASTRO PixInsight Workflow Manager v1.9.1
 
 
 
@@ -8,13 +8,23 @@ finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
 
+## New in v1.9.1 — PixInsight 1.9.6 compatibility
+
+Adds automatic blind-solving fallback when coordinates/scale are unavailable and
+an astrometric index is configured in ImageSolver/Gaia. Complete reviewed seeds
+are passed with the new solver's provenance flags. The actual capture observation
+date remains required. Seeded solving remains available on older supported PI.
+The signed v1.9.1 package targets PI 1.9.4–1.9.6. All 32 automated regression
+suites pass; native PI 1.9.6 image-processing validation remains pending.
+See [1.9.6 compatibility and release checklist](docs/PIXINSIGHT-1.9.6.md).
+
 ## New in v1.9.0 — CPD execution policy update
 
 This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, including executable discovery, setup controls and image-processing round trips. Processing stays inside PixInsight. Old saved settings selecting a removed adapter or pass are rejected; use Reset Defaults and select supported tools before running.
 
 The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.
 
-**v1.9.0 update:** install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.
+**v1.9.1 update:** install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.
 
 ## New in v1.7.0 — Independent channel stretch review
 
@@ -95,8 +105,8 @@ The silent walkthrough uses on-screen explanations and the Soul image example. I
 
 ## Requirements
 
-- PixInsight 1.9.4 or 1.9.5 with its standard ImageSolver library. See the
-  [compatibility checklist](docs/PIXINSIGHT-1.9.5.md) for verification details.
+- PixInsight 1.9.4–1.9.6 with its standard ImageSolver library. See the
+  [compatibility checklist](docs/PIXINSIGHT-1.9.6.md) for verification details.
 - Integrated, unstretched color data or registered linear L/R/G/B masters;
   Float32 XISF is recommended. Display STF is acceptable; a permanent stretch is not.
 - Installed tools, compatible models and licenses for your selected stages.
@@ -804,7 +814,7 @@ recover clipped detail, fix optical halos reliably or replace good preprocessing
 Model compatibility, licensing, catalogs and MARS coverage depend on the selected native tools.
 
 GHS integration, checkpoints and exportable user presets are not provided.
-Testing details are maintained in the [compatibility checklist](docs/PIXINSIGHT-1.9.5.md),
+Testing details are maintained in the [compatibility checklist](docs/PIXINSIGHT-1.9.6.md),
 with execution and storage details in the [security disclosure](docs/SECURITY-AND-DEPENDENCIES.md).
 
 ## Security and CPD execution policy

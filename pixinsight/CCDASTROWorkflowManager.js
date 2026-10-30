@@ -12,14 +12,22 @@
 
 #define SETTINGS_MODULE "CCDASTROWorkflowManager"
 #define SOLVER_SETTINGS_MODULE "ImageSolver"
+#ifgte __PI_BUILD__ 1707
+#define VERSION "6.6.0"
+#else
+#ifgte __PI_BUILD__ 1702
+#define VERSION "6.5.0"
+#else
 #define VERSION "6.4.2"
+#endif
+#endif
 #include <pjsr/astrometry/AstrometricMetadata.js>
 #include <pjsr/astrometry/AstronomicalCatalogs.js>
 #include "../ImageSolver/ImageSolverEngine.js"
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.0"
+#define VERSION "1.9.1"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -363,13 +371,27 @@ PlateSolveSettings.prototype.autofill = function(window, preserveReviewed)
    this.source = "Active image metadata";
 };
 
-PlateSolveSettings.prototype.complete = function()
+PlateSolveSettings.prototype.hasSeed = function()
 {
    var coordinatesOk = finiteCoordinate(this.ra) && this.ra >= 0 && this.ra <= 360 &&
       finiteCoordinate(this.dec) && this.dec >= -90 && this.dec <= 90;
    var scaleOk = finitePositive(this.resolution) ||
       (finitePositive(this.focal) && finitePositive(this.pixelSize));
    return coordinatesOk && scaleOk;
+};
+
+// Capability detection retains seeded solving on older supported installations.
+function blindSolvingAvailable()
+{
+   if (typeof BlindSolverMode === "undefined" || typeof ImageSolver === "undefined") return false;
+   var solver = new ImageSolver;
+   return typeof solver.astrometricIndexFilePath === "function" &&
+      solver.astrometricIndexFilePath().length > 0;
+}
+
+PlateSolveSettings.prototype.complete = function()
+{
+   return this.hasSeed() || blindSolvingAvailable();
 };
 
 function PlateSolveAdapter(settings)
@@ -389,7 +411,7 @@ PlateSolveAdapter.prototype.requirement = function()
    if (!this.available())
       return "Install the standard PixInsight ImageSolver script.";
    if (!this.settings.complete())
-      return "Open Plate Solve Setup and provide coordinates plus image scale or focal length and pixel size.";
+      return "Provide coordinates and image scale in Plate Solve Setup, or configure an ImageSolver astrometric index on PixInsight 1.9.6 for blind solving.";
    return "Plate-solving setup is ready.";
 };
 
@@ -408,18 +430,27 @@ PlateSolveAdapter.prototype.execute = function(view)
    solver.initialize(window, false /*prioritizeSettings*/);
    if(typeof solver.solverCfg.vizierServer==="string" && solver.solverCfg.vizierServer.toLowerCase().indexOf("https://")!==0)
       throw new Error("ImageSolver VizieR server must use HTTPS. Select a secure server in ImageSolver settings.");
-   solver.metadata.ra = this.settings.ra;
-   solver.metadata.dec = this.settings.dec;
-   solver.metadata.referenceSystem = "ICRS";
-   solver.metadata.useFocal = finitePositive(this.settings.focal) &&
-      finitePositive(this.settings.pixelSize);
-   if (finitePositive(this.settings.focal))
-      solver.metadata.focal = this.settings.focal;
-   if (finitePositive(this.settings.pixelSize))
-      solver.metadata.xpixsz = this.settings.pixelSize;
-   solver.metadata.resolution = finitePositive(this.settings.resolution)
-      ? this.settings.resolution
-      : this.settings.pixelSize / this.settings.focal * 0.18 / Math.PI;
+   var seeded = this.settings.hasSeed();
+   if (typeof BlindSolverMode !== "undefined")
+   {
+      solver.solverCfg.blindSolver = seeded ? BlindSolverMode.Automatic : BlindSolverMode.Always;
+      solver.userSeed = { coordinates: seeded, scale: seeded };
+   }
+   if (seeded)
+   {
+      solver.metadata.ra = this.settings.ra;
+      solver.metadata.dec = this.settings.dec;
+      solver.metadata.referenceSystem = "ICRS";
+      solver.metadata.useFocal = finitePositive(this.settings.focal) &&
+         finitePositive(this.settings.pixelSize);
+      if (finitePositive(this.settings.focal))
+         solver.metadata.focal = this.settings.focal;
+      if (finitePositive(this.settings.pixelSize))
+         solver.metadata.xpixsz = this.settings.pixelSize;
+      solver.metadata.resolution = finitePositive(this.settings.resolution)
+         ? this.settings.resolution
+         : this.settings.pixelSize / this.settings.focal * 0.18 / Math.PI;
+   }
    solver.solverCfg.autoMagnitude = true;
    solver.solverCfg.generateErrorImg = false;
    solver.solverCfg.showStars = false;
@@ -431,7 +462,8 @@ PlateSolveAdapter.prototype.execute = function(view)
    if (typeof CatalogMode !== "undefined")
       solver.solverCfg.catalogMode = CatalogMode.Automatic;
 
-   logLine("Running ImageSolver on " + view.fullId + "; seed source="+this.settings.source+"; RA="+this.settings.ra+" deg; Dec="+this.settings.dec+" deg; scale="+(solver.metadata.resolution*3600)+" arcsec/pixel.");
+   if (!seeded) logLine("Running ImageSolver blind solving on " + view.fullId + ".");
+   else logLine("Running ImageSolver on " + view.fullId + "; seed source="+this.settings.source+"; RA="+this.settings.ra+" deg; Dec="+this.settings.dec+" deg; scale="+(solver.metadata.resolution*3600)+" arcsec/pixel.");
    solver.solveImage(window);
    if (!imageHasAstrometricSolution(window))
       throw new Error("ImageSolver completed without creating an astrometric solution.");
@@ -1720,7 +1752,9 @@ constructor(settings)
    this.help.wordWrapping = true;
    this.help.text = "Seed values are read from the active image's FITS/XISF metadata. " +
       "Right ascension is expressed in degrees (0 to 360), resolution in degrees per pixel. " +
-      "ImageSolver uses its automatic catalog and magnitude selection.";
+      "ImageSolver uses its automatic catalog and magnitude selection. On PixInsight 1.9.6, " +
+      "coordinates and scale may be left blank when an astrometric index is configured in ImageSolver. " +
+      "The actual capture observation date is still required.";
 
    function editRow(parent, caption, value, tip)
    {
@@ -1804,7 +1838,7 @@ constructor(settings)
       var activeWindow=ImageWindow.activeWindow;
       settings.imageKey=activeWindow.filePath || activeWindow.mainView.fullId;
       if (!settings.complete())
-         throw new Error("Enter valid RA and Dec plus either resolution or both focal length and pixel size.");
+         throw new Error("Enter valid RA and Dec plus resolution or focal length and pixel size, or configure an ImageSolver astrometric index for blind solving on PixInsight 1.9.6.");
    };
    this.autofillButton.onClick = function()
    {

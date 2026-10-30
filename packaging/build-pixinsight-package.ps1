@@ -2,12 +2,12 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.0',
+    [string] $Version = '1.9.1',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
-    [ValidateSet('1.9.4', '1.9.5')]
-    [string] $MaximumPixInsightVersion = '1.9.5'
+    [ValidateSet('1.9.4', '1.9.5', '1.9.6')]
+    [string] $MaximumPixInsightVersion = '1.9.6'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -151,9 +151,9 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.9.0 removes external image-processing integrations for CPD execution policy compliance. Image processing stays within PixInsight through installed processes and included PJSR tools.</p>
+        <p>v1.9.1 adds PixInsight 1.9.6 compatibility and blind-solving fallback through the installed ImageSolver engine. Image processing stays within PixInsight.</p>
         <ul>
-          <li>Removed legacy SyQon, SyQon Studio CLI and GraXpert adapters, setup controls and executable discovery.</li>
+          <li>Blind solving when coordinates/scale are missing and an astrometric index is configured; actual capture date remains required.</li>
           <li>Saved settings referencing removed tools require Reset Defaults and review before processing.</li>
           <li>Native processing, channel stretch, ordered passes and Color &amp; Tone review remain available.</li>
           <li>Optional signed Lighthouse handoff uses the PixInsight core command-line/IPC interface.</li>

@@ -5,11 +5,12 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.6">
-      <package fileName="CCDASTROWorkflowManager-1.9.2.zip" sha1="b9c2eff4c921e85087f316c79f755a86c0ba6958" type="script" releaseDate="20261030113055">
-         <title>CCDASTRO Workflow Manager 1.9.2</title>
+      <package fileName="CCDASTROWorkflowManager-1.9.3.zip" sha1="571ea772137aa26fdc15be93793cc340d10ff5ea" type="script" releaseDate="20261031214528">
+         <title>CCDASTRO Workflow Manager 1.9.3</title>
          <description>
-            <p>v1.9.2 fixes a preprocessor directive error that prevented v1.9.1 from launching. Includes PixInsight 1.9.6 compatibility and blind-solving fallback through the installed ImageSolver engine.</p>
+            <p>v1.9.3 adds optional BlurlessAI stellar repair on linear images using installed-module defaults, with no process icon required.</p>
             <ul>
+               <li>BlurlessAI runs after gradient correction and before separate color calibration; MGC retains its SPFC prerequisite. Advanced ordered passes override the main dropdown.</li>
                <li>Blind solving when coordinates/scale are missing and an astrometric index is configured; actual capture date remains required.</li>
                <li>Saved settings referencing removed tools require Reset Defaults and review before processing.</li>
                <li>Native processing, channel stretch, ordered passes and Color &amp; Tone review remain available.</li>
@@ -19,4 +20,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-30T11:31:23.509Z" encoding="Base64">ZKOtnLiAMFsyBzbaUWIzzse0j1r3mTb+CEe0737nxTPJWjLOKIJYqW3ujvP3DxH3AfNX6CAF484h/5F1+B43Bw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-10-31T21:45:47.883Z" encoding="Base64">ZqremlAjnseRTtrFAQ2U3mn6OZVO6O4Ai/XPgDzkyPMGd9zE8il0vEyRHQNkNdmdMQpIrXkYNQpMZYCFQpJyAw==</Signature>

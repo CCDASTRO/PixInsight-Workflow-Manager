@@ -165,9 +165,9 @@
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
 <p>CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See <a href="#acknowledgments">Acknowledgments and third-party tools</a>.</p>
-<h2 id="new-in-v1.9.3-blurlessai-signing-pending">New in v1.9.3 — BlurlessAI (signing pending)</h2>
+<h2 id="new-in-v1.9.3-blurlessai">New in v1.9.3 — BlurlessAI</h2>
 <p>Adds <strong>BlurlessAI (stellar only)</strong> to <strong>Deblur / structure recovery</strong>, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.</p>
-<p>This source revision is prepared for signing; the published signed update remains <strong>v1.9.2</strong>. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.</p>
+<p>The v1.9.3 script and update manifest are signed for the CCDASTRO identity. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.</p>
 <h2 id="new-in-v1.9.2-preprocessor-hotfix">New in v1.9.2 — preprocessor hotfix</h2>
 <p>Fixes the unsupported <code>#ifgte</code> directives introduced in v1.9.1. PixInsight uses
 <code>#ifgteq</code>; the old spelling caused an unmatched else error before launch.
@@ -185,7 +185,7 @@ See <a href="docs/PIXINSIGHT-1.9.6.md">1.9.6 compatibility and release checklist
 <h2 id="new-in-v1.9.0-cpd-execution-policy-update">New in v1.9.0 — CPD execution policy update</h2>
 <p>This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, including executable discovery, setup controls and image-processing round trips. Processing stays inside PixInsight. Old saved settings selecting a removed adapter or pass are rejected; use Reset Defaults and select supported tools before running.</p>
 <p>The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.</p>
-<p><strong>v1.9.2 update:</strong> install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.</p>
+<p><strong>v1.9.3 update:</strong> install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.</p>
 <h2 id="new-in-v1.7.0-independent-channel-stretch-review">New in v1.7.0 — Independent channel stretch review</h2>
 <p>Select <strong>Final image stretch &gt; Independent channel stretch (review RGB)</strong> to adjust the R/G/B channels independently before they are recombined with stars or passed to final finishing. The existing linked stretch remains the default. The review starts all channels at median target <strong>0.23</strong>, with independent target (0.01–0.50) and amount (0–100%) sliders, Before/After comparison, individual grayscale channel views and a recombined RGB view. Zero amount preserves that channel. Confirm linear input, click <strong>Update Preview</strong>, inspect, then <strong>Apply channel stretch</strong>. Settings changes require a fresh preview. Closing the review or choosing <strong>Use shared stretch instead</strong> applies the workflow’s normal linked stretch so later nonlinear stages still receive stretched data.</p>
 <p>Use linear RGB or the existing <strong>separate R/G/B/L</strong> input mode with registered mono masters mapped to the desired output slots. For example, map SII/Ha/OIII to R/G/B for SHO. The workflow first assembles the linear mapping; this review transforms its three planes independently and recombines them. This is mathematically equivalent to applying the same independent transforms to those mapped mono channels before combination; no registration or filter inference is performed. Optional luminance preparation remains separate. When starless final-output mode is enabled, review the starless branch before the stars companion is recombined; otherwise review the final combined/active image at its existing final-stretch stage.</p>
@@ -369,7 +369,7 @@ profile when the image needs different color treatment.</p>
 <li>Selected gradient correction (MGC performs its prerequisite solve and SPFC first)</li>
 <li>ImageSolver when the image does not already have an astrometric solution</li>
 <li>Selected color calibration: SPCC (default) or configured PCC</li>
-<li>BlurXTerminator or BlurlessAI (stellar only; signing pending)</li>
+<li>BlurXTerminator or BlurlessAI (stellar only)</li>
 <li>StarXTerminator, StarNet2</li>
 <li>NoiseXTerminator, MLDenoise on the starless branch</li>
 <li>Linear-add PixelMath recombination</li>

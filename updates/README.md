@@ -1,8 +1,8 @@
 # PixInsight Update Repository
 
-**v1.9.3 source is prepared for signing.** The published signed update remains v1.9.2 until the new script and regenerated manifest have been signed. See [the signing checklist](../docs/SIGNING-v1.9.3.md).
+**v1.9.3 script and manifest are signed.** See [the signing and package record](../docs/SIGNING-v1.9.3.md).
 
-Current signed update: **v1.9.2** (PI 1.9.4–1.9.6). Fixes the v1.9.1 preprocessor launch error and retains blind-solving fallback with a configured astrometric index. Native PI 1.9.6 image-processing validation remains pending. External SyQon and GraXpert processing adapters have been removed. If saved settings reference removed tools, use Reset Defaults and choose supported PixInsight tools before running.
+Current signed update: **v1.9.3** (PI 1.9.4–1.9.6). Adds BlurlessAI stellar repair without a process icon and retains the preprocessor fix and blind-solving fallback with a configured astrometric index. Live BlurlessAI processing remains unverified. Native PI 1.9.6 image-processing validation remains pending. External SyQon and GraXpert processing adapters have been removed. If saved settings reference removed tools, use Reset Defaults and choose supported PixInsight tools before running.
 
 Add this URL in **Resources > Updates > Manage Repositories**:
 

@@ -2,11 +2,11 @@
 
 See the [current workflow guide](../README.md) for supported tools, setup, and usage.
 
-## New in v1.9.3 — BlurlessAI (signing pending)
+## New in v1.9.3 — BlurlessAI
 
 Adds **BlurlessAI (stellar only)** to **Deblur / structure recovery**, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.
 
-This source revision is prepared for signing; the published signed update remains **v1.9.2**. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.
+The v1.9.3 script and update manifest are signed for the CCDASTRO identity. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.
 
 ## New in v1.9.2 — preprocessor hotfix
 
@@ -25,4 +25,4 @@ This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, 
 
 The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.
 
-**v1.9.2 update:** install through the signed PixInsight Update Manager repository described in the current guide.
+**v1.9.3 update:** install through the signed PixInsight Update Manager repository described in the current guide.

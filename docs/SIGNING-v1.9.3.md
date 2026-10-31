@@ -1,6 +1,6 @@
-# v1.9.3 signing preparation
+# v1.9.3 signing and package record
 
-Prepared October 31, 2026. Published signed update: v1.9.2.
+Signed October 31, 2026. Release version: v1.9.3. Signing uses the usual `PixInsight-Workflow-Manager` project folder, not the temporary publishing worktree.
 
 BlurlessAI is optional, stellar-only, and runs directly with installed-module defaults; no icon is required. Live BlurlessAI execution and default-model/device behavior remain unverified. Advanced ordered passes override the main dropdown.
 
@@ -10,13 +10,16 @@ BlurlessAI is optional, stellar-only, and runs directly with installed-module de
 - Run `node pixinsight/tools/validate-workflow.js`.
 - Main source uses CRLF and UTF-8 without BOM.
 - ImageSolver dependency is staged from the installed PixInsight distribution by `packaging/prepare-codesign.ps1`; it is ignored by Git.
-- Existing XSGN and update feed belong to the earlier release and do not sign v1.9.3. No v1.9.3 ZIP or new update feed is published in this preparation.
+- User completed CodeSign signing of the script (2026-10-31T21:45:09.684Z) and manifest (2026-10-31T21:45:47.883Z). Signature records identify CCDASTRO; no independent cryptographic verification was performed by the packaging checks.
+- Package SHA-1: `571ea772137aa26fdc15be93793cc340d10ff5ea`.
+- Manifest package name/checksum and all four ZIP files match the signed-source folder byte-for-byte.
+- Live BlurlessAI processing and installation verification remain pending.
 
-## Sign and publish
+## Rebuilding a future package
 
 1. Verify BlurlessAI availability and processing in PixInsight on a linear working copy, including the chosen model and CPU/GPU setup. Check ordering before separate color calibration, with MGC retaining earlier SPFC.
-2. In PixInsight CodeSign, sign `pixinsight/CCDASTROWorkflowManager.js` in this worktree and replace `pixinsight/CCDASTROWorkflowManager.xsgn`. Verify the signature. Do not edit signed inputs afterward.
-3. From this worktree root run:
+2. In PixInsight CodeSign, sign `pixinsight/CCDASTROWorkflowManager.js` in the usual project folder and replace `pixinsight/CCDASTROWorkflowManager.xsgn`. Verify the signature. Do not edit signed inputs afterward.
+3. From the usual project root run:
 
 ```powershell
 .\packaging\build-pixinsight-package.ps1 -Version 1.9.3 -MaximumPixInsightVersion 1.9.6

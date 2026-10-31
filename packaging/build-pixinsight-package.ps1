@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.2',
+    [string] $Version = '1.9.3',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -151,8 +151,9 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.9.2 fixes a preprocessor directive error that prevented v1.9.1 from launching. Includes PixInsight 1.9.6 compatibility and blind-solving fallback through the installed ImageSolver engine.</p>
+        <p>v1.9.3 adds optional BlurlessAI stellar repair on linear images using installed-module defaults, with no process icon required.</p>
         <ul>
+          <li>BlurlessAI runs after gradient correction and before separate color calibration; MGC retains its SPFC prerequisite. Advanced ordered passes override the main dropdown.</li>
           <li>Blind solving when coordinates/scale are missing and an astrometric index is configured; actual capture date remains required.</li>
           <li>Saved settings referencing removed tools require Reset Defaults and review before processing.</li>
           <li>Native processing, channel stretch, ordered passes and Color &amp; Tone review remain available.</li>

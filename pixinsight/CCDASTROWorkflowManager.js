@@ -27,7 +27,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.2"
+#define VERSION "1.9.3"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -35,6 +35,7 @@ var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
 
 
 var adapterHelp = {
+   blurlessAI: "BlurlessAI stellar repair on linear data using module defaults; no process icon required. Runs after gradient correction, before separate color calibration. Advanced ordered passes override this selection.",
    interactiveCrop: "Review a rectangular crop on a separate linear copy and return to workflow settings.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    autoDBE: "Runs the bundled, signed AutoDBE engine, licensed CC BY-NC 4.0 for noncommercial use. No runtime vendor-script loading.",
@@ -831,10 +832,44 @@ function usesMGC(rows)
 
 function linearStageOrder(rows)
 {
+   if (rows.deconvolution && rows.deconvolution.enabled.checked && rows.deconvolution.adapterId() === "blurlessAI")
+      return usesMGC(rows) ? ["gradient", "deconvolution", "colorCalibration"]
+         : ["gradient", "plateSolve", "deconvolution", "colorCalibration"];
    // MGC performs its own prerequisite solve before SPFC; do not solve twice.
    return usesMGC(rows) ? ["gradient", "colorCalibration", "deconvolution"]
       : ["gradient", "plateSolve", "colorCalibration", "deconvolution"];
 }
+
+function BlurlessAIAdapter()
+{
+   this.id = "blurlessAI";
+   this.label = "BlurlessAI (stellar only)";
+}
+BlurlessAIAdapter.prototype.configuredProcess = function()
+{
+   var className = resolveProcessClass(["BlurlessAI"]);
+   if (className === null)
+      throw new Error("Install and activate the BlurlessAI PixInsight process; it must be available to scripts.");
+   // Use the module's own defaults without guessing undocumented parameters.
+   return createProcess(className);
+};
+BlurlessAIAdapter.prototype.available = function()
+{
+   try { this.configuredProcess(); return true; } catch (e) { return false; }
+};
+BlurlessAIAdapter.prototype.requirement = function()
+{
+   try { this.configuredProcess(); return "Uses BlurlessAI module defaults; no process icon required. Linear stellar repair after gradient correction, before separate color calibration. MGC includes SPFC before repair."; }
+   catch (e) { return errorMessage(e); }
+};
+BlurlessAIAdapter.prototype.execute = function(view)
+{
+   checkAbortRequested();
+   var p = this.configuredProcess();
+   logLine("Running BlurlessAI stellar repair with module defaults on " + view.fullId);
+   if (!p.executeOn(view)) throw new Error("BlurlessAI failed.");
+   checkAbortRequested();
+};
 
 function defaultBlurXSettings()
 {
@@ -1083,6 +1118,7 @@ var adapters = {
    pcc: new PCCIconAdapter,
 
    blurXTerminator: new BlurXIconAdapter,
+   blurlessAI: new BlurlessAIAdapter,
 
 
    noiseXTerminator: new ProcessAdapter(
@@ -1138,8 +1174,8 @@ function defaultWorkflow()
       new WorkflowStep("colorCalibration", "3. Color calibration",
          ["spcc", "pcc"], "spcc", "SPCC and PCC require a solved color image. PCC uses workflow settings or an optional icon override."),
       new WorkflowStep("deconvolution", "4. Deblur / structure recovery",
-         ["blurXTerminator"], "blurXTerminator",
-         "Runs on linear data before the main denoise pass."),
+         ["blurXTerminator", "blurlessAI"], "blurXTerminator",
+         "Linear data only. BlurlessAI uses module defaults without an icon and runs before separate color calibration."),
       new WorkflowStep("noiseReduction", "5. Noise reduction",
          ["noiseXTerminator", "mlDenoise"], "noiseXTerminator",
          "Can run before separation or on the starless branch."),

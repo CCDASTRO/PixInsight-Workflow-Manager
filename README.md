@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.2
+# CCDASTRO PixInsight Workflow Manager v1.9.3
 
 
 
@@ -7,6 +7,12 @@ registered LRGB masters. Choose processing tools and review stretching, masks an
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
+
+## New in v1.9.3 — BlurlessAI (signing pending)
+
+Adds **BlurlessAI (stellar only)** to **Deblur / structure recovery**, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.
+
+This source revision is prepared for signing; the published signed update remains **v1.9.2**. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.
 
 ## New in v1.9.2 — preprocessor hotfix
 
@@ -200,7 +206,7 @@ The default General Color Image order is:
 2. Selected gradient correction (MGC performs its prerequisite solve and SPFC first)
 3. ImageSolver when the image does not already have an astrometric solution
 4. Selected color calibration: SPCC (default) or configured PCC
-5. BlurXTerminator
+5. BlurXTerminator or BlurlessAI (stellar only; signing pending)
 6. StarXTerminator, StarNet2
 7. NoiseXTerminator, MLDenoise on the starless branch
 8. Linear-add PixelMath recombination
@@ -396,6 +402,12 @@ An optional **CCDASTRO_PCC** override supplies advanced settings; Apply color
 calibration must be enabled. Compare SPCC/PCC on separate original copies with
 identical stretch parameters. Calibration establishes balance; stretch, curves
 and saturation still influence the final appearance.
+
+## BlurlessAI stellar repair
+
+Install and activate [BlurlessAI by Neven Krcmarek](https://www.lighthousesuite.org/#blurless) separately, then select **BlurlessAI (stellar only)** under **Deblur / structure recovery**. No workspace icon is needed. The workflow uses a fresh process instance with the module defaults; settings in an open BlurlessAI window are not imported. Missing module access or processing failure stops the workflow.
+
+Use linear images with stars present. BlurlessAI runs after background correction and before the separate color-calibration stage, denoise and star removal. With MGC, SPFC remains part of the earlier gradient stage. Disable **Use ordered linear processing passes (all tools)** to use this dropdown; BlurlessAI is not yet offered in the advanced pass editor. This version supports stellar repair only. Native module defaults and processing must still be verified in PixInsight before release.
 
 ## BlurXTerminator
 
@@ -860,6 +872,7 @@ This workflow builds on the work of the following authors and teams. Selecting a
 | --- | --- | --- |
 | PixInsight and its native processes | Pleiades Astrophoto / PixInsight Development Team — [PixInsight](https://pixinsight.com/) | The host application and native calibration, gradient, stretching, denoise, multiscale, masking and image-processing processes, including SPCC, PCC, SPFC, MGC, MLDenoise and PixelMath. |
 | ImageSolver | Andres del Pozo and Juan Conejero (PTeam) — [PixInsight](https://pixinsight.com/) | The workflow uses the ImageSolver library supplied with the installed PixInsight distribution. |
+| BlurlessAI | Neven Krcmarek — [Lighthouse Suite](https://www.lighthousesuite.org/#blurless) | Optional linear stellar repair, separately installed and licensed; uses module defaults without a process icon. |
 | BlurXTerminator, NoiseXTerminator and StarXTerminator | Russell Croman / RC Astro — [RC Astro](https://www.rc-astro.com/) | Optional deconvolution, denoise and star-separation tools, installed and licensed independently. |
 | StarNet2 | Mikita Misiura / StarNet Software — [StarNet](https://starnetastro.com/) | Optional star separation through the installed PixInsight module. |
 | Automatic DBE 1.6 | Franklin Marek / Seti Astro — [Seti Astro scripts](https://www.setiastro.com/pjsr-scripts) | An adapted processing engine is included, with its original attribution and CC BY-NC 4.0 notices retained. See the detailed change and license notices below. |

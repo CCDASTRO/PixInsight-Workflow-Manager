@@ -44,3 +44,7 @@ Color & Tone Studio's slider-and-mask interface was inspired by Lighthouse by Ne
 ## Optional Lighthouse integration
 
 Lighthouse is created by Neven Krčmarek. CCDASTRO can prepare a separate saved copy for the user to open in the separately installed Lighthouse interface. No Lighthouse code or signatures are included in CCDASTRO’s package. Installation, updates and applicable terms are supplied by [Lighthouse Suite](https://www.lighthousesuite.org/).
+
+## BlurlessAI
+
+BlurlessAI is developed by Neven Krcmarek / Lighthouse Suite: https://www.lighthousesuite.org/#blurless. It is separately installed and licensed. This workflow invokes a fresh installed process instance using module defaults; no vendor code, model or license is distributed. Stellar repair only; no process icon is required.

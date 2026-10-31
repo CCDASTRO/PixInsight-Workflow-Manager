@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.9.2",
+    "softwareVersion": "1.9.3",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,16 +160,28 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.2">CCDASTRO PixInsight Workflow Manager v1.9.2</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.3">CCDASTRO PixInsight Workflow Manager v1.9.3</h1>
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
 <p>CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See <a href="#acknowledgments">Acknowledgments and third-party tools</a>.</p>
+<h2 id="new-in-v1.9.3-blurlessai-signing-pending">New in v1.9.3 — BlurlessAI (signing pending)</h2>
+<p>Adds <strong>BlurlessAI (stellar only)</strong> to <strong>Deblur / structure recovery</strong>, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.</p>
+<p>This source revision is prepared for signing; the published signed update remains <strong>v1.9.2</strong>. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.</p>
 <h2 id="new-in-v1.9.2-preprocessor-hotfix">New in v1.9.2 — preprocessor hotfix</h2>
-<p>Corrects the preprocessor comparison directives that prevented v1.9.1 from launching. All 33 regression suites pass, including a new check for directive syntax and solver-version selection. Retains PI 1.9.4–1.9.6 compatibility and blind-solving fallback. Native PI 1.9.6 image-processing validation remains pending.</p>
+<p>Fixes the unsupported <code>#ifgte</code> directives introduced in v1.9.1. PixInsight uses
+<code>#ifgteq</code>; the old spelling caused an unmatched else error before launch.
+A new preprocessor regression checks supported directives and solver version
+selection across PI builds. All 33 regression suites pass. The corrected script
+and regenerated update manifest have been signed for the CCDASTRO identity.</p>
 <h2 id="new-in-v1.9.1-pixinsight-1.9.6-compatibility">New in v1.9.1 — PixInsight 1.9.6 compatibility</h2>
-<p>The signed v1.9.1 release targets PixInsight 1.9.4–1.9.6. On PI 1.9.6, the workflow can solve images without coordinate/scale seeds when an astrometric index is configured in ImageSolver/Gaia. Complete seeds retain seeded solving with the new solver's provenance flags. The actual capture observation date remains required.</p>
-<p>All 32 automated regression suites pass. Native PI 1.9.6 image-processing validation remains pending; see the <a href="https://github.com/CCDASTRO/PixInsight-Workflow-Manager/blob/main/docs/PIXINSIGHT-1.9.6.md">compatibility and validation checklist</a>.</p>
+<p>Adds automatic blind-solving fallback when coordinates/scale are unavailable and
+an astrometric index is configured in ImageSolver/Gaia. Complete reviewed seeds
+are passed with the new solver's provenance flags. The actual capture observation
+date remains required. Seeded solving remains available on older supported PI.
+The signed v1.9.1 package targets PI 1.9.4–1.9.6. All 32 automated regression
+suites pass; native PI 1.9.6 image-processing validation remains pending.
+See <a href="docs/PIXINSIGHT-1.9.6.md">1.9.6 compatibility and release checklist</a>.</p>
 <h2 id="new-in-v1.9.0-cpd-execution-policy-update">New in v1.9.0 — CPD execution policy update</h2>
 <p>This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, including executable discovery, setup controls and image-processing round trips. Processing stays inside PixInsight. Old saved settings selecting a removed adapter or pass are rejected; use Reset Defaults and select supported tools before running.</p>
 <p>The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.</p>
@@ -232,7 +244,7 @@ for a manual Feature Scripts installation.</p>
 <h2 id="requirements">Requirements</h2>
 <ul>
 <li>PixInsight 1.9.4–1.9.6 with its standard ImageSolver library. See the
-<a href="https://github.com/CCDASTRO/PixInsight-Workflow-Manager/blob/main/docs/PIXINSIGHT-1.9.6.md">compatibility checklist</a> for verification details.</li>
+<a href="docs/PIXINSIGHT-1.9.6.md">compatibility checklist</a> for verification details.</li>
 <li>Integrated, unstretched color data or registered linear L/R/G/B masters;
 Float32 XISF is recommended. Display STF is acceptable; a permanent stretch is not.</li>
 <li>Installed tools, compatible models and licenses for your selected stages.</li>
@@ -357,7 +369,7 @@ profile when the image needs different color treatment.</p>
 <li>Selected gradient correction (MGC performs its prerequisite solve and SPFC first)</li>
 <li>ImageSolver when the image does not already have an astrometric solution</li>
 <li>Selected color calibration: SPCC (default) or configured PCC</li>
-<li>BlurXTerminator</li>
+<li>BlurXTerminator or BlurlessAI (stellar only; signing pending)</li>
 <li>StarXTerminator, StarNet2</li>
 <li>NoiseXTerminator, MLDenoise on the starless branch</li>
 <li>Linear-add PixelMath recombination</li>
@@ -532,6 +544,9 @@ correct coefficients as well as a name. Save settings, Validate and run.</p>
 calibration must be enabled. Compare SPCC/PCC on separate original copies with
 identical stretch parameters. Calibration establishes balance; stretch, curves
 and saturation still influence the final appearance.</p>
+<h2 id="blurlessai-stellar-repair">BlurlessAI stellar repair</h2>
+<p>Install and activate <a href="https://www.lighthousesuite.org/#blurless">BlurlessAI by Neven Krcmarek</a> separately, then select <strong>BlurlessAI (stellar only)</strong> under <strong>Deblur / structure recovery</strong>. No workspace icon is needed. The workflow uses a fresh process instance with the module defaults; settings in an open BlurlessAI window are not imported. Missing module access or processing failure stops the workflow.</p>
+<p>Use linear images with stars present. BlurlessAI runs after background correction and before the separate color-calibration stage, denoise and star removal. With MGC, SPFC remains part of the earlier gradient stage. Disable <strong>Use ordered linear processing passes (all tools)</strong> to use this dropdown; BlurlessAI is not yet offered in the advanced pass editor. This version supports stellar repair only. Native module defaults and processing must still be verified in PixInsight before release.</p>
 <h2 id="blurxterminator">BlurXTerminator</h2>
 <p>Select BlurXTerminator in <strong>Deblur / structure recovery</strong> and configure its
 workflow controls. <strong>Correct Only</strong> starts enabled and sets sharpening and halo
@@ -924,7 +939,7 @@ generate a separate stars image through its native PixInsight process.</p>
 recover clipped detail, fix optical halos reliably or replace good preprocessing.
 Model compatibility, licensing, catalogs and MARS coverage depend on the selected native tools.</p>
 <p>GHS integration, checkpoints and exportable user presets are not provided.
-Testing details are maintained in the <a href="https://github.com/CCDASTRO/PixInsight-Workflow-Manager/blob/main/docs/PIXINSIGHT-1.9.6.md">compatibility checklist</a>,
+Testing details are maintained in the <a href="docs/PIXINSIGHT-1.9.6.md">compatibility checklist</a>,
 with execution and storage details in the <a href="SECURITY-AND-DEPENDENCIES.md">security disclosure</a>.</p>
 <h2 id="security-and-cpd-execution-policy">Security and CPD execution policy</h2>
 <p>Image processing runs inside PixInsight through installed processes and included PJSR code. External image-processing adapters have been removed. No executable code is downloaded, no general-purpose runtime is launched, and no custom server or watched-directory control channel is provided.</p>
@@ -964,6 +979,11 @@ with execution and storage details in the <a href="SECURITY-AND-DEPENDENCIES.md"
 <td>ImageSolver</td>
 <td>Andres del Pozo and Juan Conejero (PTeam) — <a href="https://pixinsight.com/">PixInsight</a></td>
 <td>The workflow uses the ImageSolver library supplied with the installed PixInsight distribution.</td>
+</tr>
+<tr>
+<td>BlurlessAI</td>
+<td>Neven Krcmarek — <a href="https://www.lighthousesuite.org/#blurless">Lighthouse Suite</a></td>
+<td>Optional linear stellar repair, separately installed and licensed; uses module defaults without a process icon.</td>
 </tr>
 <tr>
 <td>BlurXTerminator, NoiseXTerminator and StarXTerminator</td>

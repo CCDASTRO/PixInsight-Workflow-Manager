@@ -1,6 +1,12 @@
-# CCDASTRO Workflow Manager v1.9.2
+# CCDASTRO Workflow Manager v1.9.3
 
 See the [current workflow guide](../README.md) for supported tools, setup, and usage.
+
+## New in v1.9.3 — BlurlessAI (signing pending)
+
+Adds **BlurlessAI (stellar only)** to **Deblur / structure recovery**, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.
+
+This source revision is prepared for signing; the published signed update remains **v1.9.2**. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.
 
 ## New in v1.9.2 — preprocessor hotfix
 

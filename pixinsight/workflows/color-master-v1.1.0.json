@@ -256,6 +256,11 @@
           "id": "blurXTerminator",
           "kind": "process",
           "processClass": "BlurXTerminator"
+        },
+        {
+          "id": "blurlessAI",
+          "kind": "process",
+          "processClass": "BlurlessAI"
         }
       ],
       "requires": [

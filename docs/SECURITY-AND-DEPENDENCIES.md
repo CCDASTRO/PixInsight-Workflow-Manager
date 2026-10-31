@@ -76,3 +76,7 @@ not used. No copy of ImageSolver is redistributed in this package.
 ## Lighthouse handoff and external execution
 
 The only retained external launch invokes CoreApplication.filePath with the PixInsight core --execute instance IPC interface. A temporary CCDASTRO_LighthouseLaunch_*.scp command file is written under the system temporary directory; it may remain there after dispatch. It requests execution of the separately installed Lighthouse script with --require-signature and an explicit target view. There is no custom listener, watched directory, external image processor, language-runtime launch or image-processing round trip. Lighthouse performs its work inside PixInsight after this workflow exits.
+
+## BlurlessAI native module
+
+The optional BlurlessAI adapter creates an installed native process instance with its defaults and executes it on the linear working view. No workspace icon, external executable, image upload or model download is added by this adapter. Installation, activation and module-managed resources remain the responsibility of the separately installed module.

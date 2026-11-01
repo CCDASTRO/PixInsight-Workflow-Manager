@@ -36,7 +36,7 @@ dialog.blurXStars.value=42;dialog.blurXStars.onValueUpdated();assert.equal(adapt
 dialog.blurXIcon.checked=true;dialog.blurXIcon.onCheck();assert.equal(dialog.blurXCorrectOnly.enabled,false);assert.equal(dialog.blurXStars.enabled,false);
 selected='syqonParallax';stage.refreshStatus();assert.equal(box.enabled,false);selected='blurXTerminator';
 dialog.restoreBlurX(ctx.defaultBlurXSettings());assert.equal(dialog.blurXIcon.checked,false);assert.equal(dialog.blurXCorrectOnly.checked,true);
-assert.match(source,/schemaVersion: 12/);assert.match(source,/\[4,5,6,7,8,9,10,11,12\]\.indexOf/);
+assert.match(source,/schemaVersion: 13/);assert.match(source,/\[4,5,6,7,8,9,10,11,12,13\]\.indexOf/);
 assert.match(source,/blurX: dialog\.blurXValues/);assert.match(source,/dialog\.restoreBlurX\(state\.blurX\)/);
 const create=ctx.createProcess;ctx.createProcess=()=>{const p=native();delete p.auto_nonstellar_psf;return p;};assert.equal(adapter.available(),false);ctx.createProcess=create;
 console.log('BlurX no-icon defaults, adjustable sharpening, explicit icon override, native-setting preservation, validation, failures, controls and state hooks passed (mocked APIs).');

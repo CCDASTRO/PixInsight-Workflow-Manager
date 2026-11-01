@@ -27,7 +27,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.3"
+#define VERSION "1.9.4"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -35,7 +35,8 @@ var WORKFLOW_REMEMBER_KEY = SETTINGS_MODULE + "/RememberWorkflowState";
 
 
 var adapterHelp = {
-   blurlessAI: "BlurlessAI stellar repair on linear data using module defaults; no process icon required. Runs after gradient correction, before separate color calibration. Advanced ordered passes override this selection.",
+   multiscaleTGV: "PixInsight 1.9.6 multiscale TGV denoise with automatic noise measurement, point-source protection and optional local support. No neural model or icon required.",
+   blurlessAI: "BlurlessAI repairs stars within the entire linear image using module defaults; no process icon required. Runs after gradient correction, before separate color calibration. Advanced ordered passes override this selection.",
    interactiveCrop: "Review a rectangular crop on a separate linear copy and return to workflow settings.",
    gradientCorrection: "Use PixInsight GradientCorrection to remove large-scale background gradients.",
    autoDBE: "Runs the bundled, signed AutoDBE engine, licensed CC BY-NC 4.0 for noncommercial use. No runtime vendor-script loading.",
@@ -138,7 +139,8 @@ function setRememberWorkflowState(enabled)
 function captureWorkflowState(dialog, resumeAfterCrop)
 {
    var state = {
-      schemaVersion: 12,
+      schemaVersion: 13,
+      blindSolverMode: plateSolveSettings.blindMode,
       advanced: advancedCopy(advancedWorkflowSettings),
       native: dialog.nativeValues ? dialog.nativeValues() : null,
       blurX: dialog.blurXValues ? dialog.blurXValues() : null,
@@ -177,7 +179,8 @@ function captureWorkflowState(dialog, resumeAfterCrop)
          pixelSize: plateSolveSettings.pixelSize,
          resolution: plateSolveSettings.resolution,
          source: plateSolveSettings.source,
-         imageKey: plateSolveSettings.imageKey || ""
+         imageKey: plateSolveSettings.imageKey || "",
+         blindMode: plateSolveSettings.blindMode
       };
    return state;
 }
@@ -216,9 +219,12 @@ function restoreWorkflowState(dialog)
       if (typeof text !== "string" || text.length === 0)
          return false;
       var state = JSON.parse(text);
-      if (!state || ([4,5,6,7,8,9,10,11,12].indexOf(state.schemaVersion) < 0) || !state.steps)
+      if (!state || ([4,5,6,7,8,9,10,11,12,13].indexOf(state.schemaVersion) < 0) || !state.steps)
          return false;
       validateWorkflowComplianceState(state);
+      var savedBlindMode=state.blindSolverMode===undefined?(state.plateSolve&&state.plateSolve.blindMode!==undefined?state.plateSolve.blindMode:"Automatic"):state.blindSolverMode;
+      if(["Automatic","Always","Disabled"].indexOf(savedBlindMode)<0)throw new Error("Invalid saved blind solver mode.");
+      plateSolveSettings.blindMode=savedBlindMode;
       if (state.schemaVersion >= 5 && state.imageType >= 0 &&
           state.imageType < WORKFLOW_PROFILES.length)
          dialog.imageType.currentItem = state.imageType;
@@ -274,6 +280,9 @@ function restoreWorkflowState(dialog)
       if (state.plateSolve && (state.resumeAfterCrop || (state.plateSolve.imageKey && state.plateSolve.imageKey === plateSolveSettings.imageKey)))
       {
          var savedPlateSolve = state.plateSolve;
+         var restoredMode=savedPlateSolve.blindMode===undefined?"Automatic":savedPlateSolve.blindMode;
+         if (["Automatic","Always","Disabled"].indexOf(restoredMode)<0) throw new Error("Invalid saved blind solver mode.");
+         plateSolveSettings.blindMode=restoredMode;
          plateSolveSettings.ra = finiteNumber(savedPlateSolve.ra) ? savedPlateSolve.ra : NaN;
          plateSolveSettings.dec = finiteNumber(savedPlateSolve.dec) ? savedPlateSolve.dec : NaN;
          plateSolveSettings.focal = finiteNumber(savedPlateSolve.focal) ? savedPlateSolve.focal : NaN;
@@ -324,6 +333,7 @@ function resetWorkflowControls(dialog)
    }
    if (dialog.restoreNative) dialog.restoreNative(defaultNativeSettings());
    if (dialog.restoreBlurX) dialog.restoreBlurX(defaultBlurXSettings());
+   plateSolveSettings.blindMode="Automatic";
    dialog.finishStarless.checked = false;
    dialog.starBrightness.value = 70;
    dialog.noisePlacement.currentItem = 1;
@@ -351,6 +361,7 @@ function PlateSolveSettings()
    this.resolution = NaN;  // degrees per pixel
    this.source = "Not initialized";
    this.imageKey = "";
+   this.blindMode = "Automatic";
 }
 
 PlateSolveSettings.prototype.autofill = function(window, preserveReviewed)
@@ -392,6 +403,9 @@ function blindSolvingAvailable()
 
 PlateSolveSettings.prototype.complete = function()
 {
+   if (["Automatic","Always","Disabled"].indexOf(this.blindMode)<0) return false;
+   if (this.blindMode === "Disabled") return this.hasSeed();
+   if (this.blindMode === "Always") return blindSolvingAvailable();
    return this.hasSeed() || blindSolvingAvailable();
 };
 
@@ -411,6 +425,8 @@ PlateSolveAdapter.prototype.requirement = function()
 {
    if (!this.available())
       return "Install the standard PixInsight ImageSolver script.";
+   if (this.settings.blindMode === "Disabled" && !this.settings.hasSeed()) return "Blind solving is disabled: provide valid coordinates and image scale in Plate Solve Setup.";
+   if (this.settings.blindMode === "Always" && !blindSolvingAvailable()) return "Always blind solving requires PixInsight 1.9.6 and a configured astrometric index.";
    if (!this.settings.complete())
       return "Provide coordinates and image scale in Plate Solve Setup, or configure an ImageSolver astrometric index on PixInsight 1.9.6 for blind solving.";
    return "Plate-solving setup is ready.";
@@ -431,10 +447,12 @@ PlateSolveAdapter.prototype.execute = function(view)
    solver.initialize(window, false /*prioritizeSettings*/);
    if(typeof solver.solverCfg.vizierServer==="string" && solver.solverCfg.vizierServer.toLowerCase().indexOf("https://")!==0)
       throw new Error("ImageSolver VizieR server must use HTTPS. Select a secure server in ImageSolver settings.");
-   var seeded = this.settings.hasSeed();
+   var mode=this.settings.blindMode || "Automatic";
+   if (["Automatic","Always","Disabled"].indexOf(mode)<0) throw new Error("Invalid blind solver mode.");
+   var seeded = this.settings.hasSeed() && mode !== "Always";
    if (typeof BlindSolverMode !== "undefined")
    {
-      solver.solverCfg.blindSolver = seeded ? BlindSolverMode.Automatic : BlindSolverMode.Always;
+      solver.solverCfg.blindSolver = mode === "Disabled" ? BlindSolverMode.Disabled : mode === "Always" || !seeded ? BlindSolverMode.Always : BlindSolverMode.Automatic;
       solver.userSeed = { coordinates: seeded, scale: seeded };
    }
    if (seeded)
@@ -596,7 +614,10 @@ function nativeControlDefinitions()
    function e(key,label,value,items){return {key:key,label:label,value:value,type:"enum",items:items};}
    function histogram(){return [n("shadows","Shadows (0-1)",0,0,1),n("midtones","Midtones (0-1)",0.5,0.000001,0.999999),n("highlights","Highlights (0-1)",1,0,1)];}
    function ml(){return [t("modelPath","Neural network model","","file"),n("amount","Denoise strength (0-1)",0.9,0,1),n("overlapPercent","Overlap (%)",25,1,100,true),e("precision","Precision","Precision_Fast",[["Precision_Fast","Fast"],["Precision_High","High"]]),b("mask","Local support",false)];}
+   function tgv(general){return [n("strength","Strength",0.5,0,1),n("chrominance","Chrominance",0.5,0,1),n("smoothness","Smoothness",0.5,0,1),n("scales","Scales",2,1,8,true),n("amount","Amount",1,0,1),b("deepSky","Deep-sky image (linear data)",!general),b("pitFill","Fill sub-PSF pits",true),b("pointSources","Model point sources",false),n("pointSourceThreshold","Point-source threshold (sigma)",4,2,10),b("mask","Local support",false),e("maskMode","Local support mode","MaskMode_Significance",[["MaskMode_Significance","Significance"],["MaskMode_Brightness","Brightness"]]),n("maskThreshold","Significance threshold",0.25,0,1),n("maskRange","Significance range",0.5,0,1),n("maskScale","Structure scale (px)",2,1,64,true),n("maskBackgroundLayers","Background layers",8,1,16,true),n("maskClipLow","Brightness clip low",0,-20,20),n("maskBackground","Mask background",0.25,0,1),n("maskSmoothness","Mask smoothness",2,0,64,true),n("maxIterations","Maximum iterations",1000,1,10000,true),n("tolerance","Tolerance",0.00002,0.00000001,0.01)];}
    return {
+      multiscaleTGV:{process:"MultiscaleTGVDenoise",label:"MultiscaleTGVDenoise (PI 1.9.6)",fields:tgv(false)},
+      finalTGV:{process:"MultiscaleTGVDenoise",label:"Final MultiscaleTGVDenoise (general mode)",fields:tgv(true)},
       pcc:{process:"PhotometricColorCalibration",icon:"CCDASTRO_PCC",label:"PCC",fields:[
          t("whiteReferenceName","White reference name","Average Spiral Galaxy"),n("whiteReferenceSr_JV","White reference r-V",-0.35230,-5,5),n("whiteReferenceJB_JV","White reference B-V",0.28594,-5,5),
          b("autoCatalog","Automatic catalog",true),t("catalogId","Manual catalog ID","APASS"),t("serverURL","VizieR server","https://vizier.cds.unistra.fr/"),b("autoLimitMagnitude","Automatic limit magnitude",true),n("limitMagnitude","Limit magnitude",12,0,30),
@@ -611,7 +632,7 @@ function nativeControlDefinitions()
       spfc:{process:"SpectrophotometricFluxCalibration",icon:"CCDASTRO_SPFC",label:"SPFC camera / filters",fields:[
          t("library","Filter library (.xspd)","","file"),t("deviceQECurveName","Camera QE curve","","curveQ"),t("grayFilterName","Gray / UV-IR filter","","curveL"),t("redFilterName","Red filter","","curveR"),t("greenFilterName","Green filter","","curveG"),t("blueFilterName","Blue filter","","curveB"),
          b("autoLimitMagnitude","Automatic limit magnitude",true),n("limitMagnitude","Limit magnitude",12,0,30),n("minMagnitude","Minimum magnitude",0,-10,30),n("rejectionLimit","Rejection limit",0.3,0,1),n("psfMinSNR","Minimum detection SNR",40,1,10000)]},
-      mgc:{process:"MultiscaleGradientCorrection",icon:"CCDASTRO_MGC",label:"MGC / MARS database",fields:[t("databaseFiles","MARS database files (one per line)","","files"),t("grayMARSFilter","Gray MARS filter","L"),t("redMARSFilter","Red MARS filter","R"),t("greenMARSFilter","Green MARS filter","G"),t("blueMARSFilter","Blue MARS filter","B"),n("gradientScale","Gradient scale (px)",1024,32,65536,true),n("structureSeparation","Structure separation",3,0,16,true),n("modelSmoothness","Model smoothness",1,0,100),b("enforceFieldLimits","Enforce field limits",true)]},
+      mgc:{process:"MultiscaleGradientCorrection",icon:"CCDASTRO_MGC",label:"MGC / MARS database",fields:[t("databaseFiles","MARS database files (one per line)","","files"),t("grayMARSFilter","Gray MARS filter","L"),t("redMARSFilter","Red MARS filter","R"),t("greenMARSFilter","Green MARS filter","G"),t("blueMARSFilter","Blue MARS filter","B"),n("gradientScale","Gradient scale (px)",1024,32,65536,true),n("structureSeparation","Structure separation",3,0,16,true),n("modelSmoothness","Model smoothness",1,0,100),b("enforceFieldLimits","Enforce field limits",true),b("autoScaleFactors","Automatic scale factors (PI 1.9.6)",false),b("edgeCorrection","Edge correction (PI 1.9.6)",false),n("edgeAggressiveness","Edge aggressiveness",2,1,3,true),b("allowMARSMosaics","Allow MARS reference mosaics (fallback)",false)]},
       finalNoiseX:{process:"NoiseXTerminator",label:"Final NoiseXTerminator",fields:[n("denoise","Denoise strength (0-1)",0.25,0,1),n("detail","Detail",0.15,0,1),n("iterations","Iterations",2,1,10,true)]},
       finalMLD:{process:"MLDenoise",label:"Final MLDenoise",fields:ml()},
       finalACDNR:{process:"ACDNR",label:"Final ACDNR",fields:[b("applyToLightness","Denoise lightness",true),b("applyToChrominance","Denoise chrominance",true),n("sigmaL","Lightness standard deviation",1.5,0.1,10),n("sigmaC","Chrominance standard deviation",2,0.1,10),n("amountL","Lightness amount",0.5,0,1),n("amountC","Chrominance amount",0.5,0,1),n("iterationsL","Lightness iterations",1,1,10,true),n("iterationsC","Chrominance iterations",1,1,10,true)]},
@@ -635,6 +656,7 @@ function validateNativeSettings(id,values)
       else if(typeof v!=="string")throw new Error("Invalid "+f.label);
       if(f.type==="enum" && !f.items.some(function(item){return item[0]===v;}))throw new Error("Invalid "+f.label);
    }
+   if(id==="finalTGV" && values.deepSky)throw new Error("Final MultiscaleTGVDenoise requires general mode: disable Deep-sky image for stretched data.");
    if((id==="histogram"||id==="luminance") && values.shadows>=values.highlights)throw new Error("Shadows must be below highlights.");
    if(id==="pcc" && values.backgroundLow>=values.backgroundHigh)throw new Error("Background lower limit must be below upper limit.");
    if(id==="mas" && values.backgroundROIEnabled && (!values.backgroundROIWidth||!values.backgroundROIHeight))throw new Error("Background rectangle needs positive width and height.");
@@ -667,6 +689,10 @@ function configuredNativeProcess(id)
    for(var i=0;i<definition.fields.length;++i){var f=definition.fields[i];
       if(["histogram","luminance","spfc","finalMLT"].indexOf(id)>=0 || f.key==="databaseFiles")continue;
       var value=values[f.key];if(f.type==="enum"){value=eval(className+"."+value);if(typeof value!=="number")throw new Error("Installed "+definition.process+" does not support "+values[f.key]);}
+      if(id==="mgc" && ["autoScaleFactors","edgeCorrection","edgeAggressiveness","allowMARSMosaics"].indexOf(f.key)>=0 && !propertyExists(p,f.key)) {
+         if(value!==f.value)throw new Error("MGC option "+f.label+" requires PixInsight 1.9.6.");
+         continue;
+      }
       requiredNativeProperty(p,f.key,value);
    }
    if(id==="histogram"||id==="luminance"){
@@ -675,6 +701,9 @@ function configuredNativeProcess(id)
    }
    if(id==="mlDenoise"||id==="finalMLD"){if(!values.modelPath.trim()||!File.exists(values.modelPath))throw new Error("Choose an existing neural network model in "+definition.label+" setup.");}
    if(id==="pcc"){p.applyCalibration=true;}
+   if(id==="multiscaleTGV"||id==="finalTGV"){
+      requiredNativeProperty(p,"maskPreview",false);
+   }
    // Direct modes produce the processed image, not a process-specific preview.
    var previewFlags=id==="mlDenoise"||id==="finalMLD"?["noisePreview","maskPreview"]:id==="mas"?["previewLargeScale"]:id==="finalACDNR"?["previewMask"]:[];
    for(var k=0;k<previewFlags.length;++k)if(propertyExists(p,previewFlags[k]))p[previewFlags[k]]=false;
@@ -699,8 +728,13 @@ function configuredNativeProcess(id)
 function restoreNativeSettings(values)
 {
    var defaults=defaultNativeSettings(),copy=JSON.parse(JSON.stringify(values));
-   for(var id in defaults){if(!copy[id])throw new Error("Missing saved native settings "+id);if(id!=="finalDenoise")validateNativeSettings(id,copy[id]);}
-   if(typeof copy.finalDenoise.useIcon!=="boolean"||["NoiseXTerminator","MLDenoise","ACDNR","MultiscaleLinearTransform"].indexOf(copy.finalDenoise.tool)<0)throw new Error("Invalid saved final denoise selection.");nativeSettings=copy;
+   for(var id in defaults){
+      if(!copy[id] && (id==="multiscaleTGV"||id==="finalTGV"))copy[id]=defaults[id];
+      if(!copy[id])throw new Error("Missing saved native settings "+id);
+      if(id==="mgc")["autoScaleFactors","edgeCorrection","edgeAggressiveness","allowMARSMosaics"].forEach(function(key){if(copy.mgc[key]===undefined)copy.mgc[key]=defaults.mgc[key];});
+      if(id!=="finalDenoise")validateNativeSettings(id,copy[id]);
+   }
+   if(typeof copy.finalDenoise.useIcon!=="boolean"||["NoiseXTerminator","MLDenoise","ACDNR","MultiscaleLinearTransform","MultiscaleTGVDenoise"].indexOf(copy.finalDenoise.tool)<0)throw new Error("Invalid saved final denoise selection.");nativeSettings=copy;
 }
 function saveNativeWorkflowSettings()
 {
@@ -750,11 +784,11 @@ function configureNativeProcess(id)
 }
 function finalDenoiseKey(tool)
 {
-   return {NoiseXTerminator:"finalNoiseX",MLDenoise:"finalMLD",ACDNR:"finalACDNR",MultiscaleLinearTransform:"finalMLT"}[tool];
+   return {NoiseXTerminator:"finalNoiseX",MLDenoise:"finalMLD",ACDNR:"finalACDNR",MultiscaleLinearTransform:"finalMLT",MultiscaleTGVDenoise:"finalTGV"}[tool];
 }
 function configureFinalDenoise()
 {
-   var d=new Dialog;d.windowTitle="Final noise cleanup tool";var tools=["NoiseXTerminator","MLDenoise","ACDNR","MultiscaleLinearTransform"];
+   var d=new Dialog;d.windowTitle="Final noise cleanup tool";var tools=["NoiseXTerminator","MLDenoise","ACDNR","MultiscaleLinearTransform","MultiscaleTGVDenoise"];
    var choice=labeledCombo(d,"Denoiser:",tools,tools.indexOf(nativeSettings.finalDenoise.tool),"Process strength is separate from the review's blend Amount.");
    var override=new CheckBox(d);override.text="Use CCDASTRO_FinalDenoise icon override (optional)";override.checked=nativeSettings.finalDenoise.useIcon;
    override.onCheck=function(){choice.combo.enabled=!override.checked;};override.onCheck();
@@ -766,7 +800,7 @@ function configureFinalDenoise()
 function installNativeControls(dialog)
 {
    nativeSettingsOwner=dialog;var box=new GroupBox(dialog.content);box.title="Native process setup (icons optional)";box.sizer=new HorizontalSizer;box.sizer.margin=8;box.sizer.spacing=8;
-   var options=[["pcc","colorCalibration","pcc","PCC setup..."],["mlDenoise","noiseReduction","mlDenoise","MLDenoise setup..."]],buttons=[];
+   var options=[["pcc","colorCalibration","pcc","PCC setup..."],["mlDenoise","noiseReduction","mlDenoise","MLDenoise setup..."],["multiscaleTGV","noiseReduction","multiscaleTGV","MultiscaleTGV setup..."]],buttons=[];
    for(var i=0;i<options.length;++i){var b=new PushButton(box);b.text=options[i][3];box.sizer.add(b);buttons.push(b);b.onClick=(function(id){return function(){configureNativeProcess(id);};})(options[i][0]);}
    var final=new PushButton(box);final.text="Final denoise setup...";final.onClick=configureFinalDenoise;box.sizer.add(final);
    dialog.nativeValues=function(){return JSON.parse(JSON.stringify(nativeSettings));};dialog.restoreNative=function(values){restoreNativeSettings(values);};
@@ -843,7 +877,7 @@ function linearStageOrder(rows)
 function BlurlessAIAdapter()
 {
    this.id = "blurlessAI";
-   this.label = "BlurlessAI (stellar only)";
+   this.label = "BlurlessAI";
 }
 BlurlessAIAdapter.prototype.configuredProcess = function()
 {
@@ -991,6 +1025,12 @@ function installBlurXControls(dialog)
    return box;
 }
 
+function MultiscaleTGVAdapter() {this.id="multiscaleTGV";this.label="MultiscaleTGVDenoise (PI 1.9.6)";}
+MultiscaleTGVAdapter.prototype.configuredProcess=function(){return configuredNativeProcess("multiscaleTGV");};
+MultiscaleTGVAdapter.prototype.available=function(){try{this.configuredProcess();return true;}catch(e){return false;}};
+MultiscaleTGVAdapter.prototype.requirement=function(){try{this.configuredProcess();return "Native multiscale TGV settings ready; no model or icon required.";}catch(e){return errorMessage(e);}};
+MultiscaleTGVAdapter.prototype.execute=function(view){checkAbortRequested();var p=this.configuredProcess();logLine("Running MultiscaleTGVDenoise on "+view.fullId);if(!p.executeOn(view))throw new Error("MultiscaleTGVDenoise failed.");checkAbortRequested();};
+
 function MLDenoiseAdapter()
 {
    this.id = "mlDenoise";
@@ -1131,6 +1171,7 @@ var adapters = {
 
    // Preserve the user-selected model and settings; defaults have no model path.
    mlDenoise: new MLDenoiseAdapter,
+   multiscaleTGV: new MultiscaleTGVAdapter,
 
 
    starXTerminator: new ProcessAdapter(
@@ -1177,7 +1218,7 @@ function defaultWorkflow()
          ["blurXTerminator", "blurlessAI"], "blurXTerminator",
          "Linear data only. BlurlessAI uses module defaults without an icon and runs before separate color calibration."),
       new WorkflowStep("noiseReduction", "5. Noise reduction",
-         ["noiseXTerminator", "mlDenoise"], "noiseXTerminator",
+         ["noiseXTerminator", "mlDenoise", "multiscaleTGV"], "noiseXTerminator",
          "Can run before separation or on the starless branch."),
       new WorkflowStep("starSeparation", "6. Star separation",
          ["starXTerminator", "starNet2"], "starXTerminator",
@@ -1781,7 +1822,8 @@ constructor(settings)
       focal: settings.focal,
       pixelSize: settings.pixelSize,
       resolution: settings.resolution,
-      source: settings.source
+      source: settings.source,
+      blindMode: settings.blindMode
    };
 
    this.help = new Label(this);
@@ -1821,6 +1863,12 @@ constructor(settings)
       formatNumber(settings.resolution, 9),
       "Optional image scale. When present, this takes precedence over focal length and pixel size.");
 
+   this.blindModes=["Automatic","Always","Disabled"];
+   this.blindMode = new ComboBox(this);
+   for(var modeIndex=0;modeIndex<this.blindModes.length;++modeIndex)this.blindMode.addItem("Blind solver: "+this.blindModes[modeIndex]);
+   this.blindMode.currentItem=Math.max(0,this.blindModes.indexOf(settings.blindMode));
+   this.blindMode.toolTip="Automatic uses seeds with blind fallback. Always ignores seeds and requires a local astrometric index on PI 1.9.6. Disabled requires valid seeds.";
+
    this.sourceLabel = new Label(this);
    this.sourceLabel.frameStyle = FrameStyle.Box;
    this.sourceLabel.margin = 5;
@@ -1850,6 +1898,7 @@ constructor(settings)
    this.sizer.add(this.focalRow.sizer);
    this.sizer.add(this.pixelRow.sizer);
    this.sizer.add(this.resolutionRow.sizer);
+   this.sizer.add(this.blindMode);
    this.sizer.add(this.sourceLabel);
    this.sizer.add(this.buttonSizer);
 
@@ -1865,6 +1914,7 @@ constructor(settings)
    };
    this.saveSettings = function()
    {
+      settings.blindMode = self.blindModes[self.blindMode.currentItem];
       settings.ra = parseOptionalNumber(self.raRow.edit.text);
       settings.dec = parseOptionalNumber(self.decRow.edit.text);
       settings.focal = parseOptionalNumber(self.focalRow.edit.text);
@@ -1904,6 +1954,7 @@ constructor(settings)
       settings.pixelSize = original.pixelSize;
       settings.resolution = original.resolution;
       settings.source = original.source;
+      settings.blindMode = original.blindMode;
       self.cancel();
    };
    this.adjustToContents();
@@ -3765,9 +3816,10 @@ function configuredFinalDenoise()
       if(!p)throw new Error("CCDASTRO_FinalDenoise must contain a supported denoise process.");
    } else p=configuredNativeProcess(finalDenoiseKey(nativeSettings.finalDenoise.tool));
    var id = p.processId();
-   if (["NoiseXTerminator", "MLDenoise", "ACDNR", "MultiscaleLinearTransform"].indexOf(id) < 0)
+   if (["NoiseXTerminator", "MLDenoise", "ACDNR", "MultiscaleLinearTransform", "MultiscaleTGVDenoise"].indexOf(id) < 0)
       throw new Error("CCDASTRO_FinalDenoise must contain a supported denoise process configured for a stretched image.");
    if (id === "MultiscaleLinearTransform") p.linear = false;
+   if (id === "MultiscaleTGVDenoise") { requiredNativeProperty(p,"deepSky",false); requiredNativeProperty(p,"maskPreview",false); }
    if (id === "MLDenoise" && (!p.modelPath || !File.exists(p.modelPath)))
       throw new Error("Final MLDenoise icon requires an existing model file.");
    return p;
@@ -3905,7 +3957,7 @@ function exportSharingImage(view, sourcePath, sourceId)
    var label = new Label(options); label.text = "Export a resized copy. The full-resolution image is preserved.";
    var sizeLabel = new Label(options); sizeLabel.text = "Longest edge (pixels):";
    var size = new SpinBox(options); size.minValue = 256; size.maxValue = 12000; size.value = 2048;
-   var type = new ComboBox(options); type.addItem("JPEG (quality 95)"); type.addItem("PNG (16-bit)"); type.currentItem = 0;
+   var type = new ComboBox(options); type.addItem("JPEG (quality 95)"); type.addItem("PNG (16-bit)"); type.addItem("WebP (8-bit, lossless)"); type.addItem("JPEG XL (16-bit, lossless)"); type.currentItem = 0;
    var buttons = new HorizontalSizer; buttons.spacing = 8;
    var saveButton = new PushButton(options); saveButton.text = "Export sharing copy"; saveButton.onClick = function() { options.ok(); };
    var skipButton = new PushButton(options); skipButton.text = "Skip export"; skipButton.onClick = function() { options.cancel(); };
@@ -3914,10 +3966,10 @@ function exportSharingImage(view, sourcePath, sourceId)
    options.sizer.add(label); options.sizer.add(sizeLabel); options.sizer.add(size); options.sizer.add(type); options.sizer.add(buttons);
    options.adjustToContents();
    if (!options.execute()) return "Sharing export skipped.";
-   var extension = type.currentItem === 0 ? "jpg" : "png";
+   var extension = ["jpg","png","webp","jxl"][type.currentItem];
    var save = new SaveFileDialog; save.caption = "Save separate sharing image";
    save.initialPath = sharingOutputPath(sourcePath, sourceId, extension);
-   save.filters = extension === "jpg" ? [["JPEG images", "*.jpg"]] : [["PNG images", "*.png"]];
+   save.filters = [[extension.toUpperCase()+" images", "*."+extension]];
    save.overwritePrompt = true;
    var output;
    for (;;)
@@ -3933,7 +3985,6 @@ function exportSharingImage(view, sourcePath, sourceId)
       break;
    }
    var copy = cloneHDRView(view, "_SharingCopy");
-   var file = null;
    try
    {
       var dims = sharingDimensions(view.image.width, view.image.height, size.value);
@@ -3945,17 +3996,14 @@ function exportSharingImage(view, sourcePath, sourceId)
          resize.noGUIMessages = true;
          if (!resize.executeOn(copy.mainView)) throw new Error("Sharing resize failed.");
       }
-      copy.setSampleFormat(extension === "jpg" ? 8 : 16, false);
+      copy.setSampleFormat(extension === "jpg" || extension === "webp" ? 8 : 16, false);
       var format = new FileFormat("." + extension, false, true);
       if (format.isNull) throw new Error("Sharing file format is unavailable.");
-      file = new FileFormatInstance(format);
-      if (file.isNull || !file.create(output, extension === "jpg" ? "quality 95" : "")) throw new Error("Could not create sharing file.");
-      if (!file.writeImage(copy.mainView.image)) throw new Error("Could not write sharing image.");
-      if (!file.close()) throw new Error("Could not finish writing the sharing image.");
-      file = null;
+      var hints=extension === "jpg" ? "quality 95" : extension === "webp" || extension === "jxl" ? "lossless" : "";
+      if (!copy.saveAs(output,false,false,false,false,hints)) throw new Error("Could not write sharing image.");
       return "Sharing image saved: " + output + " (" + dims[0] + " x " + dims[1] + ").";
    }
-   finally { try { if (file !== null && !file.isNull && file.isOpen) file.close(); } finally { copy.forceClose(); } }
+   finally { copy.forceClose(); }
 }
 
 class FinishingReviewDialog extends Dialog

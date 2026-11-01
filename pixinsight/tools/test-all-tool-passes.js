@@ -13,7 +13,7 @@ const original=ctx.nativeSettings,owner=ctx.nativeSettingsOwner;
 assert.equal(ctx.advancedProcessForPass(a,"linear").amount,.2);assert.equal(ctx.advancedProcessForPass(b,"linear").amount,.8);assert.equal(ctx.nativeSettings,original);assert.equal(ctx.nativeSettingsOwner,owner);assert.equal(ctx.nativeSettings.mlDenoise.modelPath,"/model-a");
 b.config.modelPath="/missing";assert.throws(()=>ctx.advancedProcessForPass(b,"linear"),/model/);assert.equal(ctx.nativeSettings,original);
 for(const tool of ["ACDNR","MultiscaleLinearTransform"]){const pass=ctx.defaultRCPass(tool),linear=ctx.advancedProcessForPass(pass,"linear"),post=ctx.advancedProcessForPass(pass,"stretched");if(tool==="ACDNR")assert.equal(post.previewMask,false);else{assert.equal(linear.linear,true);assert.equal(post.linear,false);assert.equal(linear.layers[0][3],true);}}
-assert.equal(ctx.advancedToolNames("linear").length,7);assert.equal(ctx.advancedToolNames("stretched").length,6);
+assert.equal(ctx.advancedToolNames("linear").length,8);assert.equal(ctx.advancedToolNames("stretched").length,7);
 for(const tool of ["StarXTerminator","StarNet2"])assert.equal(ctx.advancedIsStarRemoval(tool),true);
 const starNet=ctx.defaultRCPass("StarNet2");icons.first={...processFor("StarNet2"),mask:false,linear:false};starNet.processIcon="first";assert.equal(ctx.advancedProcessForPass(starNet,"linear").mask,true);assert.equal(ctx.advancedProcessForPass(starNet,"stretched").mask,false);assert.equal(ctx.advancedProcessForPass(starNet,"stretched").linear,false);
 starNet.processIcon="missing";assert.throws(()=>ctx.advancedProcessForPass(starNet,"linear"),/Missing process icon/);

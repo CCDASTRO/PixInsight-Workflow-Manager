@@ -80,3 +80,7 @@ The only retained external launch invokes CoreApplication.filePath with the PixI
 ## BlurlessAI native module
 
 The optional BlurlessAI adapter creates an installed native process instance with its defaults and executes it on the linear working view. No workspace icon, external executable, image upload or model download is added by this adapter. Installation, activation and module-managed resources remain the responsibility of the separately installed module.
+
+## v1.9.4 native additions
+
+MultiscaleTGVDenoise runs through the installed PixInsight module without an external program, neural model or workspace icon. MGC options remain native process parameters. WebP and JPEG XL sharing exports use the installed format modules through ImageWindow.saveAs, with the existing separate-copy and input-overwrite protections. No download or service is added.

@@ -123,6 +123,7 @@ function advancedToolInfo(tool) {
       BlurXTerminator:{label:"BlurXTerminator",kind:"sharpen",linearOnly:true},
       NoiseXTerminator:{label:"NoiseXTerminator",kind:"noise"},
       StarXTerminator:{label:"StarXTerminator",kind:"stars"},
+      MultiscaleTGVDenoise:{label:"MultiscaleTGVDenoise",kind:"noise",nativeKey:"multiscaleTGV"},
       MLDenoise:{label:"MLDenoise",kind:"noise",nativeKey:"mlDenoise"},
       StarNet2:{label:"StarNet2",kind:"stars"},
       ACDNR:{label:"ACDNR",kind:"noise",nativeKey:"finalACDNR"},
@@ -131,7 +132,7 @@ function advancedToolInfo(tool) {
    return definitions[tool]||null;
 }
 function advancedToolNames(scope) {
-   return ["BlurXTerminator","NoiseXTerminator","MLDenoise","StarXTerminator","StarNet2","ACDNR","MultiscaleLinearTransform"].filter(function(t){return scope!=="stretched"||!advancedToolInfo(t).linearOnly;});
+   return ["BlurXTerminator","NoiseXTerminator","MLDenoise","MultiscaleTGVDenoise","StarXTerminator","StarNet2","ACDNR","MultiscaleLinearTransform"].filter(function(t){return scope!=="stretched"||!advancedToolInfo(t).linearOnly;});
 }
 function advancedIsStarRemoval(tool) {var d=advancedToolInfo(tool);return d&&d.kind==="stars";}
 function advancedDefaultToolConfig(tool) {
@@ -168,6 +169,7 @@ function advancedOtherProcessForPass(pass,scope) {
          if(typeof p.modelPath!=="string"||!p.modelPath.trim()||!File.exists(p.modelPath))throw new Error("Choose an existing MLDenoise model for this pass.");
          setFirstProperty(p,["noisePreview"],false);setFirstProperty(p,["maskPreview"],false);
       }
+      if(pass.tool==="MultiscaleTGVDenoise"){requiredNativeProperty(p,"maskPreview",false);if(scope==="stretched")requiredNativeProperty(p,"deepSky",false);}
       if(pass.tool==="ACDNR")setFirstProperty(p,["previewMask"],false);
       if(pass.tool==="MultiscaleLinearTransform"){
          requiredNativeProperty(p,"linear",scope==="linear");

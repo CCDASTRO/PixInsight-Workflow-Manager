@@ -5,11 +5,13 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.6">
-      <package fileName="CCDASTROWorkflowManager-1.9.3.zip" sha1="571ea772137aa26fdc15be93793cc340d10ff5ea" type="script" releaseDate="20261031214528">
-         <title>CCDASTRO Workflow Manager 1.9.3</title>
+      <package fileName="CCDASTROWorkflowManager-1.9.4.zip" sha1="9071a68ceb9c3124e1f54a9ebc5f909bc01084e2" type="script" releaseDate="20261101120633">
+         <title>CCDASTRO Workflow Manager 1.9.4</title>
          <description>
-            <p>v1.9.3 adds optional BlurlessAI stellar repair on linear images using installed-module defaults, with no process icon required.</p>
+            <p>v1.9.4 adds PixInsight 1.9.6 processing choices: MultiscaleTGVDenoise, MGC options, explicit blind-solver modes, and lossless WebP/JPEG XL sharing exports.</p>
             <ul>
+               <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>
+               <li>MGC automatic scale factors, edge correction and MARS reference-mosaic fallback are configurable.</li>
                <li>BlurlessAI runs after gradient correction and before separate color calibration; MGC retains its SPFC prerequisite. Advanced ordered passes override the main dropdown.</li>
                <li>Blind solving when coordinates/scale are missing and an astrometric index is configured; actual capture date remains required.</li>
                <li>Saved settings referencing removed tools require Reset Defaults and review before processing.</li>
@@ -20,4 +22,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-10-31T21:45:47.883Z" encoding="Base64">ZqremlAjnseRTtrFAQ2U3mn6OZVO6O4Ai/XPgDzkyPMGd9zE8il0vEyRHQNkNdmdMQpIrXkYNQpMZYCFQpJyAw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-11-01T12:06:51.955Z" encoding="Base64">PiU2GEFU7KMCfM/7AVvoCfw/jR3ia2A2jhNc+MQn13v2t+I+qdrzQbJk03Z3E23WALvbrH87R0CPe8QmNXGACw==</Signature>

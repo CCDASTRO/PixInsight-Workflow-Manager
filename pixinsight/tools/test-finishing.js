@@ -3,7 +3,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),pat
 const source=fs.readFileSync(process.argv[2] || path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
 new vm.Script(source.replace(/^#.*$/gm,''));
 let windows=[],processes=[],fail='',icon=null,finishingActions=[];
-function window(){const w={isNull:false,mainView:{image:{resetSelections(){},render(){return {};}}},removeMask(){this.removed=true;},setMask(m){this.mask=m;},forceClose(){this.closed=true;},show(){this.shown=true;},setSampleFormat(bits,float){this.format=[bits,float];}};windows.push(w);return w;}
+function window(){const w={saveAs(path,a,b,c,d,hints){files.push({closed:true,path,hints});return true;},isNull:false,mainView:{image:{resetSelections(){},render(){return {};}}},removeMask(){this.removed=true;},setMask(m){this.mask=m;},forceClose(){this.closed=true;},show(){this.shown=true;},setSampleFormat(bits,float){this.format=[bits,float];}};windows.push(w);return w;}
 function proc(id){return function(){this.executeOn=()=>{processes.push({id,p:this});return fail!==id;};};}
 function control(){this.enabled=true;this.repaint=()=>{};this.setMinSize=()=>{};this.addItem=()=>{};this.adjustToContents=()=>{};this.execute=()=>finishingActions.length?finishingActions.shift()(this):true;this.ok=()=>{};this.cancel=()=>{};}
 function sizer(){this.add=()=>{};this.addStretch=()=>{};}

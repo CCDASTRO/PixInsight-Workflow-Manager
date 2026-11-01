@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.3
+# CCDASTRO PixInsight Workflow Manager v1.9.4
 
 
 
@@ -8,9 +8,19 @@ finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
 
+## New in v1.9.4 — PixInsight 1.9.6 choices
+
+- **MultiscaleTGVDenoise** in Noise reduction and ordered passes, with strength, chrominance, smoothness, scales, amount, deep-sky/point-source controls, local-support settings and convergence controls. No model or process icon is required. Final cleanup and stretched passes use general mode.
+- **MGC Setup** now includes automatic scale factors, edge correction with aggressiveness 1–3, and the optional MARS reference-mosaic fallback. New controls require PI 1.9.6; legacy settings retain their defaults. Automatic scale factors are calculated during execution when enabled.
+- **Plate Solve Setup** offers Automatic, Always and Disabled blind-solver modes. Always requires a configured astrometric index on PI 1.9.6; Disabled requires valid coordinate/scale seeds. The selection is remembered independently of image-specific seed values.
+- **Sharing export** adds lossless WebP (8-bit) and JPEG XL (16-bit) alongside JPEG/PNG. Exports remain separate resized copies.
+- The dropdown now says **BlurlessAI**; its tooltip explains that stellar repair runs on the full linear image.
+
+The v1.9.4 script and update manifest are signed for the CCDASTRO identity. All 36 regression suites pass. Native synthetic-image TGV execution, native MGC parameter application, and WebP/JPEG XL write/reopen checks passed on PI 1.9.6. Full real-image workflow validation remains pending. [Feature coverage and scope](docs/PIXINSIGHT-1.9.6-FEATURES.md).
+
 ## New in v1.9.3 — BlurlessAI
 
-Adds **BlurlessAI (stellar only)** to **Deblur / structure recovery**, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.
+Adds **BlurlessAI** to **Deblur / structure recovery**, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.
 
 The v1.9.3 script and update manifest are signed for the CCDASTRO identity. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.
 
@@ -38,7 +48,7 @@ This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, 
 
 The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.
 
-**v1.9.3 update:** install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.
+**v1.9.4 update:** install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.
 
 ## New in v1.7.0 — Independent channel stretch review
 
@@ -206,7 +216,7 @@ The default General Color Image order is:
 2. Selected gradient correction (MGC performs its prerequisite solve and SPFC first)
 3. ImageSolver when the image does not already have an astrometric solution
 4. Selected color calibration: SPCC (default) or configured PCC
-5. BlurXTerminator or BlurlessAI (stellar only)
+5. BlurXTerminator or BlurlessAI
 6. StarXTerminator, StarNet2
 7. NoiseXTerminator, MLDenoise on the starless branch
 8. Linear-add PixelMath recombination
@@ -403,9 +413,19 @@ calibration must be enabled. Compare SPCC/PCC on separate original copies with
 identical stretch parameters. Calibration establishes balance; stretch, curves
 and saturation still influence the final appearance.
 
+## PixInsight 1.9.6 processing choices
+
+Select **MultiscaleTGVDenoise (PI 1.9.6)** in **Noise reduction**, then open **MultiscaleTGV setup**. The same tool is available in ordered linear and post-stretch passes. Deep-sky mode is intended for linear data; post-stretch passes and final cleanup explicitly use general mode. For stretched cleanup, choose the tool in **Final denoise setup**. Native processing always disables mask-preview output.
+
+In **MGC Setup**, enable **Automatic scale factors** to calculate the channel factors during processing. **Edge correction** and **Edge aggressiveness** refine the border model; **Allow MARS reference mosaics** is an optional fallback when no single reference contains the target. These options do not construct a science-image mosaic.
+
+In **Plate Solve Setup**, **Automatic** uses seeds with blind fallback, **Always** ignores seeds and uses the installed astrometric index, and **Disabled** requires seeds. Existing solved images are retained in all modes. Index installation and actual capture observation time remain required where applicable.
+
+**Separate sharing image** offers JPEG, PNG, WebP and JPEG XL. WebP exports use 8-bit samples; JPEG XL uses 16-bit samples. Keep XISF as the scientific master; sharing exports may be resized and quantized. PI 1.9.6 is required for the new native formats and denoiser.
+
 ## BlurlessAI stellar repair
 
-Install and activate [BlurlessAI by Neven Krcmarek](https://www.lighthousesuite.org/#blurless) separately, then select **BlurlessAI (stellar only)** under **Deblur / structure recovery**. No workspace icon is needed. The workflow uses a fresh process instance with the module defaults; settings in an open BlurlessAI window are not imported. Missing module access or processing failure stops the workflow.
+Install and activate [BlurlessAI by Neven Krcmarek](https://www.lighthousesuite.org/#blurless) separately, then select **BlurlessAI** under **Deblur / structure recovery**. No workspace icon is needed. The workflow uses a fresh process instance with the module defaults; settings in an open BlurlessAI window are not imported. Missing module access or processing failure stops the workflow.
 
 Use linear images with stars present. BlurlessAI runs after background correction and before the separate color-calibration stage, denoise and star removal. With MGC, SPFC remains part of the earlier gradient stage. Disable **Use ordered linear processing passes (all tools)** to use this dropdown; BlurlessAI is not yet offered in the advanced pass editor. This version supports stellar repair only. Native module defaults and processing must still be verified in PixInsight before release.
 

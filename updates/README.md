@@ -1,8 +1,8 @@
 # PixInsight Update Repository
 
-**v1.9.3 script and manifest are signed.** See [the signing and package record](../docs/SIGNING-v1.9.3.md).
+**v1.9.4 script and update manifest are signed.** See [the signing and package record](../docs/SIGNING-v1.9.4.md).
 
-Current signed update: **v1.9.3** (PI 1.9.4–1.9.6). Adds BlurlessAI stellar repair without a process icon and retains the preprocessor fix and blind-solving fallback with a configured astrometric index. Live BlurlessAI processing remains unverified. Native PI 1.9.6 image-processing validation remains pending. External SyQon and GraXpert processing adapters have been removed. If saved settings reference removed tools, use Reset Defaults and choose supported PixInsight tools before running.
+Current signed update: **v1.9.4** (PI 1.9.4–1.9.6). Adds MultiscaleTGVDenoise choices, MGC automatic scale factors/edge correction/reference-mosaic fallback, explicit blind-solver modes, and WebP/JPEG XL sharing exports. Retains BlurlessAI without a process icon. Live BlurlessAI processing remains unverified. Native PI 1.9.6 image-processing validation remains pending. External SyQon and GraXpert processing adapters have been removed. If saved settings reference removed tools, use Reset Defaults and choose supported PixInsight tools before running.
 
 Add this URL in **Resources > Updates > Manage Repositories**:
 
@@ -21,7 +21,7 @@ directory to force registration of newly installed script folders.
 The package and `updates.xri` are generated from the repository root with:
 
 ```powershell
-.\packaging\build-pixinsight-package.ps1 -Version 1.9.3 -MaximumPixInsightVersion 1.9.6
+.\packaging\build-pixinsight-package.ps1 -Version 1.9.4 -MaximumPixInsightVersion 1.9.6
 ```
 
 The builder validates the source version, ZIP layout, SHA-1, XML, release date,
@@ -39,7 +39,7 @@ For a release with script or included ImageSolver dependency changes, use this o
    save the generated signature as
    `pixinsight/CCDASTROWorkflowManager.xsgn`.
 3. Run the package builder shown above. It creates
-   `updates/CCDASTROWorkflowManager-1.9.3.zip`, calculates its SHA-1, and
+   `updates/CCDASTROWorkflowManager-1.9.4.zip`, calculates its SHA-1, and
    regenerates `updates/updates.xri`.
 4. Sign the newly generated `updates/updates.xri` with PixInsight CodeSign.
 5. Commit and publish the script, `.xsgn`, ZIP, and signed manifest together.

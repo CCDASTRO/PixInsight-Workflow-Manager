@@ -1,0 +1,8 @@
+{
+  "mgc": "New flags accepted by installed process; no MGC image execution",
+  "linearTGV": "Synthetic 128x128 image executed",
+  "generalTGV": "Synthetic image executed",
+  "webp": "Lossless export written and reopened",
+  "jxl": "Lossless export written and reopened",
+  "ok": true
+}

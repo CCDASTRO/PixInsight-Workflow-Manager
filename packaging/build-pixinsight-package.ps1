@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.3',
+    [string] $Version = '1.9.4',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -151,8 +151,10 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.9.3 adds optional BlurlessAI stellar repair on linear images using installed-module defaults, with no process icon required.</p>
+        <p>v1.9.4 adds PixInsight 1.9.6 processing choices: MultiscaleTGVDenoise, MGC options, explicit blind-solver modes, and lossless WebP/JPEG XL sharing exports.</p>
         <ul>
+          <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>
+          <li>MGC automatic scale factors, edge correction and MARS reference-mosaic fallback are configurable.</li>
           <li>BlurlessAI runs after gradient correction and before separate color calibration; MGC retains its SPFC prerequisite. Advanced ordered passes override the main dropdown.</li>
           <li>Blind solving when coordinates/scale are missing and an astrometric index is configured; actual capture date remains required.</li>
           <li>Saved settings referencing removed tools require Reset Defaults and review before processing.</li>

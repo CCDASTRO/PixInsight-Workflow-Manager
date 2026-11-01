@@ -20,3 +20,11 @@ f=fixture({solved:true,modern:false});f.adapter.execute(f.view);assert.equal(f.c
 f=fixture({fail:true});assert.throws(()=>f.adapter.execute(f.view),/without creating/);
 f=fixture();seed(f);f.settings.ra=361;assert(!f.settings.hasSeed());f.adapter.execute(f.view);assert.equal(f.last().solverCfg.blindSolver,1);
 console.log('PASS seeded/blind solving, seed provenance, legacy fallback, index requirement, capture date, existing solution and failure handling');
+
+// Explicit user modes, including legacy support and index requirements.
+f=fixture();seed(f);f.settings.blindMode='Always';f.adapter.execute(f.view);assert.equal(f.last().solverCfg.blindSolver,1);assert.equal(f.last().userSeed.coordinates,false);
+f=fixture({index:false});seed(f);f.settings.blindMode='Always';assert(!f.settings.complete());assert.throws(()=>f.adapter.execute(f.view),/astrometric index/);
+f=fixture();f.settings.blindMode='Disabled';assert(!f.settings.complete());assert.throws(()=>f.adapter.execute(f.view),/disabled/);seed(f);f.adapter.execute(f.view);assert.equal(f.last().solverCfg.blindSolver,2);
+f=fixture({modern:false});seed(f);f.settings.blindMode='Disabled';f.adapter.execute(f.view);assert.equal(f.calls(),1);
+f=fixture();seed(f);f.settings.blindMode='Invalid';assert(!f.settings.complete());assert.throws(()=>f.adapter.execute(f.view));
+console.log('Explicit Automatic/Always/Disabled solver modes, index requirements and legacy seeded mode passed.');

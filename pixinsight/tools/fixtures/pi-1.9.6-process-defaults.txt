@@ -1,0 +1,77 @@
+
+// MultiscaleTGVDenoise
+var P = new MultiscaleTGVDenoise;
+P.strength = 0.500;
+P.chrominance = 0.500;
+P.smoothness = 0.500;
+P.amount = 1.000;
+P.deepSky = true;
+P.pointSources = false;
+P.pointSourceThreshold = 4.0;
+P.scales = 2;
+P.pitFill = true;
+P.mask = false;
+P.maskPreview = false;
+P.maskClipLow = 0.00;
+P.maskBackground = 0.250;
+P.maskSmoothness = 2;
+P.maskMode = MultiscaleTGVDenoise.MaskMode_Significance;
+P.maskThreshold = 0.250;
+P.maskRange = 0.500;
+P.maskScale = 2;
+P.maskBackgroundLayers = 8;
+P.tolerance = 2e-05;
+P.maxIterations = 1000;
+
+
+// MultiscaleGradientCorrection
+var P = new MultiscaleGradientCorrection;
+P.useMARSDatabase = false;
+P.marsDatabaseFiles = [ // enabled, path
+];
+P.grayMARSFilter = "L";
+P.redMARSFilter = "R";
+P.greenMARSFilter = "G";
+P.blueMARSFilter = "B";
+P.referenceImageId = "";
+P.gradientScale = 1024;
+P.structureSeparation = 3;
+P.modelSmoothness = 1.00;
+P.edgeCorrection = false;
+P.edgeAggressiveness = 2;
+P.minFieldRatio = 0.017;
+P.maxFieldRatio = 0.167;
+P.enforceFieldLimits = true;
+P.scaleFactorRK = 1.0000;
+P.scaleFactorG = 1.0000;
+P.scaleFactorB = 1.0000;
+P.showGradientModel = true;
+P.autoScaleFactors = false;
+P.autoScaleSmallScale = 256;
+P.autoScaleLargeScale = 1024;
+P.inputFilePath = "";
+P.inputViewId = "";
+P.referenceFilePath = "";
+P.outputFilePath = "";
+P.verbosity = 2;
+P.command = "";
+P.allowMARSMosaics = false;
+P.targetFrames = [ // enabled, path
+];
+P.inputHints = "";
+P.outputHints = "";
+P.outputDirectory = "";
+P.outputPrefix = "";
+P.outputPostfix = "_mgc";
+P.overwriteExistingFiles = false;
+P.onError = MultiscaleGradientCorrection.Continue;
+/*
+ * Read-only properties
+ *
+P.isValid = false;
+P.targetResolution = 0.0000;
+P.referenceResolution = 0.0000;
+P.channelData = [ // filterId, referenceFluxScaleFactor, targetFluxScaleFactor, referenceFWHM, coefficient, scaleFactor, correlation, automatic
+];
+ */
+

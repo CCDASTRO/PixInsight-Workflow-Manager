@@ -46,7 +46,7 @@ The GitHub `tree/main/pixinsight` webpage is not an update URL. Use the raw
 `updates/` URL above for Update Manager or use the installed scripts directory
 for a manual Feature Scripts installation.
 
-[Workflow webpage](https://ccdastro.com/piworkflow.html) · [Silent walkthrough (5:44)](https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.4.0/CCDASTRO-Workflow-v1.4.0-Quick-Start-Silent.mp4) · [CCDASTRO home](https://ccdastro.com/)
+[Workflow webpage](https://ccdastro.com/piworkflow.html) · [Silent walkthrough (v1.4.0 interface, 5:44)](https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.9.4/CCDASTRO-Workflow-v1.4.0-Quick-Start-Silent.mp4) · [CCDASTRO home](https://ccdastro.com/)
 
 The silent walkthrough uses on-screen explanations and the Soul image example. It covers input validation, tool selection, noise placement, plate solving, ordered passes, dual outputs, LHE and Auto Image Enhance. No audio is required.
 

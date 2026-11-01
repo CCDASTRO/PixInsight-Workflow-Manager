@@ -1,89 +1,12 @@
 # CCDASTRO PixInsight Workflow Manager v1.9.4
 
-
-
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.
 
 CCDASTRO Workflow Manager brings together PixInsight's native processes and tools developed by independent authors into one guided workflow. Credit for each tool and its processing algorithms belongs to its respective creators. CCDASTRO provides the workflow integration and its own review and finishing controls. See [Acknowledgments and third-party tools](#acknowledgments).
 
-## New in v1.9.4 — PixInsight 1.9.6 choices
-
-- **MultiscaleTGVDenoise** in Noise reduction and ordered passes, with strength, chrominance, smoothness, scales, amount, deep-sky/point-source controls, local-support settings and convergence controls. No model or process icon is required. Final cleanup and stretched passes use general mode.
-- **MGC Setup** now includes automatic scale factors, edge correction with aggressiveness 1–3, and the optional MARS reference-mosaic fallback. New controls require PI 1.9.6; legacy settings retain their defaults. Automatic scale factors are calculated during execution when enabled.
-- **Plate Solve Setup** offers Automatic, Always and Disabled blind-solver modes. Always requires a configured astrometric index on PI 1.9.6; Disabled requires valid coordinate/scale seeds. The selection is remembered independently of image-specific seed values.
-- **Sharing export** adds lossless WebP (8-bit) and JPEG XL (16-bit) alongside JPEG/PNG. Exports remain separate resized copies.
-- The dropdown now says **BlurlessAI**; its tooltip explains that stellar repair runs on the full linear image.
-
-The v1.9.4 script and update manifest are signed for the CCDASTRO identity. All 36 regression suites pass. Native synthetic-image TGV execution, native MGC parameter application, and WebP/JPEG XL write/reopen checks passed on PI 1.9.6. Full real-image workflow validation remains pending. [Feature coverage and scope](docs/PIXINSIGHT-1.9.6-FEATURES.md).
-
-## New in v1.9.3 — BlurlessAI
-
-Adds **BlurlessAI** to **Deblur / structure recovery**, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.
-
-The v1.9.3 script and update manifest are signed for the CCDASTRO identity. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.
-
-## New in v1.9.2 — preprocessor hotfix
-
-Fixes the unsupported `#ifgte` directives introduced in v1.9.1. PixInsight uses
-`#ifgteq`; the old spelling caused an unmatched else error before launch.
-A new preprocessor regression checks supported directives and solver version
-selection across PI builds. All 33 regression suites pass. The corrected script
-and regenerated update manifest have been signed for the CCDASTRO identity.
-
-## New in v1.9.1 — PixInsight 1.9.6 compatibility
-
-Adds automatic blind-solving fallback when coordinates/scale are unavailable and
-an astrometric index is configured in ImageSolver/Gaia. Complete reviewed seeds
-are passed with the new solver's provenance flags. The actual capture observation
-date remains required. Seeded solving remains available on older supported PI.
-The signed v1.9.1 package targets PI 1.9.4–1.9.6. All 32 automated regression
-suites pass; native PI 1.9.6 image-processing validation remains pending.
-See [1.9.6 compatibility and release checklist](docs/PIXINSIGHT-1.9.6.md).
-
-## New in v1.9.0 — CPD execution policy update
-
-This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, including executable discovery, setup controls and image-processing round trips. Processing stays inside PixInsight. Old saved settings selecting a removed adapter or pass are rejected; use Reset Defaults and select supported tools before running.
-
-The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.
-
-**v1.9.4 update:** install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.
-
-## New in v1.7.0 — Independent channel stretch review
-
-Select **Final image stretch > Independent channel stretch (review RGB)** to adjust the R/G/B channels independently before they are recombined with stars or passed to final finishing. The existing linked stretch remains the default. The review starts all channels at median target **0.23**, with independent target (0.01–0.50) and amount (0–100%) sliders, Before/After comparison, individual grayscale channel views and a recombined RGB view. Zero amount preserves that channel. Confirm linear input, click **Update Preview**, inspect, then **Apply channel stretch**. Settings changes require a fresh preview. Closing the review or choosing **Use shared stretch instead** applies the workflow’s normal linked stretch so later nonlinear stages still receive stretched data.
-
-Use linear RGB or the existing **separate R/G/B/L** input mode with registered mono masters mapped to the desired output slots. For example, map SII/Ha/OIII to R/G/B for SHO. The workflow first assembles the linear mapping; this review transforms its three planes independently and recombines them. This is mathematically equivalent to applying the same independent transforms to those mapped mono channels before combination; no registration or filter inference is performed. Optional luminance preparation remains separate. When starless final-output mode is enabled, review the starless branch before the stars companion is recombined; otherwise review the final combined/active image at its existing final-stretch stage.
-
-Each plane uses its median/MAD black-point estimate and its own midtones transfer function, blended with the original channel by the amount slider. PixInsight uses full-image statistics and a full-resolution review candidate. Lower the R target or amount if red dominates. Equal targets are an artistic choice that changes relative emission brightness, not physical flux calibration or a guaranteed narrowband palette. Original input images remain unchanged. Accepted controls are remembered in workflow settings/presets and recorded with the actual transform in reports. For already stretched data, use CCDASTRO Color & Tone or Lighthouse instead; those finishing controls adjust the existing stretch with color/tone masks rather than independently balancing linear channel stretches.
-
-## New in v1.6.2 — Automatic Lighthouse launch and short names
-
-When **Lighthouse (separately installed)** is the selected finishing panel, **Open Lighthouse automatically with the final image selected** is enabled by default. After normal save/report/export steps, the workflow exits and starts the signed installed Lighthouse in the same PixInsight instance, passing the exact image as its target. No manual image search is needed. Other open images are preserved. Disable the checkbox for manual launch.
-
-Handoff views use short names such as `Lighthouse_Final`, `Lighthouse_Starless` and `Lighthouse_Recombined`, with numbered suffixes when names are already in use. Suggested XISF filenames follow the same short pattern and avoid existing files. You can still choose your own filename. With dual output, the recombined companion is selected when created; otherwise the starless result is selected. Open the other saved result in Lighthouse yourself when needed.
-
-Lighthouse remains separately installed and unmodified. Its signature is checked before automatic launch, and launch is deferred until the workflow has released PixInsight’s script runtime. If dispatch fails, the result stays open with manual-launch instructions. Edits happen in Lighthouse after workflow reports/exports; save them under a new filename and regenerate sharing exports as needed. This is automatic launch and target selection, not an automatic processing round trip.
-
-
-## New in v1.6.0 — Optional Lighthouse finishing handoff
-
-Under **Pass sequences and optional finishing**, enable **Review selected color / tone finishing panel** and choose **CCDASTRO Color & Tone Studio** or **Lighthouse (separately installed)**. Existing presets keep Color & Tone Studio. Both choices require a workflow stretch.
-
-**Different approaches:** Color & Tone Studio provides CCDASTRO’s own hue-and-luminosity masks, tone/color sliders and RGB/channel curves within the workflow’s reviewed passes. Lighthouse offers a separate Lightroom-style finishing environment with luminosity/regional masking and tools such as texture, clarity and dehaze. Their processing math and slider responses differ, so matching values need not produce matching results. Choose the controls that suit the image; neither approach is universally better.
-
-Install Lighthouse from its author's [Lighthouse Suite](https://www.lighthousesuite.org/) repository. The standard installed `src/scripts/Lighthouse/Lighthouse.js` is detected; **Locate Lighthouse...** supports custom installations. The path is a local setting, not part of shared workflow presets. A missing installation is reported during preflight.
-
-**In v1.6.0–v1.6.1 Lighthouse used a manual handoff; v1.6.2 adds automatic launch and target selection by default.** At the selected finishing stage the workflow makes a separate copy, then performs its normal save, report and export steps. After successful completion it closes the workflow window and identifies the saved handoff view. Choose **Scripts > Lighthouse Suite > Lighthouse**, select that view, edit in Lighthouse, and save under a new filename. With dual output, both results are prepared separately; the recombined companion is brought forward last when created. Select the desired saved image in Lighthouse. Reports and sharing exports describe the pre-Lighthouse result; regenerate exports afterward if needed. There is no automatic return or import of Lighthouse edits; see v1.6.2 above for automatic launch.
-
-Lighthouse is not bundled, imported, modified or updated by CCDASTRO. Its installation, signature and processing remain separate. Credit belongs to **Neven Krčmarek**. Lighthouse keeps its own slider settings; CCDASTRO records only the handoff, not Lighthouse processing. Original source pixels and previously accepted images remain preserved. If saving/export fails, the workflow remains open to report the error rather than announcing a completed handoff.
-
-## New in v1.5.0 — Color & Tone Studio
-
-Finish stretched images with soft color and luminosity masks, tone and color sliders, and smooth master RGB or individual-channel curves. Pick a hue directly from the preview, inspect the mask or overlay, and apply independent passes on separate copies.
-
-Enable **Review Color & Tone Studio (color masks / curves / sliders)** under **Pass sequences and optional finishing**. Live previews use a bounded sample grid; use **Full-resolution preview** and **100%** inspection before committing fine adjustments. The panel is optional and off by default. [Full controls and usage](#color-tone-studio).
+[Changelog](#changelog)
 
 ## Install with PixInsight Update Manager
 
@@ -903,14 +826,117 @@ This workflow builds on the work of the following authors and teams. Selecting a
 
 External tools retain their own installation, licensing and model requirements. Inclusion in this credits list does not imply endorsement by their authors. Detailed notices for the included AutoDBE adaptation and other dependencies are in [Third-party notices](docs/THIRD-PARTY-NOTICES.md).
 
-## Revision history
+<a id="revision-history"></a>
 
-Documentation has been streamlined around current controls. Historical entries
-below summarize changes and can mention superseded implementations.
+## Changelog
+
+Release history, newest first. Historical entries describe the behavior at that release and may mention tools or implementations later replaced or removed.
+
+<a id="new-in-v1.9.4-pixinsight-1.9.6-choices"></a>
+
+### v1.9.4 — PixInsight 1.9.6 choices
+
+- **MultiscaleTGVDenoise** in Noise reduction and ordered passes, with strength, chrominance, smoothness, scales, amount, deep-sky/point-source controls, local-support settings and convergence controls. No model or process icon is required. Final cleanup and stretched passes use general mode.
+- **MGC Setup** now includes automatic scale factors, edge correction with aggressiveness 1–3, and the optional MARS reference-mosaic fallback. New controls require PI 1.9.6; legacy settings retain their defaults. Automatic scale factors are calculated during execution when enabled.
+- **Plate Solve Setup** offers Automatic, Always and Disabled blind-solver modes. Always requires a configured astrometric index on PI 1.9.6; Disabled requires valid coordinate/scale seeds. The selection is remembered independently of image-specific seed values.
+- **Sharing export** adds lossless WebP (8-bit) and JPEG XL (16-bit) alongside JPEG/PNG. Exports remain separate resized copies.
+- The dropdown now says **BlurlessAI**; its tooltip explains that stellar repair runs on the full linear image.
+
+The v1.9.4 script and update manifest are signed for the CCDASTRO identity. All 36 regression suites pass. Native synthetic-image TGV execution, native MGC parameter application, and WebP/JPEG XL write/reopen checks passed on PI 1.9.6. Full real-image workflow validation remains pending. [Feature coverage and scope](docs/PIXINSIGHT-1.9.6-FEATURES.md).
+
+<a id="new-in-v1.9.3-blurlessai"></a>
+
+### v1.9.3 — BlurlessAI
+
+Adds **BlurlessAI** to **Deblur / structure recovery**, using a fresh installed-module instance with its default settings. No process icon is required. Repair runs on linear data after gradient correction and before separate color calibration, denoise and star separation. MGC retains its bundled SPFC prerequisite. Advanced ordered linear passes override this dropdown.
+
+The v1.9.3 script and update manifest are signed for the CCDASTRO identity. All 34 regression suites pass; live BlurlessAI processing in PixInsight remains unverified.
+
+<a id="new-in-v1.9.2-preprocessor-hotfix"></a>
+
+### v1.9.2 — preprocessor hotfix
+
+Fixes the unsupported `#ifgte` directives introduced in v1.9.1. PixInsight uses
+`#ifgteq`; the old spelling caused an unmatched else error before launch.
+A new preprocessor regression checks supported directives and solver version
+selection across PI builds. All 33 regression suites pass. The corrected script
+and regenerated update manifest have been signed for the CCDASTRO identity.
+
+<a id="new-in-v1.9.1-pixinsight-1.9.6-compatibility"></a>
+
+### v1.9.1 — PixInsight 1.9.6 compatibility
+
+Adds automatic blind-solving fallback when coordinates/scale are unavailable and
+an astrometric index is configured in ImageSolver/Gaia. Complete reviewed seeds
+are passed with the new solver's provenance flags. The actual capture observation
+date remains required. Seeded solving remains available on older supported PI.
+The signed v1.9.1 package targets PI 1.9.4–1.9.6. All 32 automated regression
+suites pass; native PI 1.9.6 image-processing validation remains pending.
+See [1.9.6 compatibility and release checklist](docs/PIXINSIGHT-1.9.6.md).
+
+<a id="new-in-v1.9.0-cpd-execution-policy-update"></a>
+
+### v1.9.0 — CPD execution policy update
+
+This source revision removes SyQon legacy/Studio CLI and GraXpert integrations, including executable discovery, setup controls and image-processing round trips. Processing stays inside PixInsight. Old saved settings selecting a removed adapter or pass are rejected; use Reset Defaults and select supported tools before running.
+
+The workflow extends PixInsight through its existing processes and PJSR interfaces. Native processing, review/finishing controls, and the optional signature-checked Lighthouse handoff through PixInsight IPC remain available.
+
+**v1.9.4 update:** install through the PixInsight Update Manager repository below. This release removes external image-processing adapters. Existing settings selecting a removed tool require Reset Defaults before processing.
+
+### v1.8.0 — SyQon Studio CLI
+
+Added separate SyQon Studio DeepGradient, Parallax, Prism and Axiom integrations through the authenticated Studio CLI, with independently configured model/device settings and scientific float32 XISF exchange. These external-processing integrations were subsequently removed in v1.9.0.
+
+<a id="new-in-v1.7.0-independent-channel-stretch-review"></a>
+
+### v1.7.0 — Independent channel stretch review
+
+Select **Final image stretch > Independent channel stretch (review RGB)** to adjust the R/G/B channels independently before they are recombined with stars or passed to final finishing. The existing linked stretch remains the default. The review starts all channels at median target **0.23**, with independent target (0.01–0.50) and amount (0–100%) sliders, Before/After comparison, individual grayscale channel views and a recombined RGB view. Zero amount preserves that channel. Confirm linear input, click **Update Preview**, inspect, then **Apply channel stretch**. Settings changes require a fresh preview. Closing the review or choosing **Use shared stretch instead** applies the workflow’s normal linked stretch so later nonlinear stages still receive stretched data.
+
+Use linear RGB or the existing **separate R/G/B/L** input mode with registered mono masters mapped to the desired output slots. For example, map SII/Ha/OIII to R/G/B for SHO. The workflow first assembles the linear mapping; this review transforms its three planes independently and recombines them. This is mathematically equivalent to applying the same independent transforms to those mapped mono channels before combination; no registration or filter inference is performed. Optional luminance preparation remains separate. When starless final-output mode is enabled, review the starless branch before the stars companion is recombined; otherwise review the final combined/active image at its existing final-stretch stage.
+
+Each plane uses its median/MAD black-point estimate and its own midtones transfer function, blended with the original channel by the amount slider. PixInsight uses full-image statistics and a full-resolution review candidate. Lower the R target or amount if red dominates. Equal targets are an artistic choice that changes relative emission brightness, not physical flux calibration or a guaranteed narrowband palette. Original input images remain unchanged. Accepted controls are remembered in workflow settings/presets and recorded with the actual transform in reports. For already stretched data, use CCDASTRO Color & Tone or Lighthouse instead; those finishing controls adjust the existing stretch with color/tone masks rather than independently balancing linear channel stretches.
+
+<a id="new-in-v1.6.2-automatic-lighthouse-launch-and-short-names"></a>
+
+### v1.6.2 — Automatic Lighthouse launch and short names
+
+When **Lighthouse (separately installed)** is the selected finishing panel, **Open Lighthouse automatically with the final image selected** is enabled by default. After normal save/report/export steps, the workflow exits and starts the signed installed Lighthouse in the same PixInsight instance, passing the exact image as its target. No manual image search is needed. Other open images are preserved. Disable the checkbox for manual launch.
+
+Handoff views use short names such as `Lighthouse_Final`, `Lighthouse_Starless` and `Lighthouse_Recombined`, with numbered suffixes when names are already in use. Suggested XISF filenames follow the same short pattern and avoid existing files. You can still choose your own filename. With dual output, the recombined companion is selected when created; otherwise the starless result is selected. Open the other saved result in Lighthouse yourself when needed.
+
+Lighthouse remains separately installed and unmodified. Its signature is checked before automatic launch, and launch is deferred until the workflow has released PixInsight’s script runtime. If dispatch fails, the result stays open with manual-launch instructions. Edits happen in Lighthouse after workflow reports/exports; save them under a new filename and regenerate sharing exports as needed. This is automatic launch and target selection, not an automatic processing round trip.
+
+### v1.6.1 — GraXpert compatibility fix
+
+Selected AI background extraction explicitly, disabled the module’s sample-free default, and applied corrected pixels to the working copy. This addressed executable/module command-line incompatibility while preserving the original image. GraXpert integration was subsequently removed in v1.9.0.
+
+<a id="new-in-v1.6.0-optional-lighthouse-finishing-handoff"></a>
+
+<a id="lighthouse-finishing"></a>
+
+### v1.6.0 — Optional Lighthouse finishing handoff
+
+Under **Pass sequences and optional finishing**, enable **Review selected color / tone finishing panel** and choose **CCDASTRO Color & Tone Studio** or **Lighthouse (separately installed)**. Existing presets keep Color & Tone Studio. Both choices require a workflow stretch.
+
+**Different approaches:** Color & Tone Studio provides CCDASTRO’s own hue-and-luminosity masks, tone/color sliders and RGB/channel curves within the workflow’s reviewed passes. Lighthouse offers a separate Lightroom-style finishing environment with luminosity/regional masking and tools such as texture, clarity and dehaze. Their processing math and slider responses differ, so matching values need not produce matching results. Choose the controls that suit the image; neither approach is universally better.
+
+Install Lighthouse from its author's [Lighthouse Suite](https://www.lighthousesuite.org/) repository. The standard installed `src/scripts/Lighthouse/Lighthouse.js` is detected; **Locate Lighthouse...** supports custom installations. The path is a local setting, not part of shared workflow presets. A missing installation is reported during preflight.
+
+**In v1.6.0–v1.6.1 Lighthouse used a manual handoff; v1.6.2 adds automatic launch and target selection by default.** At the selected finishing stage the workflow makes a separate copy, then performs its normal save, report and export steps. After successful completion it closes the workflow window and identifies the saved handoff view. Choose **Scripts > Lighthouse Suite > Lighthouse**, select that view, edit in Lighthouse, and save under a new filename. With dual output, both results are prepared separately; the recombined companion is brought forward last when created. Select the desired saved image in Lighthouse. Reports and sharing exports describe the pre-Lighthouse result; regenerate exports afterward if needed. There is no automatic return or import of Lighthouse edits; see v1.6.2 above for automatic launch.
+
+Lighthouse is not bundled, imported, modified or updated by CCDASTRO. Its installation, signature and processing remain separate. Credit belongs to **Neven Krčmarek**. Lighthouse keeps its own slider settings; CCDASTRO records only the handoff, not Lighthouse processing. Original source pixels and previously accepted images remain preserved. If saving/export fails, the workflow remains open to report the error rather than announcing a completed handoff.
+
+<a id="new-in-v1.5.0-color-tone-studio"></a>
 
 <a id="color-tone-studio"></a>
 
 ### v1.5.0 — Color & Tone Studio
+
+Finish stretched images with soft color and luminosity masks, tone and color sliders, and smooth master RGB or individual-channel curves. Pick a hue directly from the preview, inspect the mask or overlay, and apply independent passes on separate copies.
+
+Enable **Review Color & Tone Studio (color masks / curves / sliders)** under **Pass sequences and optional finishing**. Live previews use a bounded sample grid; use **Full-resolution preview** and **100%** inspection before committing fine adjustments. The panel is optional and off by default. [Full controls and usage](#color-tone-studio).
 
 Enable **Review Color & Tone Studio (color masks / curves / sliders)** under **Pass sequences and optional finishing**. It runs after stretching and other finishing, before each final save. The feature is off by default; saved workflows from earlier versions retain their behavior.
 
@@ -982,7 +1008,6 @@ icon. Linear/mask modes follow the stage. BlurX and Parallax remain linear-only.
 
 The workflow script and update manifest are signed for the CCDASTRO identity.
 
-
 ### v1.2.1
 
 Enable **Save both final starless and recombined images** under **Pass sequences
@@ -1007,13 +1032,30 @@ Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and opti
 
 ### Earlier releases
 
+- **v1.1.47:** Detects vendor-configured SyQon executables when workflow paths are
+  empty; explicitly saved workflow paths take priority. Accepts quoted paths and
+  known executable folders. Missing-path errors show the actual resolved value.
+- **v1.1.46:** Restores SyQon through direct user-selected external executable
+  file interfaces, and AutoDBE through an attributed CC BY-NC 4.0 engine included
+  at signing time. Restores choices/setup controls and documents dependencies,
+  file locations, model/licensing behavior and ImageSolver re-signing requirements.
+- **v1.1.45:** Removes suspended SyQon/AutoDBE tools from selectable dropdowns and
+  displays their names in gray with temporarily-unavailable labels. Saved suspended
+  selections disable the stage rather than silently running another tool. Hides
+  inactive SyQon setup controls while retaining saved settings.
 - **v1.1.44:** Fixes PixInsight preprocessing of the direct PCC HTTPS check by using a plain string prefix instead of a slash-containing regular expression.
 - **v1.1.43:** Removes dynamic vendor-script source loaders and temporarily blocks
+  SyQon/AutoDBE execution pending a supported secure integration. Adds security,
+  dependency, network and storage disclosure; requires HTTPS for direct PCC server
+  settings. Clarifies that a blank SPFC filter-library field uses the installed
+  filters.xspd library, with the default path in its tooltip.
 - **v1.1.42:** Fixes native direct-process construction and enumeration lookup using
   the workflow factory; corrects the outdated active-view preflight warning.
 - **v1.1.41:** Adds direct native setup for PCC, MLDenoise, SPFC/MGC, histogram/MAS
   stretches, luminance histogram stretch and final denoise. Icons remain optional
   explicit overrides; typed settings and file paths can be remembered.
+- **v1.1.40:** Adds remembered SyQon executable paths and adjustable Parallax, Prism
+  and Starless settings. Their workspace icons are now optional explicit overrides.
 - **v1.1.39:** Makes the BlurX icon optional; adds remembered Correct Only/sharpening/halo controls and an explicit icon override. Correct Only is the default.
 - **v1.1.38:** Adds optional registered nebula masks to LHE and Curves, repeatable Curves with individual RGB channels, and optional final contrast/color review after L addition and HDR.
 - **v1.1.37:** Recovers from missing, invalid or failing luminance stretch icons without discarding completed RGB processing; fresh linear copies protect stretch retries.
@@ -1062,6 +1104,11 @@ Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and opti
 - **v1.1.2:** Adds PixInsight 1.9.5 release compatibility, strict package-content checks,
   and documented passing astrometry, SPFC/MGC, and SPCC runtime tests.
   RC Astro integration testing remains pending; its modules were unavailable.
+- **v1.1.1:** Fixes recursive SyQon script execution while preserving configured
+  process-icon settings. Runs processing outside the workflow setup dialog so
+  the Process Console remains accessible. Documents the manual Starless step:
+  click **Generate Starless**, monitor the **Process Console** for completion,
+  then close the Starless window so the workflow can import the result and continue.
 - **v1.1.0:** Adds MGC as an optional gradient method, with automatic prerequisite
   plate solving and configured SPFC/MGC process icons, setup guidance, and preflight checks.
 - **v1.0.0:** First stable public release. Promotes the fully tested,
@@ -1075,3 +1122,4 @@ Adds ordered linear BlurX/NoiseX/StarX passes with independent settings and opti
   that users may choose their preferred calibration and integration method.
 - **v0.6.0:** Adds object/image-type profiles with tailored workflows for color
   masters, emission nebulae, mapped narrowband images, galaxies, and star clusters.
+- **v0.4.8:** Pre-1.0 prototype with ordered processing choices, plate-solving setup, independently stretched starless/stars branches, preflight validation and recombination. These early behaviors were superseded by later releases.

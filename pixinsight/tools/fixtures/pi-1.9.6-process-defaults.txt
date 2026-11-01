@@ -74,4 +74,3 @@ P.referenceResolution = 0.0000;
 P.channelData = [ // filterId, referenceFluxScaleFactor, targetFluxScaleFactor, referenceFWHM, coefficient, scaleFactor, correlation, automatic
 ];
  */
-

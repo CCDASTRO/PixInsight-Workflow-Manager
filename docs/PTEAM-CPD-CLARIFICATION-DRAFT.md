@@ -54,4 +54,4 @@ without written guidance/authorization.
 Sincerely,
 Chuck Faranda / CCDASTRO
 
-Historical request draft. Chuck supplied PTeam's response; see PTEAM-CPD-RESPONSE.md. The sending of the request occurred outside this assistant; no additional message has been sent.
+Historical request draft; not current authorization. The October 13 response summary has been removed because its permissions were superseded by CPD rules 1.0.2. See [current guidance and release course](PTEAM-FOLLOWUP-2026-11-09.md). The sending of the request occurred outside this assistant; no additional message has been sent.

@@ -1,5 +1,12 @@
 # Security, network and storage disclosure — v1.9.0
 
+PTeam's later response, supplied November 9, 2026, confirms the removal of external
+processing stages in 1.9.4 and warns that the next PixInsight build changes the
+included ImageSolver engine and requires re-signing. See the
+[follow-up and release course](PTEAM-FOLLOWUP-2026-11-09.md). The superseded
+October 13 response summary has been removed to avoid presenting obsolete
+permissions as current guidance.
+
 This source revision removes external image-processing integrations for CPD rules 1.0.2. A signature establishes identity and integrity, not PTeam approval. Earlier correspondence is historical and does not override the current rules.
 
 ## Distribution, settings and security

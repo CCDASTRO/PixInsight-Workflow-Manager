@@ -27,7 +27,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.4"
+#define VERSION "1.9.5"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -3039,6 +3039,7 @@ function installHDRCoreControls(dialog, view)
    };
    var dirty = function()
    {
+      dialog.hdrPreviewReady = false;
       dialog.applyButton.enabled = false; dialog.coreMaskBitmap = null;
       if (dialog.displayMode.currentItem === 3) dialog.displayMode.currentItem = 0;
       dialog.previewStatus.text = "Core settings changed. Click Update Preview before applying HDR.";
@@ -3227,6 +3228,7 @@ constructor(view)
    super();
    var self = this;
    this.windowTitle = "HDR preview and comparison";
+   this.hdrPreviewReady = false;
    this.candidate = null;
    this.previewRevision = 0;
    this.previewStatus = new Label(this);
@@ -3287,11 +3289,12 @@ constructor(view)
    this.skipButton.text = "Skip HDR";
    this.skipButton.onClick = function() { self.cancel(); };
    this.applyButton.onClick = function() { self.ok(); };
-   var dirty = function() { self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   var dirty = function() { self.hdrPreviewReady = false; self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.layers.onValueUpdated = dirty;
    this.strength.onValueUpdated = dirty;
    this.updateButton.onClick = function()
    {
+      self.hdrPreviewReady = false;
       self.enabled = false;
       self.applyButton.enabled = false;
       self.previewStatus.text = "Calculating new preview...";
@@ -3311,6 +3314,7 @@ constructor(view)
          self.previewStatus.text = "Preview #" + self.previewRevision + ": " +
             previewChangeSummary(view.image, self.candidate.mainView.image);
          logLine(self.windowTitle + " - " + self.previewStatus.text);
+         self.hdrPreviewReady = true;
          self.applyButton.enabled = true;
       }
       catch (e)
@@ -3359,15 +3363,29 @@ function reviewHDR(view, luminance)
       var internalMask = new CheckBox(dialog);
       internalMask.text = "Use HDR internal lightness mask";
       internalMask.checked = false; dialog.hdrLightnessMask = false;
-      internalMask.onCheck = function(checked) { dialog.hdrLightnessMask = checked; dialog.applyButton.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview."; };
+      internalMask.onCheck = function(checked) { dialog.hdrLightnessMask = checked; dialog.hdrPreviewReady = false; dialog.applyButton.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview."; };
       dialog.sizer.insert(4, internalMask); dialog.adjustToContents();
    }
+   dialog.applyButton.onClick = function()
+   {
+      if (dialog.candidate === null || !dialog.hdrPreviewReady)
+      {
+         dialog.applyButton.enabled = false;
+         dialog.previewStatus.text = "Click Update Preview before applying HDR, or choose Skip HDR.";
+         return;
+      }
+      dialog.ok();
+   };
    var accepted = false;
    try
    {
-      if (!dialog.execute()) { checkAbortRequested(); return view; }
-      if (dialog.candidate === null || !dialog.applyButton.enabled)
-         throw new Error("Update the HDR preview before applying.");
+      for (;;)
+      {
+         if (!dialog.execute()) { checkAbortRequested(); return view; }
+         if (dialog.candidate !== null && dialog.hdrPreviewReady) break;
+         dialog.applyButton.enabled = false;
+         dialog.previewStatus.text = "Click Update Preview before applying HDR, or choose Skip HDR.";
+      }
       if (dialog.keepComparison.checked)
       {
          var before = cloneHDRView(view, "_BeforeHDR");

@@ -5,10 +5,10 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.6">
-      <package fileName="CCDASTROWorkflowManager-1.9.4.zip" sha1="9071a68ceb9c3124e1f54a9ebc5f909bc01084e2" type="script" releaseDate="20261101120633">
-         <title>CCDASTRO Workflow Manager 1.9.4</title>
+      <package fileName="CCDASTROWorkflowManager-1.9.5.zip" sha1="1656e2cf8e8eb470d34ae987fdd1fd158ff30ab0" type="script" releaseDate="20261111015741">
+         <title>CCDASTRO Workflow Manager 1.9.5</title>
          <description>
-            <p>v1.9.4 adds PixInsight 1.9.6 processing choices: MultiscaleTGVDenoise, MGC options, explicit blind-solver modes, and lossless WebP/JPEG XL sharing exports.</p>
+            <p>v1.9.5 fixes HDR review: an outdated preview cannot be applied, and an invalid acceptance returns to review instead of stopping the workflow.</p>
             <ul>
                <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>
                <li>MGC automatic scale factors, edge correction and MARS reference-mosaic fallback are configurable.</li>
@@ -22,4 +22,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-11-01T12:06:51.955Z" encoding="Base64">PiU2GEFU7KMCfM/7AVvoCfw/jR3ia2A2jhNc+MQn13v2t+I+qdrzQbJk03Z3E23WALvbrH87R0CPe8QmNXGACw==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-11-11T01:58:05.027Z" encoding="Base64">PEhFCYBEDPLBZRXGPAjm//oZqM1p89z0yFvX8hJS7PaGXfg1rwMxU3b2QDYatQxrByMEE5TZBgjiUAgoL95aCQ==</Signature>

@@ -53,7 +53,7 @@ for (const apply of [false, true]) {
   f = fixture();
   const candidate = { mainView: {}, show() { this.shown = true; }, forceClose() { this.closed = true; } };
   f.context.HDRReviewDialog = function () {
-    this.execute = () => apply; this.candidate = candidate; this.applyButton = { enabled: true };
+    this.execute = () => apply; this.candidate = candidate; this.hdrPreviewReady = true; this.applyButton = { enabled: false };
     this.keepComparison = { checked: true }; this.layers = { value: 6 }; this.strength = { value: 30 };
   };
   f.context.installHDRCoreControls = () => {};
@@ -64,3 +64,36 @@ for (const apply of [false, true]) {
 }
 assert.ok(source.indexOf("finalView = reviewFinalHDR(finalView, self, branches)") < source.indexOf("saveFinalImage(finalView"));
 console.log("HDR processing, blend, failure cleanup, skip and comparison tests passed (mocked APIs).");
+
+// A stale acceptance stays in review; Apply cannot close it, while Skip stays safe.
+for (const finish of ['refresh', 'skip']) {
+  f = fixture();
+  let executions = 0, accepts = 0;
+  const candidate = { mainView: {}, show() {}, forceClose() { this.closed = true; } };
+  f.context.HDRReviewDialog = function () {
+    this.candidate = candidate; this.hdrPreviewReady = false;
+    this.applyButton = { enabled: true }; this.previewStatus = {};
+    this.keepComparison = { checked: false }; this.layers = { value: 6 }; this.strength = { value: 30 };
+    this.ok = () => { ++accepts; };
+    this.execute = () => {
+      ++executions;
+      if (executions === 1) {
+        this.applyButton.onClick();
+        assert.equal(accepts, 0);
+        assert.equal(this.applyButton.enabled, false);
+        assert.match(this.previewStatus.text, /Update Preview/);
+        return true; // Simulate an unexpected dialog acceptance as well.
+      }
+      assert.equal(executions, 2);
+      if (finish === 'skip') return false;
+      this.hdrPreviewReady = true;
+      this.applyButton.onClick();
+      assert.equal(accepts, 1);
+      return true;
+    };
+  };
+  f.context.installHDRCoreControls = () => {};
+  vm.runInContext(review, f.context);
+  assert.equal(f.context.reviewHDR(f.view), finish === 'refresh' ? candidate.mainView : f.view);
+  assert.equal(candidate.closed, finish === 'skip' ? true : undefined);
+}

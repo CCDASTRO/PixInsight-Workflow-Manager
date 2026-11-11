@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.4',
+    [string] $Version = '1.9.5',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -151,7 +151,7 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.9.4 adds PixInsight 1.9.6 processing choices: MultiscaleTGVDenoise, MGC options, explicit blind-solver modes, and lossless WebP/JPEG XL sharing exports.</p>
+        <p>v1.9.5 fixes HDR review: an outdated preview cannot be applied, and an invalid acceptance returns to review instead of stopping the workflow.</p>
         <ul>
           <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>
           <li>MGC automatic scale factors, edge correction and MARS reference-mosaic fallback are configurable.</li>

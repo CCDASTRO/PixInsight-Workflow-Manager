@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.9.4",
+    "softwareVersion": "1.9.5",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.4">CCDASTRO PixInsight Workflow Manager v1.9.4</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.5">CCDASTRO PixInsight Workflow Manager v1.9.5</h1>
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
@@ -985,6 +985,13 @@ with execution and storage details in the <a href="SECURITY-AND-DEPENDENCIES.md"
 <p><a id="revision-history"></a></p>
 <h2 id="changelog">Changelog</h2>
 <p>Release history, newest first. Historical entries describe the behavior at that release and may mention tools or implementations later replaced or removed.</p>
+<h3 id="v1.9.5-hdr-preview-recovery">v1.9.5 — HDR preview recovery</h3>
+<ul>
+<li>Apply HDR requires a successfully updated preview. Changing layers, blend, core restriction or lightness-mask settings invalidates that preview.</li>
+<li>An unexpected acceptance with an outdated preview returns to HDR review instead of stopping the workflow. Update Preview to continue, or choose Skip HDR to preserve the pre-HDR image.</li>
+<li>Preview readiness is independent of the Apply button's enabled state after the dialog closes.</li>
+</ul>
+<p>The script and update manifest are signed for CCDASTRO. All 36 regression suites and workflow definition validation pass. Independent native signature verification and interactive HDR validation remain pending.</p>
 <p><a id="new-in-v1.9.4-pixinsight-1.9.6-choices"></a></p>
 <h3 id="v1.9.4-pixinsight-1.9.6-choices">v1.9.4 — PixInsight 1.9.6 choices</h3>
 <ul>

@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.5
+# CCDASTRO PixInsight Workflow Manager v1.9.6
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
@@ -831,6 +831,15 @@ External tools retain their own installation, licensing and model requirements. 
 ## Changelog
 
 Release history, newest first. Historical entries describe the behavior at that release and may mention tools or implementations later replaced or removed.
+
+### v1.9.6 — Preview acceptance across workflow reviews
+
+- Curves, LRGB, luminance blends, finishing and star recombination now track preview readiness independently of button state after a dialog closes.
+- An outdated preview returns to review instead of stopping the workflow. Update Preview to continue, or Skip to preserve the previous result.
+- Channel stretch and Auto Image Enhance retain valid accepted results when closed-dialog controls report disabled. Reference matching, local repairs and optional finishing use explicit readiness for Apply.
+- HDR retains the recovery added in 1.9.5. Color & Tone already uses accepted-result and revision tracking.
+
+The script and update manifest are signed for CCDASTRO. All 37 regression suites and workflow validation pass. Native interactive validation and independent cryptographic verification remain pending.
 
 ### v1.9.5 — HDR preview recovery
 

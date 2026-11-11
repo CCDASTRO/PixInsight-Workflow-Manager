@@ -1,3 +1,14 @@
+function executePreviewReview(dialog)
+{
+   for (;;)
+   {
+      if (!dialog.execute()) return false;
+      if (dialog.candidate !== null && dialog.previewReady) return true;
+      dialog.previewReady = dialog.applyButton.enabled = false;
+      dialog.previewStatus.text = "Update Preview before applying, or choose Skip to continue without this pass.";
+   }
+}
+
 
 function channelStretchDefaults() {return {targets:[0.23,0.23,0.23],amounts:[100,100,100]};}
 function validateChannelStretch(p) {
@@ -57,10 +68,10 @@ function channelStretchReviewDialog(view) {
    d.sizer.insert(1,d.confirmLinear);
    d.channelMode=new ComboBox(d);["Recombined RGB","R channel","G channel","B channel"].forEach(function(s){d.channelMode.addItem(s);});
    d.sizer.insert(2,d.channelMode);
-   d.zoomMode.currentItem=0;d.displayMode.enabled=true;d.updateButton.visible=true;d.applyButton.text="Apply channel stretch";d.applyButton.enabled=false;
+   d.zoomMode.currentItem=0;d.displayMode.enabled=true;d.updateButton.visible=true;d.applyButton.text="Apply channel stretch";d.previewReady = d.applyButton.enabled = false;
    d.skipButton.visible=true;d.skipButton.text="Use shared stretch instead";d.buttons.add(d.skipButton);
    d.keepComparison.visible=true;d.keepComparison.text="Keep a before-channel-stretch comparison";d.keepComparison.checked=false;
-   function dirty(){d.applyButton.enabled=false;d.previewStatus.text="Settings changed. Update Preview before applying.";}
+   function dirty(){d.previewReady = d.applyButton.enabled = false;d.previewStatus.text="Settings changed. Update Preview before applying.";}
    d.confirmLinear.onCheck=dirty;
    var controls=new VerticalSizer;controls.spacing=3;
    ["R","G","B"].forEach(function(name,c){
@@ -78,12 +89,12 @@ function channelStretchReviewDialog(view) {
    // Difference is not useful across channel display modes. Keep Before/After.
    d.displayMode.clear();d.displayMode.addItem("Before");d.displayMode.addItem("After");
    d.updateButton.onClick=function(){
-      d.applyButton.enabled=false;
+      d.previewReady = d.applyButton.enabled = false;
       try {
          if(!d.confirmLinear.checked)throw new Error("Confirm linear input and registration first.");
          if(d.candidate){d.candidate.forceClose();d.candidate=null;}
          d.candidate=buildChannelStretchCandidate(view,d.settings);updateBitmaps();
-         d.displayMode.currentItem=1;d.applyButton.enabled=true;d.previewStatus.text="Full-resolution preview ready. Review channels and recombined RGB before applying.";
+         d.displayMode.currentItem=1;d.previewReady = d.applyButton.enabled = true;d.previewStatus.text="Full-resolution preview ready. Review channels and recombined RGB before applying.";
       }catch(e){d.displayMode.currentItem=0;d.previewStatus.text=errorMessage(e);}
       d.preview.repaint();
    };
@@ -93,7 +104,7 @@ function reviewIndependentChannelStretch(view,targetBackground) {
    if(!view.image.isColor)throw new Error("Independent channel stretch requires linear RGB.");
    var d=channelStretchReviewDialog(view);
    try {
-      if(executeAdvancedDialog(d)&&d.candidate&&d.applyButton.enabled&&d.confirmLinear.checked) {
+      if(executeAdvancedDialog(d)&&d.candidate&&d.previewReady&&d.confirmLinear.checked) {
          if(d.keepComparison.checked){var before=cloneHDRView(view,"_BeforeChannelStretch");before.show();}
          var commit=new PixelMath;commit.use64BitWorkingImage=true;commit.useSingleExpression=true;commit.expression=d.candidate.mainView.fullId;commit.createNewImage=false;commit.rescale=false;commit.truncate=false;
          if(!commit.executeOn(view))throw new Error("Could not commit channel stretch.");
@@ -312,7 +323,7 @@ function advancedReviewPass(before, after, linear, label) {
       var d=new FinishingReviewDialog(a.mainView,"Inspection");d.windowTitle="Pass review: "+label;
       d.beforeBitmap=a.mainView.image.render(1,false);d.afterBitmap=b.mainView.image.render(1,false);
       d.candidate=b;
-      d.displayMode.enabled=true;d.displayMode.currentItem=1;d.applyButton.text="Keep pass";d.applyButton.enabled=true;d.skipButton.text="Skip pass";d.buttons.add(d.skipButton);d.skipButton.visible=true;
+      d.displayMode.enabled=true;d.displayMode.currentItem=1;d.applyButton.text="Keep pass";d.previewReady = d.applyButton.enabled = true;d.skipButton.text="Skip pass";d.buttons.add(d.skipButton);d.skipButton.visible=true;
       d.instructions.text=linear?"Before and After use the same temporary display stretch. The working image stays linear. Close or Skip discards this pass.":"Compare Before / After at 100%. Close or Skip discards this pass.";
       return executeAdvancedDialog(d)!==0;
    } finally {if(a)a.forceClose();if(b)b.forceClose();}
@@ -459,12 +470,12 @@ function reviewReferenceTone(view) {
    var strength=new SpinBox(d);strength.minValue=0;strength.maxValue=100;strength.value=advancedWorkflowSettings.referenceStrength;strength.toolTip="Reference match strength (%)";row.add(strength);
    var load=new PushButton(d);load.text="Load curve JSON...";row.add(load);
    d.sizer.insert(2,row);d.sizer.insert(3,confirm);
-   d.updateButton.visible=true;d.updateButton.text="Update match preview";d.keepComparison.visible=true;d.keepComparison.checked=true;d.displayMode.enabled=true;d.buttons.add(d.skipButton);d.skipButton.visible=true;d.skipButton.text="Skip match";d.applyButton.text="Apply reference match";d.applyButton.enabled=false;
-   function dirty(){d.applyButton.enabled=false;}
+   d.updateButton.visible=true;d.updateButton.text="Update match preview";d.keepComparison.visible=true;d.keepComparison.checked=true;d.displayMode.enabled=true;d.buttons.add(d.skipButton);d.skipButton.visible=true;d.skipButton.text="Skip match";d.applyButton.text="Apply reference match";d.previewReady = d.applyButton.enabled = false;
+   function dirty(){d.previewReady = d.applyButton.enabled = false;}
    picker.onItemSelected=function(){curves=null;confirm.checked=false;dirty();};confirm.onCheck=dirty;strength.onValueUpdated=dirty;
    load.onClick=function(){var f=new OpenFileDialog;f.caption="Load reference RGB curve points";f.filters=[["JSON curve files","*.json"]];if(!f.execute())return;try{curves=validateReferenceToneCurves(JSON.parse(File.readTextFile(f.fileName)));confirm.checked=true;d.previewStatus.text="Loaded curves. Update preview to review.";dirty();}catch(e){d.previewStatus.text=errorMessage(e);}};
-   d.updateButton.onClick=function(){d.enabled=false;try{if(candidate){candidate.forceClose();candidate=null;}if(!curves){if(!confirm.checked||picker.currentItem===0)throw new Error("Choose a stretched RGB reference and confirm it.");var ref=View.viewById(picker.itemText(picker.currentItem));if(ref.isNull)throw new Error("The reference was closed.");curves=referenceToneCurves(view,ref);}candidate=buildReferenceToneCandidate(view,curves,strength.value);d.candidate=candidate;d.differenceBitmap=null;d.afterBitmap=candidate.mainView.image.render(1,false);d.displayMode.currentItem=1;d.applyButton.enabled=true;d.previewStatus.text="Reference match at "+strength.value+"%. Compare at 100% before applying.";}catch(e){d.previewStatus.text=errorMessage(e);d.applyButton.enabled=false;}finally{d.enabled=true;d.preview.repaint();}};
-   var accepted=false;d.applyButton.onClick=function(){if(candidate&&d.applyButton.enabled){accepted=true;d.ok();}};d.skipButton.onClick=function(){d.cancel();};d.adjustToContents();
+   d.updateButton.onClick=function(){d.enabled=false;try{if(candidate){candidate.forceClose();candidate=null;}if(!curves){if(!confirm.checked||picker.currentItem===0)throw new Error("Choose a stretched RGB reference and confirm it.");var ref=View.viewById(picker.itemText(picker.currentItem));if(ref.isNull)throw new Error("The reference was closed.");curves=referenceToneCurves(view,ref);}candidate=buildReferenceToneCandidate(view,curves,strength.value);d.candidate=candidate;d.differenceBitmap=null;d.afterBitmap=candidate.mainView.image.render(1,false);d.displayMode.currentItem=1;d.previewReady = d.applyButton.enabled = true;d.previewStatus.text="Reference match at "+strength.value+"%. Compare at 100% before applying.";}catch(e){d.previewStatus.text=errorMessage(e);d.previewReady = d.applyButton.enabled = false;}finally{d.enabled=true;d.preview.repaint();}};
+   var accepted=false;d.applyButton.onClick=function(){if(candidate&&d.previewReady){accepted=true;d.ok();}};d.skipButton.onClick=function(){d.cancel();};d.adjustToContents();
    try{executeAdvancedDialog(d);if(!accepted)return view;if(d.keepComparison.checked){var before=cloneHDRView(view,"_BeforeReferenceMatch");before.show();}advancedWorkflowSettings.referenceStrength=strength.value;advancedRecord("Reference RGB match",{strength:strength.value,curves:curves});candidate.show();var result=candidate.mainView;candidate=null;return result;}finally{if(candidate)candidate.forceClose();}
 }
 
@@ -520,15 +531,15 @@ function reviewLocalRepairs(view) {
    var d=new FinishingReviewDialog(view,"Inspection"),list=advancedCopy(advancedWorkflowSettings.repairs),candidate=null,accepted=false;
    d.windowTitle="Local background repair  -  review before applying";d.instructions.text="Repair only known residual stars using nearby background. The unretouched image is kept. Compare Before / After at 100%.";
    var tree=new TreeBox(d);tree.numberOfColumns=3;tree.headerVisible=true;tree.setHeaderText(0,"Enabled");tree.setHeaderText(1,"Target / source");tree.setHeaderText(2,"Radius / levels");tree.setMinSize(600,90);
-   function idx(){return tree.currentNode?tree.currentNode.repairIndex:-1;}function refresh(selected){tree.clear();list.forEach(function(r,i){var n=new TreeBoxNode(tree);n.repairIndex=i;n.setText(0,r.enabled?"Yes":"No");n.setText(1,r.cx+","+r.cy+" -> "+(r.cx+r.dx)+","+(r.cy+r.dy));n.setText(2,r.inner+"/"+r.outer+" px; "+r.levelMode);if(i===selected)tree.currentNode=n;});for(var c=0;c<3;c++)tree.adjustColumnWidthToContents(c);d.applyButton.enabled=false;}
+   function idx(){return tree.currentNode?tree.currentNode.repairIndex:-1;}function refresh(selected){tree.clear();list.forEach(function(r,i){var n=new TreeBoxNode(tree);n.repairIndex=i;n.setText(0,r.enabled?"Yes":"No");n.setText(1,r.cx+","+r.cy+" -> "+(r.cx+r.dx)+","+(r.cy+r.dy));n.setText(2,r.inner+"/"+r.outer+" px; "+r.levelMode);if(i===selected)tree.currentNode=n;});for(var c=0;c<3;c++)tree.adjustColumnWidthToContents(c);d.previewReady = d.applyButton.enabled = false;}
    var bar=new HorizontalSizer;bar.spacing=6;function button(text,fn){var b=new PushButton(d);b.text=text;b.onClick=function(){try{fn();}catch(e){d.previewStatus.text=errorMessage(e);}};bar.add(b);}
    button("Add",function(){var x=Math.floor(view.image.width/2),y=Math.floor(view.image.height/2),r=editLocalRepair({enabled:true,cx:x,cy:y,dx:200,dy:0,inner:50,outer:100,levelMode:"auto",offsets:[0,0,0]},view);if(r){list.push(r);refresh(list.length-1);}});
    function edit(){var i=idx();if(i<0)return;var r=editLocalRepair(list[i],view);if(r){list[i]=r;refresh(i);}}button("Edit",edit);tree.onNodeDoubleClicked=edit;
    button("Remove",function(){var i=idx();if(i>=0){list.splice(i,1);refresh(0);}});
    button("Load regions JSON...",function(){var f=new OpenFileDialog;f.filters=[["JSON repair regions","*.json"]];if(!f.execute())return;var rows=JSON.parse(File.readTextFile(f.fileName));if(!Array.isArray(rows))throw new Error("Expected a JSON array of repair regions.");list=rows.map(function(r){return {enabled:r.enabled!==false,cx:r.cx,cy:r.cy,inner:r.inner,outer:r.outer,dx:r.dx,dy:r.dy,levelMode:r.levelMode||(r.color_offsets?"manual":"auto"),offsets:r.offsets||r.color_offsets||[0,0,0]};});validateLocalRepairs(list,view);refresh(0);});
-   d.sizer.insert(2,tree);d.sizer.insert(3,bar);d.updateButton.visible=true;d.updateButton.text="Update repair preview";d.displayMode.enabled=true;d.keepComparison.visible=true;d.keepComparison.checked=true;d.keepComparison.enabled=false;d.buttons.add(d.skipButton);d.skipButton.visible=true;d.skipButton.text="Skip repairs";d.applyButton.text="Apply reviewed repairs";d.applyButton.enabled=false;
-   d.updateButton.onClick=function(){d.enabled=false;try{if(candidate){candidate.forceClose();candidate=null;}candidate=buildLocalRepairCandidate(view,list);d.candidate=candidate;d.differenceBitmap=null;d.afterBitmap=candidate.mainView.image.render(1,false);d.displayMode.currentItem=1;d.applyButton.enabled=true;d.previewStatus.text="Inspect target and feather edges at 100% before applying.";}catch(e){d.previewStatus.text=errorMessage(e);d.applyButton.enabled=false;}finally{d.enabled=true;d.preview.repaint();}};
-   d.applyButton.onClick=function(){if(candidate&&d.applyButton.enabled){accepted=true;d.ok();}};d.skipButton.onClick=function(){d.cancel();};refresh(0);d.adjustToContents();
+   d.sizer.insert(2,tree);d.sizer.insert(3,bar);d.updateButton.visible=true;d.updateButton.text="Update repair preview";d.displayMode.enabled=true;d.keepComparison.visible=true;d.keepComparison.checked=true;d.keepComparison.enabled=false;d.buttons.add(d.skipButton);d.skipButton.visible=true;d.skipButton.text="Skip repairs";d.applyButton.text="Apply reviewed repairs";d.previewReady = d.applyButton.enabled = false;
+   d.updateButton.onClick=function(){d.enabled=false;try{if(candidate){candidate.forceClose();candidate=null;}candidate=buildLocalRepairCandidate(view,list);d.candidate=candidate;d.differenceBitmap=null;d.afterBitmap=candidate.mainView.image.render(1,false);d.displayMode.currentItem=1;d.previewReady = d.applyButton.enabled = true;d.previewStatus.text="Inspect target and feather edges at 100% before applying.";}catch(e){d.previewStatus.text=errorMessage(e);d.previewReady = d.applyButton.enabled = false;}finally{d.enabled=true;d.preview.repaint();}};
+   d.applyButton.onClick=function(){if(candidate&&d.previewReady){accepted=true;d.ok();}};d.skipButton.onClick=function(){d.cancel();};refresh(0);d.adjustToContents();
    try{executeAdvancedDialog(d);if(!accepted)return view;advancedWorkflowSettings.repairs=advancedCopy(list);var before=cloneHDRView(view,"_BeforeLocalRepair");before.show();advancedRecord("Photographic local background repair",{regions:candidate.advancedRepairRegions,unretouchedView:before.mainView.fullId});candidate.show();var result=candidate.mainView;candidate=null;return result;}finally{if(candidate)candidate.forceClose();}
 }
 
@@ -750,10 +761,10 @@ function reviewMetadataFinishing(view){
   if(p.tool==="Masked RGB / lightness curves"){current=reviewAdaptive(current);pass++;continue;}
   var d=new FinishingReviewDialog(current,"Inspection"),accepted=false,again=false;
   d.windowTitle=p.tool+" - optional pass "+pass;d.instructions.text="Review "+p.tool+" on a copy at 100%. Update Preview recalculates from Before. Apply keeps this result; Skip preserves the previous result.";
-  d.updateButton.visible=true;d.updateButton.text="Update Preview";d.displayMode.enabled=true;d.skipButton.visible=true;d.buttons.add(d.skipButton);d.skipButton.text="Skip this operation";d.keepComparison.visible=true;d.keepComparison.checked=true;d.applyButton.text="Apply and finish";d.applyButton.enabled=false;
+  d.updateButton.visible=true;d.updateButton.text="Update Preview";d.displayMode.enabled=true;d.skipButton.visible=true;d.buttons.add(d.skipButton);d.skipButton.text="Skip this operation";d.keepComparison.visible=true;d.keepComparison.checked=true;d.applyButton.text="Apply and finish";d.previewReady = d.applyButton.enabled = false;
   var next=new PushButton(d);next.text="Apply and choose another operation";next.enabled=false;d.buttons.insert(0,next);
-  d.updateButton.onClick=function(){d.enabled=false;try{if(d.candidate){d.candidate.forceClose();d.candidate=null;}d.candidate=buildMetadataFinishingCandidate(current,p);d.afterBitmap=d.candidate.mainView.image.render(1,false);d.differenceBitmap=null;d.displayMode.currentItem=1;d.applyButton.enabled=next.enabled=true;d.previewStatus.text=previewChangeSummary(current.image,d.candidate.mainView.image);}catch(e){d.displayMode.currentItem=0;d.applyButton.enabled=next.enabled=false;d.previewStatus.text=errorMessage(e);}finally{d.enabled=true;d.preview.repaint();}};
-  d.applyButton.onClick=function(){if(d.candidate&&d.applyButton.enabled){accepted=true;d.ok();}};next.onClick=function(){if(d.candidate&&next.enabled){accepted=true;again=true;d.ok();}};d.skipButton.onClick=function(){d.cancel();};d.adjustToContents();
+  d.updateButton.onClick=function(){d.enabled=false;try{if(d.candidate){d.candidate.forceClose();d.candidate=null;}d.candidate=buildMetadataFinishingCandidate(current,p);d.afterBitmap=d.candidate.mainView.image.render(1,false);d.differenceBitmap=null;d.displayMode.currentItem=1;d.previewReady = d.applyButton.enabled = next.enabled=true;d.previewStatus.text=previewChangeSummary(current.image,d.candidate.mainView.image);}catch(e){d.displayMode.currentItem=0;d.previewReady = d.applyButton.enabled = next.enabled=false;d.previewStatus.text=errorMessage(e);}finally{d.enabled=true;d.preview.repaint();}};
+  d.applyButton.onClick=function(){if(d.candidate&&d.previewReady){accepted=true;d.ok();}};next.onClick=function(){if(d.candidate&&next.enabled){accepted=true;again=true;d.ok();}};d.skipButton.onClick=function(){d.cancel();};d.adjustToContents();
   try{executeAdvancedDialog(d);if(accepted){if(d.keepComparison.checked)cloneHDRView(current,"_BeforeOptionalFinishing").show();current=d.candidate.mainView;d.candidate.show();advancedRecord("Optional masked finishing",{pass:pass,settings:p,parameters:d.candidate.advancedProcessParameters});d.candidate=null;}}finally{if(d.candidate)d.candidate.forceClose();}
   if(accepted&&!again)return current;pass++;
  }
@@ -798,13 +809,13 @@ function reviewAutoImageEnhance(view){
  color.enabled=view.image.isColor;var buttons=new HorizontalSizer;buttons.spacing=6;d.sizer.add(buttons);
  var mode=new ComboBox(d);mode.addItem("Before");mode.addItem("After");d.sizer.add(mode);var preview=new Control(d);preview.setMinSize(540,260);d.sizer.add(preview,100);
  preview.onPaint=function(){var g=new Graphics(this);try{g.fillRect(this.boundsRect,new Brush(0xff202020));var b=mode.currentItem===1&&after?after:before;var scale=Math.min((this.width-8)/b.width,(this.height-8)/b.height),width=Math.round(b.width*scale),height=Math.round(b.height*scale);g.drawScaledBitmap(new Rect(Math.round((this.width-width)/2),Math.round((this.height-height)/2),Math.round((this.width+width)/2),Math.round((this.height+height)/2)),b);}finally{g.end();}};mode.onItemSelected=function(){preview.repaint();};
- var status=new Label(d);status.wordWrapping=true;status.text="Choose an operation to calculate its preview.";d.sizer.add(status);var row=new HorizontalSizer,apply=new PushButton(d),skip=new PushButton(d);apply.text="Apply enhancement";apply.enabled=false;skip.text="Skip enhancement";row.addStretch();row.add(apply);row.add(skip);d.sizer.add(row);
- function dirty(){apply.enabled=false;status.text="Settings changed. Click an operation again to update its preview.";}
+ var previewReady=false;var status=new Label(d);status.wordWrapping=true;status.text="Choose an operation to calculate its preview.";d.sizer.add(status);var row=new HorizontalSizer,apply=new PushButton(d),skip=new PushButton(d);apply.text="Apply enhancement";previewReady=false;apply.enabled=false;skip.text="Skip enhancement";row.addStretch();row.add(apply);row.add(skip);d.sizer.add(row);
+ function dirty(){previewReady=false;apply.enabled=false;status.text="Settings changed. Click an operation again to update its preview.";}
  [tone,contrast,color,clip].forEach(function(c){c.onValueUpdated=dirty;});
- function calculate(name){d.enabled=false;try{if(candidate){candidate.forceClose();candidate=null;}after=null;apply.enabled=false;candidate=buildAutoEnhanceCandidate(view,name,[tone.value,contrast.value,color.value],clip.value/100);after=candidate.mainView.image.render(1,false);selected=name;mode.currentItem=1;apply.enabled=true;status.text=name+": "+previewChangeSummary(view.image,candidate.mainView.image);}catch(e){mode.currentItem=0;status.text=errorMessage(e);}finally{d.enabled=true;preview.repaint();}}
+ function calculate(name){d.enabled=false;try{if(candidate){candidate.forceClose();candidate=null;}after=null;previewReady=false;apply.enabled=false;candidate=buildAutoEnhanceCandidate(view,name,[tone.value,contrast.value,color.value],clip.value/100);after=candidate.mainView.image.render(1,false);selected=name;mode.currentItem=1;previewReady=true;apply.enabled=true;status.text=name+": "+previewChangeSummary(view.image,candidate.mainView.image);}catch(e){mode.currentItem=0;status.text=errorMessage(e);}finally{d.enabled=true;preview.repaint();}}
  d.autoEnhanceControls={tone:tone,contrast:contrast,color:color,clip:clip,apply:apply,skip:skip,mode:mode};d.autoEnhanceButtons={};
- ["Auto Tone","Auto Contrast","Auto Color","Auto All"].forEach(function(name){var b=new PushButton(d);d.autoEnhanceButtons[name]=b;b.text=name;b.enabled=name!=="Auto Color"||view.image.isColor;b.onClick=function(){calculate(name);};buttons.add(b);});apply.onClick=function(){if(candidate&&apply.enabled)d.ok();};skip.onClick=function(){d.cancel();};d.adjustToContents();
- try{if(!executeAdvancedDialog(d)||!candidate||!apply.enabled)return view;candidate.show();advancedRecord("Auto Image Enhance",{operation:selected,steps:candidate.autoEnhanceSteps});var result=candidate.mainView;candidate=null;return result;}finally{if(candidate)candidate.forceClose();}
+ ["Auto Tone","Auto Contrast","Auto Color","Auto All"].forEach(function(name){var b=new PushButton(d);d.autoEnhanceButtons[name]=b;b.text=name;b.enabled=name!=="Auto Color"||view.image.isColor;b.onClick=function(){calculate(name);};buttons.add(b);});apply.onClick=function(){if(candidate&&previewReady)d.ok();};skip.onClick=function(){d.cancel();};d.adjustToContents();
+ try{if(!executeAdvancedDialog(d)||!candidate||!previewReady)return view;candidate.show();advancedRecord("Auto Image Enhance",{operation:selected,steps:candidate.autoEnhanceSteps});var result=candidate.mainView;candidate=null;return result;}finally{if(candidate)candidate.forceClose();}
 }
 
 /* Color & Tone Studio: original CCDASTRO finishing controls, not Lighthouse code.

@@ -47,7 +47,7 @@ d.channel.currentItem=1;d.channel.onItemSelected();assert.equal(d.applyButton.en
 d.curveInputs[1].value=50;d.curveInputs[1].onValueUpdated();d.updateButton.onClick();assert.equal(d.applyButton.enabled,false);assert.equal(d.candidate,null);assert.equal(d.afterBitmap,null);
 for(const apply of [false,true]){
  const w={mainView:{},show(){},forceClose(){this.closed=true;}};
- ctx.testDialog=function(){this.execute=()=>apply;this.candidate=w;this.applyButton={enabled:true};this.keepComparison={checked:true};this.strength={value:100};this.curveInputs=[{value:0},{value:1000}];this.curveOutputs=[{value:0},{value:1000}];};
+ ctx.testDialog=function(){this.execute=()=>apply;this.candidate=w;this.previewReady=true;this.applyButton={enabled:false};this.keepComparison={checked:true};this.strength={value:100};this.curveInputs=[{value:0},{value:1000}];this.curveOutputs=[{value:0},{value:1000}];};
  vm.runInContext('AdaptiveReviewDialog = testDialog;',ctx);
  assert.equal(ctx.reviewAdaptive(view),apply?w.mainView:view);
  assert.equal(w.closed,apply?undefined:true);
@@ -62,7 +62,7 @@ let passNumber=0, passViews=[], skipped;
 ctx.testDialog=function(){
   const n=passNumber++; const w={mainView:{pass:n},show(){},forceClose(){this.closed=true;}};
   if(n===1)skipped=w;
-  this.execute=()=>n===0;this.candidate=w;this.applyButton={enabled:true};this.keepComparison={checked:false};
+  this.execute=()=>n===0;this.candidate=w;this.previewReady=true;this.applyButton={enabled:false};this.keepComparison={checked:false};
   this.strength={value:100};this.curveInputs=[{value:0},{value:1000}];this.curveOutputs=[{value:0},{value:1000}];this.anotherPassRequested=true;
 };
 vm.runInContext('AdaptiveReviewDialog = testDialog;',ctx);

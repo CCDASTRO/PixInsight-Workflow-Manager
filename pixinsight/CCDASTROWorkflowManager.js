@@ -27,7 +27,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.5"
+#define VERSION "1.9.6"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -2311,17 +2311,17 @@ function reviewLuminanceBlends(view)
       confirmed.text = "I confirm source/mask registration and compatible source stretch";
       var another = new PushButton(dialog); another.text = "Apply blend and add another"; another.enabled = false;
       var repeat = false;
-      another.onClick = function() { if (!dialog.applyButton.enabled || dialog.candidate === null) return; repeat = true; dialog.ok(); };
+      another.onClick = function() { if (!dialog.previewReady || dialog.candidate === null) return; repeat = true; dialog.ok(); };
       dialog.buttons.insert(1, another);
       dialog.sizer.insert(4, sourceRow.sizer); dialog.sizer.insert(5, maskRow.sizer);
       dialog.sizer.insert(6, invert); dialog.sizer.insert(7, confirmed);
-      var dirty = function() { dialog.applyButton.enabled = false; another.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview."; };
+      var dirty = function() { dialog.previewReady = dialog.applyButton.enabled = false; another.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview."; };
       sourceRow.combo.onItemSelected = maskRow.combo.onItemSelected = dirty;
       invert.onCheck = confirmed.onCheck = dirty; dialog.strength.onValueUpdated = dirty;
       var usedSource = "", usedMask = "", usedAmount = 0, usedInvert = false;
       dialog.updateButton.onClick = function()
       {
-         dialog.enabled = false; dialog.applyButton.enabled = false; another.enabled = false;
+         dialog.enabled = false; dialog.previewReady = dialog.applyButton.enabled = false; another.enabled = false;
          try
          {
             if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate = null; }
@@ -2336,7 +2336,7 @@ function reviewLuminanceBlends(view)
             dialog.afterBitmap = dialog.candidate.mainView.image.render(1, false);
             dialog.displayMode.currentItem = 1; ++dialog.previewRevision;
             dialog.previewStatus.text = previewChangeSummary(current.image, dialog.candidate.mainView.image);
-            dialog.applyButton.enabled = true; another.enabled = true;
+            dialog.previewReady = dialog.applyButton.enabled = true; another.enabled = true;
          }
          catch(e) { dialog.displayMode.currentItem = 0; dialog.previewStatus.text = "Preview failed: " + errorMessage(e); if (Console.abortRequested) dialog.cancel(); }
          finally { dialog.enabled = true; dialog.preview.repaint(); CoreApplication.processEvents(); }
@@ -2344,8 +2344,7 @@ function reviewLuminanceBlends(view)
       dialog.adjustToContents();
       try
       {
-         if (!dialog.execute()) { checkAbortRequested(); return current; }
-         if (dialog.candidate === null || !dialog.applyButton.enabled) throw new Error("Update the blend preview before applying.");
+         if (!executePreviewReview(dialog)) { checkAbortRequested(); return current; }
          if (dialog.keepComparison.checked) { var before = cloneHDRView(current, "_BeforeLuminanceBlend"); before.show(); }
          dialog.candidate.show(); accepted = true; current = dialog.candidate.mainView;
          logLine("Luminance blend pass " + pass + ": source=" + usedSource + ", mask=" + usedMask + ", inverted=" + usedInvert + ", source weight=" + usedAmount + "%.");
@@ -2462,7 +2461,7 @@ function reviewLRGB(rgb, linearLuminance, prepare, state)
       dialog.applyButton.text = "Apply LRGB"; dialog.skipButton.text = "Keep RGB";
       dialog.updateButton.onClick = function()
       {
-         dialog.enabled=false; dialog.applyButton.enabled=false;
+         dialog.enabled=false; dialog.previewReady = dialog.applyButton.enabled = false;
          try
          {
             if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate=null; }
@@ -2472,14 +2471,13 @@ function reviewLRGB(rgb, linearLuminance, prepare, state)
             dialog.afterBitmap=dialog.candidate.mainView.image.render(1,false);
             dialog.displayMode.currentItem=1; ++dialog.previewRevision;
             dialog.previewStatus.text="L weight "+dialog.strength.value+"%. "+previewChangeSummary(rgb.image,dialog.candidate.mainView.image);
-            dialog.applyButton.enabled=true;
+            dialog.previewReady = dialog.applyButton.enabled = true;
          }
          catch(e) { dialog.displayMode.currentItem=0; dialog.previewStatus.text="Preview failed: "+errorMessage(e); if (Console.abortRequested) dialog.cancel(); }
          finally { dialog.enabled=true; dialog.preview.repaint(); CoreApplication.processEvents(); }
       };
       dialog.adjustToContents();
-      if (!dialog.execute()) { checkAbortRequested(); logLine("Luminance skipped; keeping processed RGB."); return rgb; }
-      if (dialog.candidate === null || !dialog.applyButton.enabled) throw new Error("Update the LRGB preview before applying.");
+      if (!executePreviewReview(dialog)) { checkAbortRequested(); logLine("Luminance skipped; keeping processed RGB."); return rgb; }
       if (dialog.keepComparison.checked) { rgb.window.show(); luminance.show(); } else if (!prepare) luminance.forceClose();
       dialog.candidate.show(); accepted=true;
       if (state) state.added = dialog.strength.value > 0;
@@ -3040,7 +3038,7 @@ function installHDRCoreControls(dialog, view)
    var dirty = function()
    {
       dialog.hdrPreviewReady = false;
-      dialog.applyButton.enabled = false; dialog.coreMaskBitmap = null;
+      dialog.previewReady = dialog.applyButton.enabled = false; dialog.coreMaskBitmap = null;
       if (dialog.displayMode.currentItem === 3) dialog.displayMode.currentItem = 0;
       dialog.previewStatus.text = "Core settings changed. Click Update Preview before applying HDR.";
       dialog.preview.repaint();
@@ -3284,19 +3282,19 @@ constructor(view)
    this.updateButton.text = "Update Preview";
    this.applyButton = new PushButton(this);
    this.applyButton.text = "Apply HDR";
-   this.applyButton.enabled = false;
+   this.previewReady = this.applyButton.enabled = false;
    this.skipButton = new PushButton(this);
    this.skipButton.text = "Skip HDR";
    this.skipButton.onClick = function() { self.cancel(); };
-   this.applyButton.onClick = function() { self.ok(); };
-   var dirty = function() { self.hdrPreviewReady = false; self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   this.applyButton.onClick = function() { if (self.previewReady) self.ok(); };
+   var dirty = function() { self.hdrPreviewReady = false; self.previewReady = self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.layers.onValueUpdated = dirty;
    this.strength.onValueUpdated = dirty;
    this.updateButton.onClick = function()
    {
       self.hdrPreviewReady = false;
       self.enabled = false;
-      self.applyButton.enabled = false;
+      self.previewReady = self.applyButton.enabled = false;
       self.previewStatus.text = "Calculating new preview...";
       self.previewStatus.repaint();
       try
@@ -3315,7 +3313,7 @@ constructor(view)
             previewChangeSummary(view.image, self.candidate.mainView.image);
          logLine(self.windowTitle + " - " + self.previewStatus.text);
          self.hdrPreviewReady = true;
-         self.applyButton.enabled = true;
+         self.previewReady = self.applyButton.enabled = true;
       }
       catch (e)
       {
@@ -3363,14 +3361,14 @@ function reviewHDR(view, luminance)
       var internalMask = new CheckBox(dialog);
       internalMask.text = "Use HDR internal lightness mask";
       internalMask.checked = false; dialog.hdrLightnessMask = false;
-      internalMask.onCheck = function(checked) { dialog.hdrLightnessMask = checked; dialog.hdrPreviewReady = false; dialog.applyButton.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview."; };
+      internalMask.onCheck = function(checked) { dialog.hdrLightnessMask = checked; dialog.hdrPreviewReady = false; dialog.previewReady = dialog.applyButton.enabled = false; dialog.previewStatus.text = "Settings changed. Click Update Preview."; };
       dialog.sizer.insert(4, internalMask); dialog.adjustToContents();
    }
    dialog.applyButton.onClick = function()
    {
       if (dialog.candidate === null || !dialog.hdrPreviewReady)
       {
-         dialog.applyButton.enabled = false;
+         dialog.previewReady = dialog.applyButton.enabled = false;
          dialog.previewStatus.text = "Click Update Preview before applying HDR, or choose Skip HDR.";
          return;
       }
@@ -3383,7 +3381,7 @@ function reviewHDR(view, luminance)
       {
          if (!dialog.execute()) { checkAbortRequested(); return view; }
          if (dialog.candidate !== null && dialog.hdrPreviewReady) break;
-         dialog.applyButton.enabled = false;
+         dialog.previewReady = dialog.applyButton.enabled = false;
          dialog.previewStatus.text = "Click Update Preview before applying HDR, or choose Skip HDR.";
       }
       if (dialog.keepComparison.checked)
@@ -3640,14 +3638,14 @@ constructor(view)
    this.anotherPassRequested = false;
    this.anotherCurveButton = new PushButton(this); this.anotherCurveButton.text = "Apply and add another Curves pass";
    this.anotherCurveButton.enabled = false;
-   this.anotherCurveButton.onClick = function() { if (self.applyButton.enabled) { self.anotherPassRequested = true; self.ok(); } };
+   this.anotherCurveButton.onClick = function() { if (self.previewReady) { self.anotherPassRequested = true; self.ok(); } };
    this.applyButton.text = "Apply Curves";
-   this.applyButton.enabled = false;
+   this.previewReady = this.applyButton.enabled = false;
    this.skipButton = new PushButton(this);
    this.skipButton.text = "Skip Curves";
    this.skipButton.onClick = function() { self.cancel(); };
-   this.applyButton.onClick = function() { self.anotherPassRequested = false; self.ok(); };
-   var dirty = function() { self.anotherCurveButton.enabled = false; self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   this.applyButton.onClick = function() { if (self.previewReady) { self.anotherPassRequested = false; self.ok(); } };
+   var dirty = function() { self.anotherCurveButton.enabled = false; self.previewReady = self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    installNebulaMaskControls(this, view, dirty, false);
    this.layers.onItemSelected = function(index)
    {
@@ -3671,7 +3669,7 @@ constructor(view)
    this.updateButton.onClick = function()
    {
       self.enabled = false;
-      self.applyButton.enabled = false;
+      self.previewReady = self.applyButton.enabled = false;
       if (self.anotherCurveButton) self.anotherCurveButton.enabled = false;
       self.previewStatus.text = "Calculating new preview...";
       self.previewStatus.repaint();
@@ -3689,7 +3687,7 @@ constructor(view)
          self.previewStatus.text = "Preview #" + self.previewRevision + ": " +
             previewChangeSummary(view.image, self.candidate.mainView.image);
          logLine(self.windowTitle + " - " + self.previewStatus.text);
-         self.applyButton.enabled = true;
+         self.previewReady = self.applyButton.enabled = true;
          if (self.anotherCurveButton) self.anotherCurveButton.enabled = true;
       }
       catch (e)
@@ -3748,9 +3746,7 @@ function reviewAdaptivePass(view, state)
    var accepted = false;
    try
    {
-      if (!dialog.execute()) { checkAbortRequested(); return view; }
-      if (dialog.candidate === null || !dialog.applyButton.enabled)
-         throw new Error("Update the Curves preview before applying.");
+      if (!executePreviewReview(dialog)) { checkAbortRequested(); return view; }
       if (dialog.keepComparison.checked)
       {
          var before = cloneHDRView(view, "_BeforeCurves");
@@ -3918,9 +3914,7 @@ function reviewFinishing(view, kind, luminance)
       var accepted = false;
       try
       {
-         if (!dialog.execute()) { checkAbortRequested(); return current; }
-         if (dialog.candidate === null || !dialog.applyButton.enabled)
-            throw new Error("Update the " + kind + " preview before applying.");
+         if (!executePreviewReview(dialog)) { checkAbortRequested(); return current; }
          if (dialog.keepComparison.checked)
          {
             var before = cloneHDRView(current, "_Before" + kind.replace(/ /g, "")); before.show();
@@ -4090,21 +4084,21 @@ constructor(view, kind, pass)
    this.updateButton.text = "Update Preview";
    this.applyButton = new PushButton(this);
    this.applyButton.text = kind === "Local contrast" ? "Apply LHE and finish" : "Apply " + kind;
-   this.applyButton.enabled = false;
+   this.previewReady = this.applyButton.enabled = false;
    this.anotherPassButton = new PushButton(this);
    this.anotherPassButton.text = "Apply and add another LHE pass";
    this.anotherPassButton.toolTip = "Accept the current masked LHE result, then review another pass. Adjust kernel radius, amount, contrast limit and mask independently for each pass.";
    this.anotherPassButton.enabled = false;
    this.anotherPassButton.visible = kind === "Local contrast";
    this.anotherPassButton.onClick = function() {
-      if (!self.applyButton.enabled || self.candidate === null) return;
+      if (!self.previewReady || self.candidate === null) return;
       self.anotherPassRequested = true; self.ok();
    };
    this.skipButton = new PushButton(this);
    this.skipButton.text = kind === "Local contrast" && (pass || 1) > 1 ? "Finish without this pass" : "Skip " + kind;
    this.skipButton.onClick = function() { self.cancel(); };
-   this.applyButton.onClick = function() { self.anotherPassRequested = false; self.ok(); };
-   var dirty = function() { self.anotherPassButton.enabled = false; self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
+   this.applyButton.onClick = function() { if (self.previewReady) { self.anotherPassRequested = false; self.ok(); } };
+   var dirty = function() { self.anotherPassButton.enabled = false; self.previewReady = self.applyButton.enabled = false; self.previewStatus.text = "Settings changed. Click Update Preview again."; };
    this.maskLow = new SpinBox(this); this.maskLow.minValue = 0; this.maskLow.maxValue = 999; this.maskLow.value = 50;
    this.maskHigh = new SpinBox(this); this.maskHigh.minValue = 1; this.maskHigh.maxValue = 1000; this.maskHigh.value = 850;
    this.maskLabel = new Label(this); this.maskLabel.text = "Protect below / above (0-1000):";
@@ -4123,7 +4117,7 @@ constructor(view, kind, pass)
    this.updateButton.onClick = function()
    {
       self.enabled = false;
-      self.applyButton.enabled = false;
+      self.previewReady = self.applyButton.enabled = false;
       self.anotherPassButton.enabled = false;
       self.previewStatus.text = "Calculating new preview...";
       self.previewStatus.repaint();
@@ -4141,7 +4135,7 @@ constructor(view, kind, pass)
          self.previewStatus.text = "Preview #" + self.previewRevision + ": " +
             previewChangeSummary(view.image, self.candidate.mainView.image);
          logLine(self.windowTitle + " - " + self.previewStatus.text);
-         self.applyButton.enabled = true;
+         self.previewReady = self.applyButton.enabled = true;
          self.anotherPassButton.enabled = kind === "Local contrast";
       }
       catch (e)
@@ -4190,7 +4184,7 @@ constructor(view, kind, pass)
    if (kind === "Inspection")
    {
       this.strength.visible = this.strengthLabel.visible = this.updateButton.visible = this.keepComparison.visible = false;
-      this.applyButton.text = "Continue to finishing"; this.applyButton.enabled = true;
+      this.applyButton.text = "Continue to finishing"; this.previewReady = this.applyButton.enabled = true;
       this.skipButton.visible = false;
       this.displayMode.currentItem = 0; this.displayMode.enabled = false; this.zoomMode.currentItem = 1;
       this.previewStatus.text = "100% inspection. Drag the image to inspect different areas; use Fit for the full frame.";
@@ -4439,7 +4433,7 @@ function reviewStarRecombination(nebula, stars, self)
    var coreRow = new HorizontalSizer; coreRow.spacing = 8;
    var labels = ["Bright-star threshold (0-1000):", "Halo radius (px):", "Protect core (px):", "Feather (px):"];
    var controls = [dialog.haloThreshold, dialog.haloRadius, dialog.haloCore, dialog.haloFeather];
-   var dirtyHalo = function() { dialog.applyButton.enabled = false; dialog.haloMaskBitmap = null; if (dialog.displayMode.currentItem === 3) dialog.displayMode.currentItem = 0; dialog.previewStatus.text = "Settings changed. Click Update Preview again."; dialog.preview.repaint(); };
+   var dirtyHalo = function() { dialog.previewReady = dialog.applyButton.enabled = false; dialog.haloMaskBitmap = null; if (dialog.displayMode.currentItem === 3) dialog.displayMode.currentItem = 0; dialog.previewStatus.text = "Settings changed. Click Update Preview again."; dialog.preview.repaint(); };
    for (var i=0; i<controls.length; ++i)
    {
       var label = new Label(dialog); label.text = labels[i]; var row = i < 2 ? spatial : coreRow; row.add(label); row.add(controls[i]);
@@ -4485,7 +4479,7 @@ function reviewStarRecombination(nebula, stars, self)
    dialog.updateButton.onClick = function()
    {
       dialog.enabled = false;
-      dialog.applyButton.enabled = false;
+      dialog.previewReady = dialog.applyButton.enabled = false;
       try
       {
          if (dialog.candidate !== null) { dialog.candidate.forceClose(); dialog.candidate = null; }
@@ -4509,7 +4503,7 @@ function reviewStarRecombination(nebula, stars, self)
          dialog.previewStatus.text = "Stars brightness " + dialog.strength.value + "%; halo reduction " + dialog.layers.value + "%. " +
             previewChangeSummary(baseline.mainView.image, dialog.candidate.mainView.image);
          logLine("Halo treatment compared with untreated recombination: " + dialog.previewStatus.text);
-         dialog.applyButton.enabled = true;
+         dialog.previewReady = dialog.applyButton.enabled = true;
       }
       catch (e)
       {
@@ -4522,9 +4516,7 @@ function reviewStarRecombination(nebula, stars, self)
    var accepted = false;
    try
    {
-      if (!dialog.execute()) { checkAbortRequested(); return nebula; }
-      if (dialog.candidate === null || !dialog.applyButton.enabled)
-         throw new Error("Update the recombination preview before applying.");
+      if (!executePreviewReview(dialog)) { checkAbortRequested(); return nebula; }
       self.starBrightness.value = dialog.strength.value;
       self.recombinedStarsApplied = true;
       dialog.candidate.show();

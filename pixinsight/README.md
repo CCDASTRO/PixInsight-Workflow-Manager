@@ -1,4 +1,4 @@
-# CCDASTRO Workflow Manager v1.9.5
+# CCDASTRO Workflow Manager v1.9.6
 
 See the [current workflow guide](../README.md) for installation, supported tools, setup and usage.
 

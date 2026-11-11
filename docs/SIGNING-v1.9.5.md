@@ -27,4 +27,4 @@ Package SHA-1: `1656e2cf8e8eb470d34ae987fdd1fd158ff30ab0`, matching the generate
 manifest. These structural checks do not independently verify cryptographic
 signature validity. The user supplied the signed `updates/updates.xri`; its CCDASTRO signature timestamp is 2026-11-11T01:58:05.027Z. An attempted native verification launch did not produce a report, so independent native verification is not claimed.
 The previous manifest is preserved in the workspace's
-`output/pi-before-1.9.5-manifest`. No 1.9.5 publication has occurred.
+`output/pi-before-1.9.5-manifest`. The user authorized publication despite the stated native-verification limits. The signed 1.9.5 package, manifest, source and updated guides were pushed to GitHub main. Live ccdastro.com deployment remains separate.

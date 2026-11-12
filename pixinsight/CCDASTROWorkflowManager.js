@@ -27,7 +27,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.8"
+#define VERSION "1.9.9"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -1632,6 +1632,20 @@ function applyBlanshanStarReduction(targetView, starlessView, iterations, mode)
       throw new Error("Star reduction failed.");
 }
 
+function masterQualityPixelScale(view)
+{
+   var keywords=view.window && view.window.keywords || [],values={};
+   for(var i=0;i<keywords.length;i++){
+      if(/^CUNIT[12]$/.test(keywords[i].name)&&String(keywords[i].value).replace(/'/g,"").trim().toLowerCase()!=="deg")return null;
+      if(/^(CD[12]_[12]|CDELT[12])$/.test(keywords[i].name))values[keywords[i].name]=Number(String(keywords[i].value).replace(/'/g,""));
+   }
+   var x,y;
+   if(values.CD1_1!==undefined && values.CD2_2!==undefined){
+      x=Math.sqrt(values.CD1_1*values.CD1_1+(values.CD2_1||0)*(values.CD2_1||0));
+      y=Math.sqrt(values.CD2_2*values.CD2_2+(values.CD1_2||0)*(values.CD1_2||0));
+   }else{x=Math.abs(values.CDELT1);y=Math.abs(values.CDELT2);}
+   return isFinite(x)&&isFinite(y)&&x>0&&y>0&&Math.max(x,y)/Math.min(x,y)<1.1?3600*Math.sqrt(x*y):null;
+}
 function PreflightResult()
 {
    this.errors = [];
@@ -1679,7 +1693,7 @@ PreflightValidator.prototype.validate = function()
       var message=workflowPrecisionError(v.image);if(message)result.errors.push(v.fullId+": "+message);
       if(v.image && typeof v.image.sample === "function") {
          var inputCheck=quickWorkflowInputCheck(v.image);
-         try { result.masterQuality.push({id:v.fullId,assessment:masterQualityAssessment(v.image,inputCheck)}); }
+         try { result.masterQuality.push({id:v.fullId,assessment:masterQualityAssessment(v.image,inputCheck,masterQualityPixelScale(v))}); }
          catch(e) { result.masterQuality.push({id:v.fullId,assessment:null}); }
          inputCheck.errors.forEach(function(t){result.errors.push(v.fullId+": "+t);});
          inputCheck.warnings.forEach(function(t){result.warnings.push(v.fullId+": "+t);});
@@ -1834,7 +1848,8 @@ function resultText(result)
    if (result.warnings.length)
       text += "\n\nWarnings:\n- " + result.warnings.join("\n- ");
    if(result.masterQuality && result.masterQuality.length)
-      text += "\n\nAdvisory master assessment (does not block processing):\n" + result.masterQuality.map(function(q){return q.assessment?masterQualityText(q.id,q.assessment):q.id+": assessment unavailable; inspect manually.";}).join("\n\n");
+      text += "\n\nAdvisory master assessment (does not block processing):\n" + result.masterQuality.map(function(q){return q.assessment?masterQualitySummary(q.id,q.assessment):q.id+": assessment unavailable; inspect manually.";}).join("\n\n")+
+         "\n\nProcessing cannot reliably restore missing detail or clipped signal. Scores are provisional estimates, not a universal quality grade. Use Master quality details for all measurements and limitations.";
    return text;
 }
 
@@ -2553,7 +2568,17 @@ constructor()
    this.inputQualityNote.text = "<b>Input quality matters:</b> The workflow builds on the linear master you provide. " +
       "Accurate calibration, registration, integration, rejection, and color combination are essential; " +
       "processing cannot recover detail or remove defects lost or introduced while creating the master.";
-   this.inputQualityNote.toolTip = "Validate and Run show an advisory 0-100 data-integrity score for each master and save it in enabled run reports. This bounded sampling checks quantization, invalid pixels, clipping and blank data. Focus, star shape, noise and gradients are not graded; a high score does not guarantee final image quality. Existing input safety checks still apply.";
+   this.inputQualityNote.toolTip = "Validate and Run report data integrity plus sampled stellar width, eccentricity, field consistency, noise, stellar contrast and background variation. The overall score is an advisory heuristic; insufficient stars leave it unavailable. Widths are moment estimates, not fitted PSFs. Real nebulosity is not penalized as a gradient. Results are saved in enabled run reports; processing choices are unchanged.";
+   this.inputQualityDetails = new PushButton(this.content);
+   this.inputQualityDetails.text = "Master quality details...";
+   this.inputQualityDetails.toolTip = "Measure the current input masters without processing them, and show the full advisory in a scrollable report.";
+   this.inputQualityDetails.onClick = function() {
+      var result=new PreflightValidator(self).validate(),d=new Dialog;
+      d.windowTitle="Advisory input master quality";d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=8;
+      var report=new TextBox(d);report.readOnly=true;report.setMinSize(700,450);
+      report.text=result.masterQuality.length?result.masterQuality.map(function(q){return q.assessment?masterQualityText(q.id,q.assessment):q.id+": assessment unavailable.";}).join("\n\n"):"No master available. Open and select an integrated master first.";
+      d.sizer.add(report,100);var close=new PushButton(d);close.text="Close";close.onClick=function(){d.ok();};d.sizer.add(close);d.adjustToContents();executeAdvancedDialog(d);
+   };
    this.linearConfirmation = new CheckBox(this.content);
    this.linearConfirmation.text = "I confirm the workflow inputs are unstretched, integrated linear masters";
    this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";
@@ -2824,6 +2849,7 @@ constructor()
    this.content.sizer.add(this.help);
    this.content.sizer.add(this.inputLabel);
    this.content.sizer.add(this.inputQualityNote);
+   this.content.sizer.add(this.inputQualityDetails);
    this.content.sizer.add(this.linearConfirmation);
    this.content.sizer.add(this.rememberSettings);
    // Use the available desktop width to avoid one long stack of expanded sections.

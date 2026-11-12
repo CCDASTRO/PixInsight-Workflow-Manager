@@ -704,8 +704,91 @@ function quickWorkflowInputCheck(image) {
    return result;
 }
 
-// Advisory technical screening; never used to approve or reject a master.
-function masterQualityAssessment(image, check) {
+function qualityMedian(values) {
+   if(!values.length)return null;
+   var a=values.slice().sort(function(a,b){return a-b;});
+   return (a[Math.floor((a.length-1)/2)]+a[Math.floor(a.length/2)])/2;
+}
+function qualityMAD(values) {
+   var m=qualityMedian(values);return m===null?null:1.4826*qualityMedian(values.map(function(v){return Math.abs(v-m);}));
+}
+// Nine disjoint interior tiles; at most 147456 luminance pixels and 180 stars.
+// Stellar widths are background-subtracted second moments, not fitted PSFs.
+function masterQualityMetrics(image) {
+   var result={method:"Interior tiles; Gaussian-equivalent stellar second moments",stars:0,tiles:0,
+      noise:null,medianFWHMPixels:null,eccentricity:null,elongatedFraction:null,
+      peakToNoise:null,fieldWidthRatio:null,backgroundSpan:null,backgroundSpanInNoise:null};
+   var w=image.width,h=image.height,nc=Math.min(3,image.numberOfNominalChannels||image.numberOfChannels||1);
+   if(w<64||h<64)return result;
+   var size=Math.min(128,Math.floor(.25*Math.min(w,h))),stars=[],noises=[],backgrounds=[],regions=0;
+   for(var ty=0;ty<3;ty++)for(var tx=0;tx<3;tx++) {
+      if(typeof checkAbortRequested==="function")checkAbortRequested();
+      var x0=Math.floor((.15+.35*tx)*w-size/2),y0=Math.floor((.15+.35*ty)*h-size/2),pixels=[],valid=[];
+      for(var y=0;y<size;y++)for(var x=0;x<size;x++) {
+         var v=0,ok=true;
+         for(var c=0;c<nc;c++){var a=image.sample(x0+x,y0+y,c);if(!isFinite(a)||a<=0||a>=1)ok=false;v+=a/nc;}
+         pixels.push(ok?v:null);if(ok)valid.push(v);
+      }
+      if(valid.length<size*size*.9)continue;
+      var bg=qualityMedian(valid),residual=[];
+      for(var y=0;y<size-1;y+=2)for(var x=0;x<size-1;x+=2){var i=y*size+x;
+         if(pixels[i]!==null&&pixels[i+1]!==null&&pixels[i+size]!==null&&pixels[i+size+1]!==null)
+            residual.push((pixels[i]-pixels[i+1]-pixels[i+size]+pixels[i+size+1])/2);
+      }
+      var noise=qualityMAD(residual);noises.push(noise);backgrounds.push(bg);result.tiles++;
+      var tileStars=0;
+      for(var y=7;y<size-7&&tileStars<20;y++)for(var x=7;x<size-7&&tileStars<20;x++) {
+         var peak=pixels[y*size+x];if(peak===null||peak>=.95||peak-bg<=Math.max(20*noise,1e-7))continue;
+         var maximum=true;
+         for(var dy=-2;dy<=2;dy++)for(var dx=-2;dx<=2;dx++)if((dx||dy)&&pixels[(y+dy)*size+x+dx]>=peak)maximum=false;
+         if(!maximum)continue;
+         var ring=[],clean=true;
+         for(var dy=-6;dy<=6;dy++)for(var dx=-6;dx<=6;dx++){
+            var v=pixels[(y+dy)*size+x+dx];if(v===null)clean=false;
+            if(Math.max(Math.abs(dx),Math.abs(dy))===6&&v!==null)ring.push(v);
+         }
+         if(!clean)continue;
+         var local=qualityMedian(ring),amplitude=peak-local;
+         if(amplitude<=Math.max(20*noise,1e-7)||qualityMAD(ring)>Math.max(3*noise,.08*amplitude))continue;
+         var sum=0,mx=0,my=0,xx=0,yy=0,xy=0,edge=0;
+         for(var dy=-5;dy<=5;dy++)for(var dx=-5;dx<=5;dx++){
+            var weight=Math.max(0,pixels[(y+dy)*size+x+dx]-local-2*noise);
+            sum+=weight;mx+=weight*dx;my+=weight*dy;xx+=weight*dx*dx;yy+=weight*dy*dy;xy+=weight*dx*dy;
+            if(Math.max(Math.abs(dx),Math.abs(dy))===5)edge+=weight;
+         }
+         if(!sum||edge/sum>.05)continue;
+         mx/=sum;my/=sum;xx=xx/sum-mx*mx;yy=yy/sum-my*my;xy=xy/sum-mx*my;
+         var spread=Math.sqrt((xx-yy)*(xx-yy)+4*xy*xy),major=(xx+yy+spread)/2,minor=(xx+yy-spread)/2;
+         if(minor<.36||major>9||Math.abs(mx)>1||Math.abs(my)>1)continue;
+         // Discard close pairs / knots with another significant peak in the aperture.
+         var blended=false;
+         for(var dy=-4;dy<=4;dy++)for(var dx=-4;dx<=4;dx++)if(dx*dx+dy*dy>=9){
+            var j=(y+dy)*size+x+dx,v=pixels[j];
+            if(v-local>.25*amplitude&&v>pixels[j-1]&&v>pixels[j+1]&&v>pixels[j-size]&&v>pixels[j+size])blended=true;
+         }
+         if(blended)continue;
+         stars.push({width:2.35482*Math.pow(major*minor,.25),eccentricity:Math.sqrt(Math.max(0,1-minor/major)),
+            contrast:noise>0?amplitude/noise:null,center:tx===1&&ty===1});tileStars++;
+      }
+      if(tileStars)regions++;
+   }
+   result.noise=qualityMedian(noises);result.stars=stars.length;result.starRegions=regions;
+   if(backgrounds.length>=5){var sorted=backgrounds.slice().sort(function(a,b){return a-b;});
+      result.backgroundSpan=sorted[sorted.length-2]-sorted[1];
+      result.backgroundSpanInNoise=result.noise>0?result.backgroundSpan/result.noise:null;
+   }
+   if(stars.length>=15&&regions>=3){
+      result.medianFWHMPixels=qualityMedian(stars.map(function(s){return s.width;}));
+      result.eccentricity=qualityMedian(stars.map(function(s){return s.eccentricity;}));
+      result.elongatedFraction=stars.filter(function(s){return s.eccentricity>.6;}).length/stars.length;
+      result.peakToNoise=qualityMedian(stars.map(function(s){return s.contrast;}).filter(function(v){return v!==null;}));
+      var center=stars.filter(function(s){return s.center;}),outer=stars.filter(function(s){return !s.center;});
+      if(center.length>=3&&outer.length>=9){var ratio=qualityMedian(outer.map(function(s){return s.width;}))/qualityMedian(center.map(function(s){return s.width;}));result.fieldWidthRatio=Math.max(ratio,1/ratio);}
+   }
+   return result;
+}
+// Advisory estimates; never used to approve or reject a master.
+function masterQualityAssessment(image, check, arcsecondsPerPixel) {
    check=check || quickWorkflowInputCheck(image);
    var penalty=0, notes=check.errors.concat(check.warnings);
    check.channels.forEach(function(c){
@@ -714,15 +797,41 @@ function masterQualityAssessment(image, check) {
       if(c.samples-c.invalid>=2048 && c.eightBitGridFraction>=.999 && c.eightBitLevels>=64)p=Math.max(p,70);
       penalty=Math.max(penalty,p);
    });
-   return {version:1,score:check.sampleCount?Math.max(0,Math.round(100-penalty)):null,
-      confidence:"Limited - sampled data integrity only",limitations:notes,channels:check.channels,
-      scope:"Focus, star shape, noise, gradients and true object signal-to-noise are not graded. A high score means few detected data-integrity problems, not excellent image quality.",
+   var metrics=masterQualityMetrics(image),integrity=check.sampleCount?Math.max(0,Math.round(100-penalty)):null;
+   var quality=null,components={};
+   if(metrics.medianFWHMPixels!==null){
+      components.starShape=Math.max(0,100-Math.max(0,metrics.eccentricity-.35)*160);
+      if(metrics.peakToNoise!==null)components.stellarContrast=Math.min(100,Math.max(0,100*Math.log(metrics.peakToNoise/20)/Math.log(10)));
+      if(metrics.fieldWidthRatio!==null)components.fieldConsistency=Math.max(0,100-Math.max(0,metrics.fieldWidthRatio-1.15)*100);
+      var total=0,count=0;for(var key in components){total+=components[key];count++;}
+      if(integrity!==null&&metrics.peakToNoise!==null&&metrics.tiles>=5)quality=Math.round(Math.min(integrity,total/count));
+      if(metrics.eccentricity>.6)notes.push("Elongated stars may remain visible after processing; inspect tracking, optics and registration.");
+      if(metrics.fieldWidthRatio>1.3)notes.push("Stellar widths vary between the center and outer sampled regions; inspect field focus and optics.");
+      if(metrics.peakToNoise!==null&&metrics.peakToNoise<50)notes.push("Low measured stellar peak-to-noise contrast; aggressive denoising or sharpening may compromise detail.");
+   }else notes.push("Insufficient isolated, unsaturated stars across the sampled regions: stellar metrics and overall quality score unavailable.");
+   if(metrics.backgroundSpanInNoise>5)notes.push("Uneven background brightness: possible gradient or real object structure. Inspect visually; no score deduction for this ambiguity.");
+   if(metrics.noise===0)notes.push("Noise estimate is zero: smooth or correlated data can make stellar contrast unreliable.");
+   metrics.medianFWHMArcseconds=isFinite(arcsecondsPerPixel)&&arcsecondsPerPixel>0&&metrics.medianFWHMPixels!==null?metrics.medianFWHMPixels*arcsecondsPerPixel:null;
+   return {version:2,score:integrity,qualityScore:quality,components:components,metrics:metrics,
+      confidence:quality===null?"Limited - overall quality unavailable":metrics.fieldWidthRatio===null?"Limited - field consistency unavailable":"Moderate - sampled heuristic estimates",limitations:notes,channels:check.channels,
+      scope:"Gaussian-equivalent widths are moment estimates, not fitted PSFs. Absolute sharpness is reported without a universal penalty. Noise/stellar contrast depend on sampling, correlation and star brightness; gradients may be nebulosity. Calibration accuracy and true object SNR are not determined. A high score does not guarantee excellent image quality.",
       message:"Final image quality is limited by the input master. Processing cannot reliably recover clipped signal, missing detail or lost precision. Poor focus, tracking, noise or calibration can remain visible in the final image."};
 }
 function masterQualityText(id,r) {
    return id+": master data-integrity score "+(r.score===null?"unavailable":r.score+"/100")+
-      ". Confidence: "+r.confidence+".\n"+r.scope+"\n"+r.message+
+      ".\nOverall quality: "+(r.qualityScore===null?"unavailable":r.qualityScore+"/100 (heuristic)")+". Confidence: "+r.confidence+".\n"+
+      (r.metrics?"Sampled stars: "+r.metrics.stars+"; noise (normalized luminance): "+(r.metrics.noise===null?"unavailable":r.metrics.noise.toExponential(3))+".\n"+
+      "Gaussian-equivalent FWHM: "+(r.metrics.medianFWHMPixels===null?"unavailable":r.metrics.medianFWHMPixels.toFixed(2)+" px"+(r.metrics.medianFWHMArcseconds===null?"":" / "+r.metrics.medianFWHMArcseconds.toFixed(2)+" arcsec"))+"; eccentricity: "+(r.metrics.eccentricity===null?"unavailable":r.metrics.eccentricity.toFixed(3))+".\n"+
+      "Elongated stars: "+(r.metrics.elongatedFraction===null?"unavailable":(100*r.metrics.elongatedFraction).toFixed(1)+"%")+"; field width ratio: "+(r.metrics.fieldWidthRatio===null?"unavailable":r.metrics.fieldWidthRatio.toFixed(2))+"; stellar peak/noise: "+(r.metrics.peakToNoise===null?"unavailable":r.metrics.peakToNoise.toFixed(1))+".\n"+
+      "Background span: "+(r.metrics.backgroundSpan===null?"unavailable":r.metrics.backgroundSpan.toExponential(3))+" (not scored).\n":"")+
+      r.scope+"\n"+r.message+
       (r.limitations.length?"\n- "+r.limitations.join("\n- "):"");
+}
+function masterQualitySummary(id,r) {
+   var m=r.metrics;
+   return id+": overall quality "+(r.qualityScore===null?"unavailable":r.qualityScore+"/100 (heuristic)")+"; data integrity "+(r.score===null?"unavailable":r.score+"/100")+".\n"+
+      "Confidence: "+r.confidence+". "+(m&&m.medianFWHMPixels!==null?"Moment width "+m.medianFWHMPixels.toFixed(2)+" px; eccentricity "+m.eccentricity.toFixed(3)+"; "+m.stars+" sampled stars.":"Insufficient stellar measurements.")+"\n"+
+      (r.limitations.length?r.limitations.slice(0,2).join(" "):"No additional sampled limitations flagged.");
 }
 
 // Bill Blanshan Star Method V3, as recorded in the user-supplied M42 history.

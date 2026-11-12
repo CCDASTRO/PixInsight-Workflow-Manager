@@ -4,9 +4,9 @@ PixInsight XML Code Signature Format - XSGN version 1.0
 Created with PixInsight software - https://pixinsight.com/
 -->
 <xsgn version="1.0" xmlns="http://www.pixinsight.com/xsgn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.pixinsight.com/xsgn http://pixinsight.com/xsgn/xsgn-1.0.xsd">
-   <CreationTime>2026-11-12T01:19:35.212Z</CreationTime>
+   <CreationTime>2026-11-12T01:55:26.675Z</CreationTime>
    <Signature version="1.0" developerId="CCDASTRO">
-      <Timestamp>2026-11-12T01:19:35.212Z</Timestamp>
-      <CodeSignature encoding="Base64">MTJmO5SZAc/n1H1LTB00iwzz/fzQM/iCLkH4Q7X5Cm+uEetCxlrIKUHtWcXu8/uxWT7NhJt8YJxy7Oq3dPUzCA==</CodeSignature>
+      <Timestamp>2026-11-12T01:55:26.675Z</Timestamp>
+      <CodeSignature encoding="Base64">2e1XwvC/TyrGpr26LLS5aY3Mjbe873+eF+tCr7oOvySQZwj4CyZwQUPkNy7ABAZKbahbBWo5cfepyOrAJ5OKDQ==</CodeSignature>
    </Signature>
 </xsgn>

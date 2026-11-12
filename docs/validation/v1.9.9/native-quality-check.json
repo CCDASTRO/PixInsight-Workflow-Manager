@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "elapsedMilliseconds": 108,
+  "synthetic": {
+    "version": 2,
+    "score": 100,
+    "qualityScore": 100,
+    "components": {
+      "starShape": 100,
+      "stellarContrast": 100,
+      "fieldConsistency": 100
+    },
+    "metrics": {
+      "method": "Interior tiles; Gaussian-equivalent stellar second moments",
+      "stars": 81,
+      "tiles": 9,
+      "noise": 0.00003248489359393716,
+      "medianFWHMPixels": 3.4939691715444603,
+      "eccentricity": 0.04211213410821318,
+      "elongatedFraction": 0,
+      "peakToNoise": 2462.730546650301,
+      "fieldWidthRatio": 1.0001283669204148,
+      "backgroundSpan": 4.2142346501350403e-7,
+      "backgroundSpanInNoise": 0.012972905815278912,
+      "starRegions": 9,
+      "medianFWHMArcseconds": 4.192763005853352
+    },
+    "confidence": "Moderate - sampled heuristic estimates",
+    "limitations": [],
+    "channels": [
+      {
+        "channel": 0,
+        "samples": 4096,
+        "invalid": 0,
+        "median": 0.010001529939472675,
+        "min": 0.009889207780361176,
+        "max": 0.061316024512052536,
+        "blackFraction": 0,
+        "whiteFraction": 0,
+        "eightBitGridFraction": 0.000244140625,
+        "eightBitLevels": 1
+      }
+    ],
+    "scope": "Gaussian-equivalent widths are moment estimates, not fitted PSFs. Absolute sharpness is reported without a universal penalty. Noise/stellar contrast depend on sampling, correlation and star brightness; gradients may be nebulosity. Calibration accuracy and true object SNR are not determined. A high score does not guarantee excellent image quality.",
+    "message": "Final image quality is limited by the input master. Processing cannot reliably recover clipped signal, missing detail or lost precision. Poor focus, tracking, noise or calibration can remain visible in the final image."
+  },
+  "signatures": {
+    "script": {
+      "valid": true,
+      "developerId": "CCDASTRO"
+    },
+    "include": {
+      "valid": true,
+      "developerId": "CCDASTRO"
+    },
+    "manifest": {
+      "valid": true,
+      "developerId": "CCDASTRO"
+    }
+  }
+}

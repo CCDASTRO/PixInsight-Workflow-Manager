@@ -15,7 +15,7 @@ r=ctx.quickWorkflowInputCheck(image((x,y,c)=>Math.round(linear.sample(x,y,c)*655
 console.log('Quick screening detects hidden 8-bit, invalid, blank and clipped inputs; bright high-precision data only warns; normal 16-bit and float linear data pass.');
 const good=ctx.masterQualityAssessment(linear);
 assert.equal(good.score,100);
-assert.match(good.scope,/not excellent image quality/);
+assert.match(good.scope,/does not guarantee excellent image quality/);
 assert.equal(ctx.masterQualityAssessment(image(()=>NaN)).score,0);
 assert.equal(ctx.masterQualityAssessment(image(()=>.01)).score,0);
 assert(ctx.masterQualityAssessment(quantized).score<=30);
@@ -32,5 +32,5 @@ const a=new ctx.PreflightResult();a.masterQuality.push({id:'Master',assessment:c
 const start=source.indexOf('function resultText(result)'),finish=source.indexOf('class PlateSolveSetupDialog',start);
 vm.runInContext(source.slice(start,finish),ctx);
 assert.match(ctx.resultText(a),/does not block processing/);
-assert.match(ctx.resultText(a),/Master: master data-integrity score/);
+assert.match(ctx.resultText(a),/Master: overall quality/);
 console.log('Advisory score handles corrupt, clipped, quantized, bright and unavailable masters without changing approval.');

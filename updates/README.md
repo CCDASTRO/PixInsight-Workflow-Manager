@@ -1,8 +1,8 @@
 # PixInsight Update Repository
 
-**v1.9.8 script and update manifest are signed.** See [the signing and package record](../docs/SIGNING-v1.9.8.md).
+**v1.9.9 script and update manifest are signed.** See [the signing and package record](../docs/SIGNING-v1.9.9.md).
 
-Current signed update: **v1.9.8** (PI 1.9.4–1.9.6). Fixes color-camera SPFC setup with Sony sensor-response presets and no gray-response requirement for RGB masters. Retains per-master advisory data-integrity scores in Validate/Run and enabled reports. The score does not measure focus, star shape, noise or gradients and does not guarantee final quality. No new processing blocks. Retains fixes for preview acceptance across Curves, HDR, LRGB, luminance blends, finishing and recombination; outdated previews return to review instead of stopping the workflow. Retains MultiscaleTGVDenoise choices, MGC automatic scale factors/edge correction/reference-mosaic fallback, explicit blind-solver modes, and WebP/JPEG XL sharing exports. Retains BlurlessAI without a process icon. Live BlurlessAI processing remains unverified. Native PI 1.9.6 image-processing validation remains pending. External SyQon and GraXpert processing adapters have been removed. If saved settings reference removed tools, use Reset Defaults and choose supported PixInsight tools before running.
+Current signed update: **v1.9.9** (PI 1.9.4–1.9.6). Adds expanded advisory master-quality measurements, an overall heuristic score and scrollable details. Retains color-camera SPFC setup with Sony sensor-response presets and no gray-response requirement for RGB masters. Retains per-master advisory data-integrity scores in Validate/Run and enabled reports. Stellar widths and shapes, noise, stellar contrast, field consistency and background variation are sampled; scores remain provisional and do not guarantee final quality. No new processing blocks. Retains fixes for preview acceptance across Curves, HDR, LRGB, luminance blends, finishing and recombination; outdated previews return to review instead of stopping the workflow. Retains MultiscaleTGVDenoise choices, MGC automatic scale factors/edge correction/reference-mosaic fallback, explicit blind-solver modes, and WebP/JPEG XL sharing exports. Retains BlurlessAI without a process icon. Live BlurlessAI processing remains unverified. Native PI 1.9.6 image-processing validation remains pending. External SyQon and GraXpert processing adapters have been removed. If saved settings reference removed tools, use Reset Defaults and choose supported PixInsight tools before running.
 
 Add this URL in **Resources > Updates > Manage Repositories**:
 
@@ -21,7 +21,7 @@ directory to force registration of newly installed script folders.
 The package and `updates.xri` are generated from the repository root with:
 
 ```powershell
-.\packaging\build-pixinsight-package.ps1 -Version 1.9.8 -MaximumPixInsightVersion 1.9.6
+.\packaging\build-pixinsight-package.ps1 -Version 1.9.9 -MaximumPixInsightVersion 1.9.6
 ```
 
 The builder validates the source version, ZIP layout, SHA-1, XML, release date,
@@ -39,7 +39,7 @@ For a release with script or included ImageSolver dependency changes, use this o
    save the generated signature as
    `pixinsight/CCDASTROWorkflowManager.xsgn`.
 3. Run the package builder shown above. It creates
-   `updates/CCDASTROWorkflowManager-1.9.8.zip`, calculates its SHA-1, and
+   `updates/CCDASTROWorkflowManager-1.9.9.zip`, calculates its SHA-1, and
    regenerates `updates/updates.xri`.
 4. Sign the newly generated `updates/updates.xri` with PixInsight CodeSign.
 5. Commit and publish the script, `.xsgn`, ZIP, and signed manifest together.

@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.8
+# CCDASTRO PixInsight Workflow Manager v1.9.9
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
@@ -70,7 +70,7 @@ SPFC setup now offers **Sony color camera – no external filter** and **Sony co
 
 ## Input master advisory
 
-Validate and Run now show an advisory **0–100 data-integrity score for each input master**, including separate L/R/G/B masters. Enabled run reports retain the assessment and detected limitations. Processing cannot reliably recover clipped signal, missing detail or lost precision. The score does not add processing blocks; existing input safety checks remain. It measures sampled clipping, quantization, invalid and blank data—not focus, star shape, noise, gradients or final aesthetic quality. A high score means few detected integrity problems. [Assessment scope and scoring](docs/MASTER-QUALITY-ADVISORY.md).
+Validate and Run now report an advisory **overall quality score alongside data integrity**, using bounded interior samples. Measurements include Gaussian-equivalent stellar widths, eccentricity, elongated-star fraction, center-to-outer-field consistency, local noise, stellar peak-to-noise contrast and background variation. **Master quality details** opens a scrollable report. Widths are moment estimates, not fitted PSFs; true object SNR and calibration accuracy are not established. Background variation may be real nebulosity and is not penalized. Insufficient measurements leave the overall score unavailable. Scores are provisional heuristics, not universal grades across targets, filters or equipment. Enabled run reports retain all measurements. [Methods, thresholds and limitations](docs/MASTER-QUALITY-ADVISORY.md).
 
 ## Quick start
 
@@ -837,6 +837,13 @@ External tools retain their own installation, licensing and model requirements. 
 <a id="revision-history"></a>
 
 ## Changelog
+
+### v1.9.9 — Expanded advisory master quality
+
+Validate and Run now report an advisory **overall quality score alongside data integrity**, using bounded interior samples. Measurements include Gaussian-equivalent stellar widths, eccentricity, elongated-star fraction, center-to-outer-field consistency, local noise, stellar peak-to-noise contrast and background variation. **Master quality details** opens a scrollable report. Widths are moment estimates, not fitted PSFs; true object SNR and calibration accuracy are not established. Background variation may be real nebulosity and is not penalized. Insufficient measurements leave the overall score unavailable. Scores are provisional heuristics, not universal grades across targets, filters or equipment. Enabled run reports retain all measurements. [Methods, thresholds and limitations](docs/MASTER-QUALITY-ADVISORY.md).
+
+All 38 automated regression suites pass. Native results and release checks are recorded in [the signing record](docs/SIGNING-v1.9.9.md).
+
 
 ### v1.9.8 — Color-camera SPFC correction
 

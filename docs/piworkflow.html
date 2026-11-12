@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.9.8",
+    "softwareVersion": "1.9.9",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.8">CCDASTRO PixInsight Workflow Manager v1.9.8</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.9">CCDASTRO PixInsight Workflow Manager v1.9.9</h1>
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
@@ -221,8 +221,8 @@ not prove registration. Later processing cannot recover clipped or missing detai
 <p>SPFC offers <strong>Sony color camera – no external filter</strong> and <strong>Sony color camera – UV/IR cut</strong> presets. These supply installed Sony RGB sensor responses with Ideal QE. RGB masters require neither separate physical RGB filters nor a gray response. Choose UV/IR cut only when it matches your optical path. The presets use generic Sony responses, not a measured camera-specific profile.</p>
 <p>Custom RGB responses are preserved; grayscale inputs still require a gray response. Incomplete saved Sony configurations migrate to the color preset.</p>
 <h2 id="input-master-advisory">Input master advisory</h2>
-<p>Validate and Run display an advisory <strong>0–100 data-integrity score for each input master</strong>, including separate L/R/G/B masters. Enabled run reports retain the assessment and detected limitations. Processing cannot reliably recover clipped signal, missing detail or lost precision.</p>
-<p>The score adds no processing blocks; existing input safety checks remain. It measures sampled clipping, quantization, invalid and blank data. Focus, star shape, noise, gradients and final aesthetic quality are not graded. A high score means few detected integrity problems.</p>
+<p>Validate and Run report an advisory <strong>overall quality score alongside data integrity</strong>, using bounded interior samples. Measurements include Gaussian-equivalent stellar widths, eccentricity, elongated-star fraction, field consistency, local noise, stellar peak-to-noise contrast and background variation. <strong>Master quality details</strong> opens a scrollable report; enabled processing reports retain the measurements.</p>
+<p>Widths are moment estimates, not fitted PSFs. Scores are provisional heuristics, not universal grades across targets, filters or equipment. True object SNR and calibration accuracy are not established. Background variation may be nebulosity and is not penalized. Insufficient measurements leave the overall score unavailable. No new processing blocks.</p>
 <h2 id="quick-start">Quick start</h2>
 <ol>
 <li>Open your unstretched color master, or registered linear L/R/G/B masters.</li>
@@ -990,6 +990,8 @@ with execution and storage details in the <a href="SECURITY-AND-DEPENDENCIES.md"
 <p>External tools retain their own installation, licensing and model requirements. Inclusion in this credits list does not imply endorsement by their authors. Detailed notices for the included AutoDBE adaptation and other dependencies are in <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a>.</p>
 <p><a id="revision-history"></a></p>
 <h2 id="changelog">Changelog</h2>
+<h3 id="v1.9.9-expanded-advisory-master-quality">v1.9.9 — Expanded advisory master quality</h3>
+<p>Added sampled stellar width and shape, noise, stellar contrast, field consistency, background variation and an advisory overall score. A scrollable details report shows measurements and limitations. Insufficient data produces an unavailable score; no new processing blocks. All 38 automated regression suites pass.</p>
 <h3 id="v1.9.8-color-camera-spfc-correction">v1.9.8 — Color-camera SPFC correction</h3>
 <p>Color-camera presets automatically supply sensor responses with Ideal QE. The irrelevant gray-filter requirement is removed for RGB masters; custom RGB settings and grayscale validation are retained.</p>
 <h3 id="v1.9.7-advisory-input-master-assessment">v1.9.7 — Advisory input master assessment</h3>

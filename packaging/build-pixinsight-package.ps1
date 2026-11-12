@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.8',
+    [string] $Version = '1.9.9',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -151,9 +151,9 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.9.8 fixes SPFC setup for color cameras: Sony sensor-response presets use Ideal QE, and RGB masters no longer require a gray response. Custom responses and grayscale validation are retained.</p>
+        <p>v1.9.9 expands advisory master assessment with sampled stellar width and shape, noise, stellar contrast, field consistency and background variation. A separate overall quality estimate and scrollable details accompany the data-integrity score.</p>
         <ul>
-          <li>The score grades sampled clipping, quantization, invalid and blank data. Focus, star shape, noise and gradients are not graded; a high score does not guarantee final image quality. No new processing blocks.</li>
+          <li>Scores are provisional heuristics. Widths are moment estimates, not fitted PSFs; true object SNR and calibration accuracy are not measured. Background variation is not penalized. Insufficient measurements leave the overall score unavailable. No new processing blocks.</li>
           <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>
           <li>MGC automatic scale factors, edge correction and MARS reference-mosaic fallback are configurable.</li>
           <li>BlurlessAI runs after gradient correction and before separate color calibration; MGC retains its SPFC prerequisite. Advanced ordered passes override the main dropdown.</li>

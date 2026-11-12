@@ -13,7 +13,7 @@ const ctx=vm.createContext({finiteNumber:Number.isFinite,CoreApplication:{srcDir
  Dialog,Label:C,CheckBox:C,SpinBox:C,ComboBox:C,Edit:C,TextBox:C,Control:C,PushButton:C,GroupBox:C,ScrollBox:function(p){C.call(this,p);this.setMinSize=C.prototype.setMinSize;this.viewport=new C(this);},VerticalSizer:Sizer,HorizontalSizer:Sizer,TITLE:'test',StdIcon:{Error:1},StdButton:{Ok:1},MessageBox:function(){this.execute=function(){};},saveWorkflowState:()=>saved++,errorMessage:e=>e.message});
 vm.runInContext(source.slice(source.indexOf('function resolveProcessClass('),source.indexOf('function ProcessAdapter(')),ctx);
 vm.runInContext(code,ctx);const defs=ctx.nativeControlDefinitions();
-for(const id of Object.keys(defs)){const def=defs[id];if(constructors[def.process])continue;const proc=function(){this.processId=()=>def.process;this.executeOn=()=>true;for(const entry of Object.values(defs).filter(d=>d.process===def.process))for(const f of entry.fields)this[f.key]=f.value;this.H=Array.from({length:5},()=>[0,.5,1,0,1]);this.layers=Array.from({length:5},()=>[true,true,0,false,3,1,1]);for(const k of ['narrowbandMode','grayFilterTrCurve','redFilterTrCurve','greenFilterTrCurve','blueFilterTrCurve','deviceQECurve','marsDatabaseFiles','useMARSDatabase','command','showGradientModel'])this[k]=null;};proc.Precision_Fast=0;proc.Precision_High=1;constructors[def.process]=proc;}
+for(const id of Object.keys(defs)){const def=defs[id];if(constructors[def.process])continue;const proc=function(){this.processId=()=>def.process;this.executeOn=()=>true;for(const entry of Object.values(defs).filter(d=>d.process===def.process))for(const f of entry.fields)if(f.key!=="responseMode")this[f.key]=f.value;this.H=Array.from({length:5},()=>[0,.5,1,0,1]);this.layers=Array.from({length:5},()=>[true,true,0,false,3,1,1]);for(const k of ['narrowbandMode','grayFilterTrCurve','redFilterTrCurve','greenFilterTrCurve','blueFilterTrCurve','deviceQECurve','marsDatabaseFiles','useMARSDatabase','command','showGradientModel'])this[k]=null;};proc.Precision_Fast=0;proc.Precision_High=1;constructors[def.process]=proc;}
 Object.assign(ctx,constructors);assert.equal(ctx.resolveProcessClass(['HistogramTransformation']),'HistogramTransformation');
 // Reproduce the released name-as-constructor regression with the actual resolver.
 vm.runInContext(code.replace('var p=createProcess(className);','var p=new className;'),ctx);
@@ -25,7 +25,7 @@ icon={processId:()=> 'PhotometricColorCalibration',whiteReferenceName:'Advanced'
 assert.throws(()=>ctx.configuredNativeProcess('mlDenoise'),/existing neural/);ctx.nativeSettings.mlDenoise.modelPath='model.pb';assert.equal(ctx.configuredNativeProcess('mlDenoise').modelPath,'model.pb');ctx.nativeSettings.mlDenoise.amount=1.1;assert.throws(()=>ctx.configuredNativeProcess('mlDenoise'),/strength/);ctx.nativeSettings.mlDenoise.amount=.4;
 for(const id of ['histogram','luminance']){assert.throws(()=>ctx.configuredNativeProcess(id),/identity/);ctx.nativeSettings[id].midtones=.1;const p=ctx.configuredNativeProcess(id);assert.equal(p.H[3][1],.1);assert.equal(p.H[0][1],.5);ctx.nativeSettings[id].shadows=1;assert.throws(()=>ctx.configuredNativeProcess(id),/Shadows/);ctx.nativeSettings[id].shadows=0;}
 let mas=ctx.configuredNativeProcess('mas');assert.equal(mas.targetBackground,.15);ctx.nativeSettings.mas.backgroundROIEnabled=true;assert.throws(()=>ctx.configuredNativeProcess('mas'),/positive width/);ctx.nativeSettings.mas.backgroundROIWidth=32;ctx.nativeSettings.mas.backgroundROIHeight=32;assert.equal(ctx.configuredNativeProcess('mas').backgroundROIEnabled,true);
-assert.throws(()=>ctx.configuredNativeProcess('spfc'),/Select device/);Object.assign(ctx.nativeSettings.spfc,{deviceQECurveName:'Ideal & QE',grayFilterName:'Clear',redFilterName:'R',greenFilterName:'G',blueFilterName:'B'});const spfc=ctx.configuredNativeProcess('spfc');assert.equal(spfc.deviceQECurve,'300,1,800,1');assert.equal(spfc.narrowbandMode,false);
+ctx.nativeSettings.spfc.responseMode='Custom';assert.throws(()=>ctx.configuredNativeProcess('spfc'),/deviceQECurveName/);Object.assign(ctx.nativeSettings.spfc,{deviceQECurveName:'Ideal & QE',grayFilterName:'Clear',redFilterName:'R',greenFilterName:'G',blueFilterName:'B'});const spfc=ctx.configuredNativeProcess('spfc');assert.equal(spfc.deviceQECurve,'300,1,800,1');assert.equal(spfc.narrowbandMode,false);
 assert.throws(()=>ctx.configuredNativeProcess('mgc'),/Add MARS/);ctx.nativeSettings.mgc.databaseFiles='missing.xmars';assert.throws(()=>ctx.configuredNativeProcess('mgc'),/file missing/);ctx.nativeSettings.mgc.databaseFiles='mars.xmars';const mgc=ctx.configuredNativeProcess('mgc');assert.equal(mgc.useMARSDatabase,true);assert.equal(mgc.command,'');assert.equal(mgc.marsDatabaseFiles[0][1],'mars.xmars');
 const mlt=ctx.configuredNativeProcess('finalMLT');assert.equal(mlt.layers[0][3],true);assert.equal(mlt.layers[3][3],false);assert.equal(mlt.layers[4][3],false);assert.equal(mlt.linear,false);
 for(const id of ['finalNoiseX','finalACDNR'])assert.ok(ctx.configuredNativeProcess(id));ctx.nativeSettings.finalMLD.modelPath='model.pb';assert.ok(ctx.configuredNativeProcess('finalMLD'));
@@ -49,3 +49,35 @@ assert.equal(ctx.configuredNativeProcess('pcc').applyCalibration,true);
 
 // PixInsight's preprocessor can misread escaped URL slashes in regex literals.
 assert.ok(source.includes('values.serverURL.trim().toLowerCase().indexOf('));
+
+// OSC presets use sensor responses (which include QE), never a physical gray filter.
+const library=ctx.nativeFilterLibrary('');
+library.push({name:'Ideal QE curve',channel:'Q',data:'300,1,800,1'});
+for(const channel of ['R','G','B'])for(const suffix of ['', '-UVIRcut'])library.push({name:'Sony Color Sensor '+channel+suffix,channel,data:'300,0,500,.8,800,0'});
+ctx.nativeSettings.spfc.responseMode='SonyOSC';
+ctx.nativeSettings.spfc.grayFilterName='';
+ctx.nativeSettings.spfc.deviceQECurveName='Wrong mono QE';
+for(const key of ['redFilterName','greenFilterName','blueFilterName'])ctx.nativeSettings.spfc[key]='';
+const osc=ctx.configuredNativeProcess('spfc',{image:{isColor:true}});
+assert.equal(osc.deviceQECurveName,'Ideal QE curve');assert.equal(osc.redFilterName,'Sony Color Sensor R');
+assert.equal(osc.grayFilterTrCurve,null);assert.equal(osc.grayFilterName,'');assert.equal('responseMode' in osc,false);
+assert.equal(ctx.nativeSettings.spfc.deviceQECurveName,'Wrong mono QE'); // Preset resolution does not mutate manual selections.
+ctx.nativeSettings.spfc.responseMode='SonyOSC_UVIR';
+assert.equal(ctx.configuredNativeProcess('spfc').blueFilterName,'Sony Color Sensor B-UVIRcut');
+ctx.nativeSettings.spfc.responseMode='Custom';
+Object.assign(ctx.nativeSettings.spfc,{deviceQECurveName:'Ideal & QE',redFilterName:'R',greenFilterName:'G',blueFilterName:'B'});
+assert.equal(ctx.configuredNativeProcess('spfc').redFilterName,'R'); // Custom RGB also needs no gray curve.
+ctx.nativeSettings.spfc.greenFilterName='';assert.throws(()=>ctx.configuredNativeProcess('spfc'),/greenFilterName/);
+ctx.nativeSettings.spfc.greenFilterName='G';
+assert.throws(()=>ctx.configuredNativeProcess('spfc',{image:{isColor:false}}),/grayFilterName/);
+ctx.nativeSettings.spfc.grayFilterName='Clear';
+const mono=ctx.configuredNativeProcess('spfc',{image:{isColor:false}});assert.equal(mono.grayFilterName,'Clear');assert.equal(mono.redFilterTrCurve,null);
+const legacy=JSON.parse(JSON.stringify(ctx.nativeSettings));delete legacy.spfc.responseMode;
+ctx.restoreNativeSettings(legacy);assert.equal(ctx.nativeSettings.spfc.responseMode,'Custom');
+for(const key of ['redFilterName','greenFilterName','blueFilterName'])legacy.spfc[key]='';
+legacy.spfc.deviceQECurveName='Sony IMX411/455/461/533/571';
+ctx.restoreNativeSettings(legacy);assert.equal(ctx.nativeSettings.spfc.responseMode,'SonyOSC');
+assert.equal(ctx.configuredNativeProcess('spfc').deviceQECurveName,'Ideal QE curve');
+controls=[];action=()=>{const preset=controls.find(c=>c.values&&c.values.includes('SonyOSC'));assert(preset);const gray=controls.find(c=>c.values&&c.values.includes('Clear'));assert.equal(gray.enabled,false);preset.currentItem=preset.values.indexOf('Custom');preset.onItemSelected();assert.equal(gray.enabled,true);controls.find(c=>c.text==='Cancel').onClick();};
+ctx.configureNativeProcess('spfc');assert.equal(ctx.nativeSettings.spfc.responseMode,'SonyOSC');
+console.log('OSC presets, QE handling, RGB/mono requirements, legacy migration and preset UI passed.');

@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.7',
+    [string] $Version = '1.9.8',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -151,7 +151,7 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.9.7 adds an advisory 0-100 data-integrity score for each input master in Validate/Run and enabled reports. Processing cannot reliably recover clipped signal, missing detail or lost precision.</p>
+        <p>v1.9.8 fixes SPFC setup for color cameras: Sony sensor-response presets use Ideal QE, and RGB masters no longer require a gray response. Custom responses and grayscale validation are retained.</p>
         <ul>
           <li>The score grades sampled clipping, quantization, invalid and blank data. Focus, star shape, noise and gradients are not graded; a high score does not guarantee final image quality. No new processing blocks.</li>
           <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>

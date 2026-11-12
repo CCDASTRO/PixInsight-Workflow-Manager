@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.7
+# CCDASTRO PixInsight Workflow Manager v1.9.8
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
@@ -63,6 +63,10 @@ WBPP normally supplies integrated filter masters. Inspect calibration, gradients
 clipping, alignment, noise and integration borders before processing. The workflow
 does not calibrate, integrate, align or PSF-match masters. Identical dimensions do
 not prove registration. Later processing cannot recover clipped or missing detail.
+
+## Color-camera SPFC setup
+
+SPFC setup now offers **Sony color camera – no external filter** and **Sony color camera – UV/IR cut** presets. These use installed Sony RGB sensor-response curves with Ideal QE; separate physical RGB filters and a gray response are not required for RGB masters. Choose the UV/IR-cut preset only when it matches the optical path. These are generic Sony responses, not a measured camera-specific profile. Custom RGB selections remain available, and grayscale inputs still require a gray response. Existing custom settings are preserved; incomplete saved Sony settings migrate to the color preset.
 
 ## Input master advisory
 
@@ -833,6 +837,11 @@ External tools retain their own installation, licensing and model requirements. 
 <a id="revision-history"></a>
 
 ## Changelog
+
+### v1.9.8 — Color-camera SPFC correction
+
+SPFC setup now offers **Sony color camera – no external filter** and **Sony color camera – UV/IR cut** presets. These use installed Sony RGB sensor-response curves with Ideal QE; separate physical RGB filters and a gray response are not required for RGB masters. Choose the UV/IR-cut preset only when it matches the optical path. These are generic Sony responses, not a measured camera-specific profile. Custom RGB selections remain available, and grayscale inputs still require a gray response. Existing custom settings are preserved; incomplete saved Sony settings migrate to the color preset.
+
 
 ### v1.9.7 — Advisory input master assessment
 

@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "color": {
+    "qe": "Ideal QE curve",
+    "red": "Sony Color Sensor R",
+    "green": "Sony Color Sensor G",
+    "blue": "Sony Color Sensor B"
+  },
+  "uv": "Sony Color Sensor R-UVIRcut",
+  "monoRequiresGray": true,
+  "signatures": {
+    "script": {
+      "valid": true,
+      "developerId": "CCDASTRO"
+    },
+    "manifest": {
+      "valid": true,
+      "developerId": "CCDASTRO"
+    }
+  }
+}

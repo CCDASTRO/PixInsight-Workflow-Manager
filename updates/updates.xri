@@ -5,10 +5,10 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.6">
-      <package fileName="CCDASTROWorkflowManager-1.9.7.zip" sha1="58dce3d2100f1e5e1589b44e2d7c5818001e6373" type="script" releaseDate="20261112011852">
-         <title>CCDASTRO Workflow Manager 1.9.7</title>
+      <package fileName="CCDASTROWorkflowManager-1.9.8.zip" sha1="607eae8475ddfe427a5653bcfafb5280b59ba77d" type="script" releaseDate="20261112014018">
+         <title>CCDASTRO Workflow Manager 1.9.8</title>
          <description>
-            <p>v1.9.7 adds an advisory 0-100 data-integrity score for each input master in Validate/Run and enabled reports. Processing cannot reliably recover clipped signal, missing detail or lost precision.</p>
+            <p>v1.9.8 fixes SPFC setup for color cameras: Sony sensor-response presets use Ideal QE, and RGB masters no longer require a gray response. Custom responses and grayscale validation are retained.</p>
             <ul>
                <li>The score grades sampled clipping, quantization, invalid and blank data. Focus, star shape, noise and gradients are not graded; a high score does not guarantee final image quality. No new processing blocks.</li>
                <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>
@@ -23,4 +23,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-11-12T01:19:35.219Z" encoding="Base64">+mkQklpVIzLmHNkUqN6PlBYQ3yBb4YvtPTaqvm2CLi3X4DUy1PaQvrZR5bYtslhKfEkaUmJZoLKUwgsaZqdoDQ==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-11-12T01:40:40.840Z" encoding="Base64">fTxJ6YJWi7if/vGsd2Qpyws1DspS+QDmvKO6XW5K5XyyfFHTkAgRy7hgkQBKn2la/krTefen25hGnq6oLKTfAg==</Signature>

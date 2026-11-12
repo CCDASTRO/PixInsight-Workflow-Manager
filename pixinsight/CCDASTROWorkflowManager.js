@@ -27,7 +27,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.7"
+#define VERSION "1.9.8"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -630,8 +630,8 @@ function nativeControlDefinitions()
          b("saturationEnabled","Adjust saturation",true),n("saturationAmount","Saturation amount",0.75,0,1),n("saturationBoost","Saturation boost",0.5,0,1),b("saturationLightnessMask","Saturation lightness mask",true),
          b("backgroundROIEnabled","Use background rectangle",false),n("backgroundROIX0","Background left",0,0,100000,true),n("backgroundROIY0","Background top",0,0,100000,true),n("backgroundROIWidth","Background width",0,0,100000,true),n("backgroundROIHeight","Background height",0,0,100000,true)]},
       spfc:{process:"SpectrophotometricFluxCalibration",icon:"CCDASTRO_SPFC",label:"SPFC camera / filters",fields:[
-         t("library","Filter library (.xspd)","","file"),t("deviceQECurveName","Camera QE curve","","curveQ"),t("grayFilterName","Gray / UV-IR filter","","curveL"),t("redFilterName","Red filter","","curveR"),t("greenFilterName","Green filter","","curveG"),t("blueFilterName","Blue filter","","curveB"),
-         b("autoLimitMagnitude","Automatic limit magnitude",true),n("limitMagnitude","Limit magnitude",12,0,30),n("minMagnitude","Minimum magnitude",0,-10,30),n("rejectionLimit","Rejection limit",0.3,0,1),n("psfMinSNR","Minimum detection SNR",40,1,10000)]},
+         t("library","Filter library (.xspd)","","file"),t("deviceQECurveName","Camera QE curve","","curveQ"),t("grayFilterName","Grayscale response (mono only)","","curveL"),t("redFilterName","Red channel response","","curveR"),t("greenFilterName","Green channel response","","curveG"),t("blueFilterName","Blue channel response","","curveB"),
+         b("autoLimitMagnitude","Automatic limit magnitude",true),n("limitMagnitude","Limit magnitude",12,0,30),n("minMagnitude","Minimum magnitude",0,-10,30),n("rejectionLimit","Rejection limit",0.3,0,1),n("psfMinSNR","Minimum detection SNR",40,1,10000),e("responseMode","Camera response","SonyOSC",[["SonyOSC","Sony color camera - no external filter"],["SonyOSC_UVIR","Sony color camera - UV/IR cut"],["Custom","Custom / monochrome filter responses"]])]},
       mgc:{process:"MultiscaleGradientCorrection",icon:"CCDASTRO_MGC",label:"MGC / MARS database",fields:[t("databaseFiles","MARS database files (one per line)","","files"),t("grayMARSFilter","Gray MARS filter","L"),t("redMARSFilter","Red MARS filter","R"),t("greenMARSFilter","Green MARS filter","G"),t("blueMARSFilter","Blue MARS filter","B"),n("gradientScale","Gradient scale (px)",1024,32,65536,true),n("structureSeparation","Structure separation",3,0,16,true),n("modelSmoothness","Model smoothness",1,0,100),b("enforceFieldLimits","Enforce field limits",true),b("autoScaleFactors","Automatic scale factors (PI 1.9.6)",false),b("edgeCorrection","Edge correction (PI 1.9.6)",false),n("edgeAggressiveness","Edge aggressiveness",2,1,3,true),b("allowMARSMosaics","Allow MARS reference mosaics (fallback)",false)]},
       finalNoiseX:{process:"NoiseXTerminator",label:"Final NoiseXTerminator",fields:[n("denoise","Denoise strength (0-1)",0.25,0,1),n("detail","Detail",0.15,0,1),n("iterations","Iterations",2,1,10,true)]},
       finalMLD:{process:"MLDenoise",label:"Final MLDenoise",fields:ml()},
@@ -676,7 +676,16 @@ function requiredNativeProperty(p,key,value)
    if(!propertyExists(p,key))throw new Error(p.processId()+" does not support workflow parameter "+key+". Update PixInsight or select an advanced icon override.");
    p[key]=value;
 }
-function configuredNativeProcess(id)
+function spfcResponseSettings(values, isColor) {
+   var selected={};for(var key in values)selected[key]=values[key];
+   if(isColor && values.responseMode!=="Custom") {
+      selected.deviceQECurveName="Ideal QE curve";
+      var suffix=values.responseMode==="SonyOSC_UVIR"?"-UVIRcut":"";
+      ["red","green","blue"].forEach(function(channel,i){selected[channel+"FilterName"]="Sony Color Sensor "+["R","G","B"][i]+suffix;});
+   }
+   return selected;
+}
+function configuredNativeProcess(id, view)
 {
    var definition=nativeControlDefinitions()[id],values=nativeSettings[id];
    if(!definition)throw new Error("Unknown workflow process "+id);
@@ -710,10 +719,14 @@ function configuredNativeProcess(id)
    if(id==="finalNoiseX")for(var k=0,flags=["enable_color_separation","enable_frequency_separation"];k<flags.length;++k)if(propertyExists(p,flags[k]))p[flags[k]]=false;
 
    if(id==="spfc"){
+      var isColor=!view || !view.image || view.image.isColor!==false;
+      var response=spfcResponseSettings(values,isColor);
       var curves=nativeFilterLibrary(values.library),mapping=[["deviceQECurveName","deviceQECurve","Q"],["grayFilterName","grayFilterTrCurve","L"],["redFilterName","redFilterTrCurve","R"],["greenFilterName","greenFilterTrCurve","G"],["blueFilterName","blueFilterTrCurve","B"]];
-      for(var c=0;c<mapping.length;++c){var pair=mapping[c],curve=null;for(var j=0;j<curves.length;++j)if(curves[j].name===values[pair[0]]&&(curves[j].channel===pair[2]||(pair[2]==="L"&&curves[j].channel==="PAN"))){curve=curves[j];break;}
-         if(!curve)throw new Error("Select "+pair[0]+" in SPFC setup for your camera/filters.");requiredNativeProperty(p,pair[0],curve.name);requiredNativeProperty(p,pair[1],curve.data);}
-      p.narrowbandMode=false;for(var k=6;k<definition.fields.length;++k){var f=definition.fields[k];requiredNativeProperty(p,f.key,values[f.key]);}
+      for(var c=0;c<mapping.length;++c){var pair=mapping[c],curve=null;
+         if((isColor && pair[2]==="L") || (!isColor && ["R","G","B"].indexOf(pair[2])>=0))continue;
+         for(var j=0;j<curves.length;++j)if(curves[j].name===response[pair[0]]&&(curves[j].channel===pair[2]||(pair[2]==="L"&&curves[j].channel==="PAN"))){curve=curves[j];break;}
+         if(!curve)throw new Error("Select a valid SPFC response for "+pair[0]+" (requested: "+response[pair[0]]+"). Check the camera response preset and installed filter library.");requiredNativeProperty(p,pair[0],curve.name);requiredNativeProperty(p,pair[1],curve.data);}
+      p.narrowbandMode=false;for(var k=6;k<definition.fields.length;++k){var f=definition.fields[k];if(f.key!=="responseMode")requiredNativeProperty(p,f.key,values[f.key]);}
    }
    if(id==="mgc"){
       var paths=values.databaseFiles.split(/\r?\n/).map(function(s){return s.trim();}).filter(function(s){return s.length>0;});
@@ -732,6 +745,10 @@ function restoreNativeSettings(values)
       if(!copy[id] && (id==="multiscaleTGV"||id==="finalTGV"))copy[id]=defaults[id];
       if(!copy[id])throw new Error("Missing saved native settings "+id);
       if(id==="mgc")["autoScaleFactors","edgeCorrection","edgeAggressiveness","allowMARSMosaics"].forEach(function(key){if(copy.mgc[key]===undefined)copy.mgc[key]=defaults.mgc[key];});
+      if(id==="spfc" && copy[id].responseMode===undefined) {
+         var old=copy[id];
+         old.responseMode=!old.redFilterName&&!old.greenFilterName&&!old.blueFilterName&&(!old.deviceQECurveName||old.deviceQECurveName==="Sony IMX411/455/461/533/571")?"SonyOSC":"Custom";
+      }
       if(id!=="finalDenoise")validateNativeSettings(id,copy[id]);
    }
    if(typeof copy.finalDenoise.useIcon!=="boolean"||["NoiseXTerminator","MLDenoise","ACDNR","MultiscaleLinearTransform","MultiscaleTGVDenoise"].indexOf(copy.finalDenoise.tool)<0)throw new Error("Invalid saved final denoise selection.");nativeSettings=copy;
@@ -746,7 +763,7 @@ function configureNativeProcess(id)
    var d=new Dialog;d.windowTitle=definition.label+" workflow setup";
    var root=new VerticalSizer;root.margin=10;root.spacing=8;d.sizer=root;
    var override=new CheckBox(d);override.text="Use "+(definition.icon||"")+" icon override (optional)";override.checked=current.useIcon;override.visible=!!definition.icon;root.add(override);
-   var hint=new Label(d);hint.wordWrapping=true;hint.text=id==="spfc"?"Choose the actual camera QE and broadband filter curves from your installed library. Narrowband or custom curves use an advanced icon override.":id==="pcc"?"White-reference color indices must match the named reference. Native defaults use Average Spiral Galaxy. Automatic catalog/limit options take precedence over manual values.":"Set workflow inputs below. Advanced parameters retain installed native defaults. Save settings does not apply the process to an image.";root.add(hint);
+   var hint=new Label(d);hint.wordWrapping=true;hint.text=id==="spfc"?"Sony color-camera presets configure the built-in sensor responses automatically; no separate RGB filters are required. Choose UV/IR cut only when present in your optical path. Presets use Ideal QE because the sensor curves already include QE. Disabled manual fields are ignored. Custom / monochrome mode uses manual responses; gray is only used for grayscale images. Narrowband uses an advanced icon override.":id==="pcc"?"White-reference color indices must match the named reference. Native defaults use Average Spiral Galaxy. Automatic catalog/limit options take precedence over manual values.":"Set workflow inputs below. Advanced parameters retain installed native defaults. Save settings does not apply the process to an image.";root.add(hint);
    var scroll=new ScrollBox(d);scroll.setMinSize(650,400);var content=new Control(scroll.viewport);content.sizer=new VerticalSizer;content.sizer.margin=8;content.sizer.spacing=6;var controls={},curves=null;
    if(id==="spfc"){try{curves=nativeFilterLibrary(current.library);}catch(e){curves=[];}}
    function addField(f){var row=new HorizontalSizer;row.spacing=8;var label=new Label(content);label.text=f.label+":";label.minWidth=235;row.add(label);var c;
@@ -764,7 +781,8 @@ function configureNativeProcess(id)
       if(f.type==="file"||f.type==="files"){var browse=new PushButton(content);browse.text=f.type==="files"?"Add files...":"Browse...";browse.onClick=function(){var file=new OpenFileDialog;file.caption=f.label;file.multipleSelections=f.type==="files";if(file.execute()){if(f.type==="files")c.text+=(c.text.trim()?"\n":"")+file.fileNames.join("\n");else c.text=file.fileName;if(id==="spfc"&&f.key==="library")reloadSPFC();}};row.add(browse);controls[f.key].browse=browse;}
       content.sizer.add(row);
    }
-   for(var i=0;i<definition.fields.length;++i)addField(definition.fields[i]);
+   if(id==="spfc")addField(definition.fields[definition.fields.length-1]);
+   for(var i=0;i<definition.fields.length;++i)if(id!=="spfc"||definition.fields[i].key!=="responseMode")addField(definition.fields[i]);
    function reloadSPFC(){
       try{curves=nativeFilterLibrary(controls.library.control.text.trim());}
       catch(e){curves=[];hint.text=errorMessage(e)+" Choose a valid XSPD library, then select its curves.";}
@@ -774,7 +792,12 @@ function configureNativeProcess(id)
    if(id==="spfc")controls.library.control.onEditCompleted=reloadSPFC;
    content.adjustToContents();scroll.verticalScrollRange=[0,Math.max(0,content.height-400)];scroll.onVerticalScrollPosUpdated=function(pos){content.move(0,-pos);};
    scroll.viewport.onResize=function(){content.resize(scroll.viewport.width,content.height);scroll.verticalScrollRange=[0,Math.max(0,content.height-scroll.viewport.height)];};root.add(scroll,100);
-   function refresh(){for(var key in controls){controls[key].control.enabled=!override.checked;if(controls[key].browse)controls[key].browse.enabled=!override.checked;}}override.onCheck=refresh;refresh();
+   function refresh(){for(var key in controls){
+      var automatic=id==="spfc"&&controls.responseMode.control.values[controls.responseMode.control.currentItem]!=="Custom";
+      var manualCurve=id==="spfc"&&controls[key].field.type.indexOf("curve")===0;
+      controls[key].control.enabled=!override.checked&&!(automatic&&manualCurve);
+      if(controls[key].browse)controls[key].browse.enabled=!override.checked;
+   }}override.onCheck=refresh;if(id==="spfc")controls.responseMode.control.onItemSelected=refresh;refresh();
    var buttons=new HorizontalSizer;buttons.spacing=8;buttons.addStretch();
    var defaults=new PushButton(d);defaults.text="Reset tool defaults";defaults.onClick=function(){for(var key in controls){var item=controls[key],f=item.field,c=item.control;if(f.type==="boolean")c.checked=f.value;else if(f.type==="integer")c.value=f.value;else if(f.type==="enum"||f.type.indexOf("curve")===0)c.currentItem=Math.max(0,c.values.indexOf(f.value));else c.text=String(f.value);}override.checked=false;if(id==="spfc")reloadSPFC();refresh();};buttons.add(defaults);
    var save=new PushButton(d);save.text="Save settings";save.onClick=function(){try{var v={useIcon:override.checked};for(var key in controls){var item=controls[key],c=item.control,f=item.field;v[key]=f.type==="boolean"?c.checked:f.type==="integer"?c.value:f.type==="number"?Number(c.text.trim()):f.type==="enum"||f.type.indexOf("curve")===0?c.values[c.currentItem]:c.text.trim();if(f.type==="number"&&!c.text.trim())throw new Error("Enter "+f.label);}
@@ -816,9 +839,9 @@ function MGCAdapter()
    this.label = "MultiscaleGradientCorrection (SPFC + MGC)";
 }
 
-MGCAdapter.prototype.loadIcons = function()
+MGCAdapter.prototype.loadIcons = function(view)
 {
-   var result = {spfc:configuredNativeProcess("spfc"),mgc:configuredNativeProcess("mgc")};
+   var result = {spfc:configuredNativeProcess("spfc",view),mgc:configuredNativeProcess("mgc")};
    if (propertyExists(result.mgc, "command") && result.mgc.command !== "")
       throw new Error("CCDASTRO_MGC must be a gradient-correction instance, not a database-management command.");
    if (propertyExists(result.mgc, "useMARSDatabase") && !result.mgc.useMARSDatabase)
@@ -840,7 +863,7 @@ MGCAdapter.prototype.requirement = function()
 
 MGCAdapter.prototype.execute = function(view)
 {
-   var processes = this.loadIcons();
+   var processes = this.loadIcons(view);
    if (!imageHasAstrometricSolution(view.window))
    {
       checkAbortRequested();

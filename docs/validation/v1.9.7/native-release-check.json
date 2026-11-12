@@ -1,0 +1,37 @@
+{
+  "script": {
+    "valid": true,
+    "developerId": "CCDASTRO"
+  },
+  "manifest": {
+    "valid": true,
+    "developerId": "CCDASTRO"
+  },
+  "include": {
+    "valid": true,
+    "developerId": "CCDASTRO"
+  },
+  "ok": true,
+  "advisory": {
+    "version": 1,
+    "score": 100,
+    "confidence": "Limited - sampled data integrity only",
+    "limitations": [],
+    "channels": [
+      {
+        "channel": 0,
+        "samples": 4096,
+        "invalid": 0,
+        "median": 0.01751238852739334,
+        "min": 0.004999999888241291,
+        "max": 0.029975222423672676,
+        "blackFraction": 0,
+        "whiteFraction": 0,
+        "eightBitGridFraction": 0,
+        "eightBitLevels": 0
+      }
+    ],
+    "scope": "Focus, star shape, noise, gradients and true object signal-to-noise are not graded. A high score means few detected data-integrity problems, not excellent image quality.",
+    "message": "Final image quality is limited by the input master. Processing cannot reliably recover clipped signal, missing detail or lost precision. Poor focus, tracking, noise or calibration can remain visible in the final image."
+  }
+}

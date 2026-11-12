@@ -13,3 +13,24 @@ r=ctx.quickWorkflowInputCheck(image(()=>.01));assert(r.errors.some(s=>s.includes
 r=ctx.quickWorkflowInputCheck(image((x,y,c)=>x<512?1:linear.sample(x,y,c)));assert(r.warnings.some(s=>s.includes('clipping')));
 r=ctx.quickWorkflowInputCheck(image((x,y,c)=>Math.round(linear.sample(x,y,c)*65535)/65535));assert.equal(r.errors.length,0);
 console.log('Quick screening detects hidden 8-bit, invalid, blank and clipped inputs; bright high-precision data only warns; normal 16-bit and float linear data pass.');
+const good=ctx.masterQualityAssessment(linear);
+assert.equal(good.score,100);
+assert.match(good.scope,/not excellent image quality/);
+assert.equal(ctx.masterQualityAssessment(image(()=>NaN)).score,0);
+assert.equal(ctx.masterQualityAssessment(image(()=>.01)).score,0);
+assert(ctx.masterQualityAssessment(quantized).score<=30);
+const clipped=ctx.masterQualityAssessment(image((x,y,c)=>x<512?1:linear.sample(x,y,c)));
+assert(clipped.score<good.score);
+assert.match(ctx.masterQualityText('Master',clipped),/Final image quality is limited/);
+assert.equal(ctx.masterQualityAssessment(image((x,y,c)=>linear.sample(x,y,c)+.25)).score,100); // Brightness alone is not a defect.
+assert.equal(ctx.masterQualityAssessment({width:0,height:0,numberOfNominalChannels:1,sample(){throw Error('empty');}}).score,null);
+const fs=require('node:fs'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'..','CCDASTROWorkflowManager.js'),'utf8');
+const begin=source.indexOf('function PreflightResult()'),end=source.indexOf('function PreflightValidator(');
+vm.runInContext(source.slice(begin,end),ctx);
+const a=new ctx.PreflightResult();a.masterQuality.push({id:'Master',assessment:clipped});assert(a.ok());
+const start=source.indexOf('function resultText(result)'),finish=source.indexOf('class PlateSolveSetupDialog',start);
+vm.runInContext(source.slice(start,finish),ctx);
+assert.match(ctx.resultText(a),/does not block processing/);
+assert.match(ctx.resultText(a),/Master: master data-integrity score/);
+console.log('Advisory score handles corrupt, clipped, quantized, bright and unavailable masters without changing approval.');

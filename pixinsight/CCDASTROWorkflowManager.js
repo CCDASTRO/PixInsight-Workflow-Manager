@@ -27,7 +27,7 @@
 #undef VERSION
 
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.6"
+#define VERSION "1.9.7"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -1613,6 +1613,7 @@ function PreflightResult()
 {
    this.errors = [];
    this.warnings = [];
+   this.masterQuality = [];
 }
 
 PreflightResult.prototype.ok = function()
@@ -1655,10 +1656,13 @@ PreflightValidator.prototype.validate = function()
       var message=workflowPrecisionError(v.image);if(message)result.errors.push(v.fullId+": "+message);
       if(v.image && typeof v.image.sample === "function") {
          var inputCheck=quickWorkflowInputCheck(v.image);
+         try { result.masterQuality.push({id:v.fullId,assessment:masterQualityAssessment(v.image,inputCheck)}); }
+         catch(e) { result.masterQuality.push({id:v.fullId,assessment:null}); }
          inputCheck.errors.forEach(function(t){result.errors.push(v.fullId+": "+t);});
          inputCheck.warnings.forEach(function(t){result.warnings.push(v.fullId+": "+t);});
       }
    });
+   this.dialog.masterQualityAssessments=result.masterQuality;
    var cropRow = this.dialog.rowsById.crop;
    if (!cropRow.enabled.checked)
       try
@@ -1806,6 +1810,8 @@ function resultText(result)
       text += "\n\nErrors:\n- " + result.errors.join("\n- ");
    if (result.warnings.length)
       text += "\n\nWarnings:\n- " + result.warnings.join("\n- ");
+   if(result.masterQuality && result.masterQuality.length)
+      text += "\n\nAdvisory master assessment (does not block processing):\n" + result.masterQuality.map(function(q){return q.assessment?masterQualityText(q.id,q.assessment):q.id+": assessment unavailable; inspect manually.";}).join("\n\n");
    return text;
 }
 
@@ -2524,7 +2530,7 @@ constructor()
    this.inputQualityNote.text = "<b>Input quality matters:</b> The workflow builds on the linear master you provide. " +
       "Accurate calibration, registration, integration, rejection, and color combination are essential; " +
       "processing cannot recover detail or remove defects lost or introduced while creating the master.";
-   this.inputQualityNote.toolTip = "Validate and Run sample the input for hidden 8-bit quantization, invalid pixels, clipping, blank data and possible prior stretching. This is a quick screening, not a guarantee of linearity or image quality.";
+   this.inputQualityNote.toolTip = "Validate and Run show an advisory 0-100 data-integrity score for each master and save it in enabled run reports. This bounded sampling checks quantization, invalid pixels, clipping and blank data. Focus, star shape, noise and gradients are not graded; a high score does not guarantee final image quality. Existing input safety checks still apply.";
    this.linearConfirmation = new CheckBox(this.content);
    this.linearConfirmation.text = "I confirm the workflow inputs are unstretched, integrated linear masters";
    this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";
@@ -4582,6 +4588,7 @@ function executeWorkflow(self, quiet)
       var sourcePath = workflowSourcePath(view);
       var sourceId = workflowSourceId(view);
       advancedRunAudit={version:VERSION,started:new Date().toISOString(),sourcePath:sourcePath,sourceId:sourceId,configuration:captureWorkflowState(self,false),steps:[]};
+      advancedRecord("Advisory input master quality",self.masterQualityAssessments || []);
       view = lrgbViews !== null && lrgbViews.R ? combineLinearRGB(lrgbViews) : cloneWorkflowInput(view);
       if (lrgbViews !== null && !imageHasAstrometricSolution(view.window)) plateSolveSettings.autofill(view.window, true);
       clearDisplaySTF(view);

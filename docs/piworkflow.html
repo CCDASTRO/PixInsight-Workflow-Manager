@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.9.6",
+    "softwareVersion": "1.9.7",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.6">CCDASTRO PixInsight Workflow Manager v1.9.6</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.7">CCDASTRO PixInsight Workflow Manager v1.9.7</h1>
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
@@ -217,6 +217,9 @@ Float32 XISF is recommended. Display STF is acceptable; a permanent stretch is n
 clipping, alignment, noise and integration borders before processing. The workflow
 does not calibrate, integrate, align or PSF-match masters. Identical dimensions do
 not prove registration. Later processing cannot recover clipped or missing detail.</p>
+<h2 id="input-master-advisory">Input master advisory</h2>
+<p>Validate and Run display an advisory <strong>0–100 data-integrity score for each input master</strong>, including separate L/R/G/B masters. Enabled run reports retain the assessment and detected limitations. Processing cannot reliably recover clipped signal, missing detail or lost precision.</p>
+<p>The score adds no processing blocks; existing input safety checks remain. It measures sampled clipping, quantization, invalid and blank data. Focus, star shape, noise, gradients and final aesthetic quality are not graded. A high score means few detected integrity problems.</p>
 <h2 id="quick-start">Quick start</h2>
 <ol>
 <li>Open your unstretched color master, or registered linear L/R/G/B masters.</li>
@@ -984,6 +987,8 @@ with execution and storage details in the <a href="SECURITY-AND-DEPENDENCIES.md"
 <p>External tools retain their own installation, licensing and model requirements. Inclusion in this credits list does not imply endorsement by their authors. Detailed notices for the included AutoDBE adaptation and other dependencies are in <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a>.</p>
 <p><a id="revision-history"></a></p>
 <h2 id="changelog">Changelog</h2>
+<h3 id="v1.9.7-advisory-input-master-assessment">v1.9.7 — Advisory input master assessment</h3>
+<p>Per-master advisory data-integrity scores now appear in Validate/Run and enabled processing reports, with an explanation of how input limitations affect the final image. No new processing blocks. All 37 automated regression suites pass; native interactive assessment validation remains pending.</p>
 <p>Release history, newest first. Historical entries describe the behavior at that release and may mention tools or implementations later replaced or removed.</p>
 <h3 id="v1.9.6-preview-acceptance-across-workflow-reviews">v1.9.6 — Preview acceptance across workflow reviews</h3>
 <ul>

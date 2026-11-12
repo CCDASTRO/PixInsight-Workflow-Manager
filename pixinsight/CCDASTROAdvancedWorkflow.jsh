@@ -704,6 +704,27 @@ function quickWorkflowInputCheck(image) {
    return result;
 }
 
+// Advisory technical screening; never used to approve or reject a master.
+function masterQualityAssessment(image, check) {
+   check=check || quickWorkflowInputCheck(image);
+   var penalty=0, notes=check.errors.concat(check.warnings);
+   check.channels.forEach(function(c){
+      var p=Math.min(40,100*(c.blackFraction+c.whiteFraction));
+      if(c.invalid || (c.max!==null && c.max-c.min<=1e-8))p=100;
+      if(c.samples-c.invalid>=2048 && c.eightBitGridFraction>=.999 && c.eightBitLevels>=64)p=Math.max(p,70);
+      penalty=Math.max(penalty,p);
+   });
+   return {version:1,score:check.sampleCount?Math.max(0,Math.round(100-penalty)):null,
+      confidence:"Limited - sampled data integrity only",limitations:notes,channels:check.channels,
+      scope:"Focus, star shape, noise, gradients and true object signal-to-noise are not graded. A high score means few detected data-integrity problems, not excellent image quality.",
+      message:"Final image quality is limited by the input master. Processing cannot reliably recover clipped signal, missing detail or lost precision. Poor focus, tracking, noise or calibration can remain visible in the final image."};
+}
+function masterQualityText(id,r) {
+   return id+": master data-integrity score "+(r.score===null?"unavailable":r.score+"/100")+
+      ". Confidence: "+r.confidence+".\n"+r.scope+"\n"+r.message+
+      (r.limitations.length?"\n- "+r.limitations.join("\n- "):"");
+}
+
 // Bill Blanshan Star Method V3, as recorded in the user-supplied M42 history.
 var metadataStarV3Expression="/*      Star Reduction using PixelMath, by Bill Blanshan -\n                      Star Method - V3                            */\n\nImg1= Starless  ;// <--Starless Image name\n\nI=   2  ;// <--number of iterations, between 1-3\nM=   3  ;// <--Method mode; 1=Strong; 2=Moderate; 3=Soft reductions\n\n/*  Drag bottom left arrow over to the image you require star reduction\n\nNote:\n   Strong mode produces smaller sharp stars while removing small stars\n   Moderate mode still has sharp stars and some smaller stars\n   Soft mode is a simple star reduction of the original image       */\n\n\n\n\n\n\n\n\n\n\n\n//equations:\nE1= $T*~(~(max(0,min(1,Img1/$T)))*~$T);  //iteration-1\nE2= max(E1,($T*E1)+(E1*~E1));\n\nE3= E1*~(~(max(0,min(1,Img1/E1)))*~E1);  //iteration-2\nE4= max(E3,($T*E3)+(E3*~E3));\n\nE5= E3*~(~(max(0,min(1,Img1/E3)))*~E3);  //iteration-3\nE6= max(E5,($T*E5)+(E5*~E5));\n\nE7= iif(I==1,E1,iif(I==2,E3,E5)); // Strong reduction mode\nE8= iif(I==1,E2,iif(I==2,E4,E6)); // Moderate reduction mode\n\nE9= mean(\n$T-($T-iif(I==1,E2,iif(I==2,E4,E6))), \n$T*~($T-iif(I==1,E2,iif(I==2,E4,E6)))); //soft reduction mode\n\niif(M==1,E7,iif(M==2,E8,E9))";
 var metadataStarV3Symbols="I,M,Img1,E1,E2,E3,E4,E5,E6,E7,E8,E9,E10,";

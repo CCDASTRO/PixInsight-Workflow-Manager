@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.6
+# CCDASTRO PixInsight Workflow Manager v1.9.7
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
@@ -63,6 +63,10 @@ WBPP normally supplies integrated filter masters. Inspect calibration, gradients
 clipping, alignment, noise and integration borders before processing. The workflow
 does not calibrate, integrate, align or PSF-match masters. Identical dimensions do
 not prove registration. Later processing cannot recover clipped or missing detail.
+
+## Input master advisory
+
+Validate and Run now show an advisory **0–100 data-integrity score for each input master**, including separate L/R/G/B masters. Enabled run reports retain the assessment and detected limitations. Processing cannot reliably recover clipped signal, missing detail or lost precision. The score does not add processing blocks; existing input safety checks remain. It measures sampled clipping, quantization, invalid and blank data—not focus, star shape, noise, gradients or final aesthetic quality. A high score means few detected integrity problems. [Assessment scope and scoring](docs/MASTER-QUALITY-ADVISORY.md).
 
 ## Quick start
 
@@ -829,6 +833,13 @@ External tools retain their own installation, licensing and model requirements. 
 <a id="revision-history"></a>
 
 ## Changelog
+
+### v1.9.7 — Advisory input master assessment
+
+Validate and Run now show an advisory **0–100 data-integrity score for each input master**, including separate L/R/G/B masters. Enabled run reports retain the assessment and detected limitations. Processing cannot reliably recover clipped signal, missing detail or lost precision. The score does not add processing blocks; existing input safety checks remain. It measures sampled clipping, quantization, invalid and blank data—not focus, star shape, noise, gradients or final aesthetic quality. A high score means few detected integrity problems. [Assessment scope and scoring](docs/MASTER-QUALITY-ADVISORY.md).
+
+All 37 automated regression suites pass. Native PixInsight interactive assessment validation remains pending.
+
 
 Release history, newest first. Historical entries describe the behavior at that release and may mention tools or implementations later replaced or removed.
 

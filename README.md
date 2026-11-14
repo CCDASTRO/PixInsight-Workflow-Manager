@@ -1,5 +1,7 @@
 # CCDASTRO PixInsight Workflow Manager v1.10.0
 
+[Download the v1.10.0 source ZIP](https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.10.0/CCDASTROWorkflowManager-1.10.0-source.zip). This archive includes source, documentation and tests. For installation, use PixInsight Update Manager or the signed release package.
+
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.

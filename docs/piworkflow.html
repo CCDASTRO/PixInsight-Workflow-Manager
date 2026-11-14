@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.9.9",
+    "softwareVersion": "1.10.0",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,7 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.9.9">CCDASTRO PixInsight Workflow Manager v1.9.9</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.10.0">CCDASTRO PixInsight Workflow Manager v1.10.0</h1>
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
@@ -223,6 +223,9 @@ not prove registration. Later processing cannot recover clipped or missing detai
 <h2 id="input-master-advisory">Input master advisory</h2>
 <p>Validate and Run report an advisory <strong>overall quality score alongside data integrity</strong>, using bounded interior samples. Measurements include Gaussian-equivalent stellar widths, eccentricity, elongated-star fraction, field consistency, local noise, stellar peak-to-noise contrast and background variation. <strong>Master quality details</strong> opens a scrollable report; enabled processing reports retain the measurements.</p>
 <p>Widths are moment estimates, not fitted PSFs. Scores are provisional heuristics, not universal grades across targets, filters or equipment. True object SNR and calibration accuracy are not established. Background variation may be nebulosity and is not penalized. Insufficient measurements leave the overall score unavailable. No new processing blocks.</p>
+<h2 id="build-1718-additions">Build 1718 additions</h2>
+<p>Workflow Manager 1.10.0 adds sky-region and preview-region solving, local target lookup, optional native ImageAnalysis measurements on temporary master snapshots, FilterGenerator access and interactive AnnotateImage handoffs on separate copies. Native measurements supplement the quick score; editing curves and rendering annotations remain under your control. The after-save annotation option is off by default and is skipped when saving is canceled.</p>
+<p>New tools require build 1718. Preview regions are tied to the current image and are not restored from saved settings. Source pixels are preserved, temporary measurement files are cleaned up, and native snapshot results are recorded with their measurement time. Update the ImageSolver dependencies and matching signed release together after upgrading PixInsight.</p>
 <h2 id="quick-start">Quick start</h2>
 <ol>
 <li>Open your unstretched color master, or registered linear L/R/G/B masters.</li>
@@ -990,6 +993,8 @@ with execution and storage details in the <a href="SECURITY-AND-DEPENDENCIES.md"
 <p>External tools retain their own installation, licensing and model requirements. Inclusion in this credits list does not imply endorsement by their authors. Detailed notices for the included AutoDBE adaptation and other dependencies are in <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a>.</p>
 <p><a id="revision-history"></a></p>
 <h2 id="changelog">Changelog</h2>
+<h3 id="v1.10.0-build-1718-native-tools">v1.10.0 — Build 1718 native tools</h3>
+<p>Added region solving, local target search, native master snapshots, filter-curve editing and interactive annotation copies. Updated ImageSolver provenance and signing dependencies. Existing processing choices remain available; new native handoffs require build 1718.</p>
 <h3 id="v1.9.9-expanded-advisory-master-quality">v1.9.9 — Expanded advisory master quality</h3>
 <p>Added sampled stellar width and shape, noise, stellar contrast, field consistency, background variation and an advisory overall score. A scrollable details report shows measurements and limitations. Insufficient data produces an unavailable score; no new processing blocks. All 38 automated regression suites pass.</p>
 <h3 id="v1.9.8-color-camera-spfc-correction">v1.9.8 — Color-camera SPFC correction</h3>

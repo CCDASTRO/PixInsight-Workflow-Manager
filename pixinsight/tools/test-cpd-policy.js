@@ -11,7 +11,7 @@ for(const tool of ['SyQonParallax','SyQonPrism','SyQonStarless','StudioGradient'
 }
 c.validateWorkflowComplianceState({steps:{gradient:{adapterId:'gradientCorrection'}}});
 assert(!manager.includes('new ExternalProcess'));assert(!advanced.includes('new ExternalProcess'));
-assert.equal((advanced.match(/ExternalProcess\.startDetached/g)||[]).length,1);
+assert.equal((advanced.match(/ExternalProcess\.startDetached/g)||[]).length,2);
 assert(advanced.includes('ExternalProcess.startDetached(CoreApplication.filePath,["--execute="'));
 assert(advanced.includes('--require-signature'));
 for(const name of ['executeSyQonEngine','executeStudio','runStudioProcess','discoverStudioPath','configureWorkflowGraXpert','installStudioControls','installSyQonControls'])assert(!new RegExp('function '+name+'\\(').test(manager+advanced));

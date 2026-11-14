@@ -11,6 +11,6 @@ function version(build){let active=true,result;const stack=[];for(const line of 
  else if(line==='#endif'){assert(stack.length,'Unmatched endif');active=stack.pop().parent;}
  else if(active&&(m=line.match(/^#define VERSION "([^"]+)"$/)))result=m[1];
  }assert.equal(stack.length,0);return result;}
-for(const [build,expected] of [[1693,'6.4.2'],[1701,'6.4.2'],[1702,'6.5.0'],[1706,'6.5.0'],[1707,'6.6.0'],[1713,'6.6.0']])assert.equal(version(build),expected);
-assert.match(source,/#define VERSION "1\.9\.9"/);
+for(const [build,expected] of [[1693,'6.4.2'],[1701,'6.4.2'],[1702,'6.5.0'],[1706,'6.5.0'],[1707,'6.6.0'],[1713,'6.6.0'],[1717,'6.6.0'],[1718,'6.6.1']])assert.equal(version(build),expected);
+assert.match(source,/#define VERSION "1\.10\.0"/);
 console.log('PASS PJSR directive syntax, balanced branches, and solver version build boundaries');

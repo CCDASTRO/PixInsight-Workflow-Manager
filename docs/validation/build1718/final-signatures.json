@@ -1,0 +1,23 @@
+{
+  "manager": {
+    "valid": true,
+    "developerId": "CCDASTRO"
+  },
+  "include": {
+    "valid": true,
+    "developerId": "CCDASTRO"
+  },
+  "master": {
+    "valid": true,
+    "developerId": "CCDASTRO"
+  },
+  "managerManifest": {
+    "valid": true,
+    "developerId": "CCDASTRO"
+  },
+  "masterManifest": {
+    "valid": true,
+    "developerId": "CCDASTRO"
+  },
+  "ok": true
+}

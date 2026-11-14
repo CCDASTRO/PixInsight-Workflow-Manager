@@ -1,4 +1,4 @@
-# CCDASTRO PixInsight Workflow Manager v1.9.9
+# CCDASTRO PixInsight Workflow Manager v1.10.0
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
@@ -71,6 +71,17 @@ SPFC setup now offers **Sony color camera – no external filter** and **Sony co
 ## Input master advisory
 
 Validate and Run now report an advisory **overall quality score alongside data integrity**, using bounded interior samples. Measurements include Gaussian-equivalent stellar widths, eccentricity, elongated-star fraction, center-to-outer-field consistency, local noise, stellar peak-to-noise contrast and background variation. **Master quality details** opens a scrollable report. Widths are moment estimates, not fitted PSFs; true object SNR and calibration accuracy are not established. Background variation may be real nebulosity and is not penalized. Insufficient measurements leave the overall score unavailable. Scores are provisional heuristics, not universal grades across targets, filters or equipment. Enabled run reports retain all measurements. [Methods, thresholds and limitations](docs/MASTER-QUALITY-ADVISORY.md).
+
+## Build 1718 additions
+
+Version **1.10.0** refreshes ImageSolver dependencies and adds optional build-1718 tools. These additions require build 1718; existing older-build paths remain available.
+
+- **Plate Solve Setup:** automatic sky-region detection, selection of an image preview for blind solving, and local catalog target-name search. Region selection is image-specific and is not restored from saved workflow settings. The selected rectangle is transferred to the working copy; stale or mismatched previews are rejected. Capture date and scale requirements are unchanged.
+- **Native ImageAnalysis:** explicitly measure the active master on a temporary snapshot, with native PSF width/eccentricity/residual, noise, gradient/banding/trail and field-shape metrics. Source pixels and files are preserved; snapshots are deleted after measurement. Native measurements do not replace the quick heuristic score or claim true object SNR. Each snapshot result records its measurement time and is retained in enabled workflow reports; remeasure after editing pixels.
+- **FilterGenerator:** open the signed installed native tool to create or edit filter-response curves, then select/import the resulting responses in SPFC custom mode. The native tool controls library changes and backups.
+- **Annotation:** open AnnotateImage interactively on a separate, plate-solved copy, or select the optional handoff after final save. Annotation is never rendered automatically by the manager. Canceled final saves skip the automatic handoff. Save annotated output separately.
+
+Optional native additions require build 1718. Existing processing defaults and older seeded/blind paths are retained. The included solver provenance now selects 6.6.1 on build 1718+ and preserves earlier build mappings. [Implementation and validation](docs/BUILD-1718-ADDITIONS.md).
 
 ## Quick start
 
@@ -837,6 +848,11 @@ External tools retain their own installation, licensing and model requirements. 
 <a id="revision-history"></a>
 
 ## Changelog
+
+### v1.10.0 — Build 1718 native tools
+
+Adds preview-region/wide-field solving controls, local target search, native ImageAnalysis master snapshots, FilterGenerator access and interactive annotation copies. Native measurements remain separate from the heuristic score. Annotation and filter editing require user review. Updated ImageSolver provenance and signing dependencies for build 1718. See [implementation and validation](docs/BUILD-1718-ADDITIONS.md).
+
 
 ### v1.9.9 — Expanded advisory master quality
 

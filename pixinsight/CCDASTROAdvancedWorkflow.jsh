@@ -1264,3 +1264,72 @@ function queueLighthouseLaunch(view) {
 }
 
 
+
+// Optional native tools: never run inside the post-processing pipeline by default.
+function nativeWorkflowToolPath(tool) {
+   var paths={filter:'FilterGenerator/FilterGenerator.js',annotate:'AnnotateImage/AnnotateImage.js'};
+   if(!paths[tool])throw new Error('Unknown native workflow tool.');
+   if(CoreApplication.versionBuild<1718)throw new Error('This native tool requires PixInsight build 1718 or later.');
+   var path=CoreApplication.srcDirPath+'/scripts/'+paths[tool];
+   if(!File.exists(path))throw new Error('Install the standard PixInsight tool: '+paths[tool]);
+   var signature=Security.getScriptSignature(path);
+   if(!signature||!signature.valid)throw new Error('The installed native tool signature is invalid. Reinstall PixInsight before launching it.');
+   return path;
+}
+function nativeWorkflowToolCommand(path,viewId) {
+   if(/["\r\n]/.test(path))throw new Error('Invalid native tool path.');
+   if(viewId && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(viewId))throw new Error('Invalid annotation target identifier.');
+   // Activate explicitly, then launch interactively. View-target execution of
+   // AnnotateImage renders immediately instead of opening its review dialog.
+   return (viewId?'activate '+viewId+'\n':'')+'run -x --require-signature "'+path.replace(/\\/g,'/')+'"\n';
+}
+function queueNativeWorkflowTool(tool,source) {
+   var path=nativeWorkflowToolPath(tool),copy=null,shell='';
+   try {
+      if(tool==='annotate'){
+         if(!source||source.isNull||source.isPreview)throw new Error('Select an open main image for annotation.');
+         if(!imageHasAstrometricSolution(source.window))throw new Error('Plate-solve the image before creating an annotated copy.');
+         copy=cloneHDRView(source,'_AnnotationCopy');copy.show();
+      }
+      shell=File.systemTempDirectory+'/CCDASTRO_NativeTool_'+Date.now()+'_'+Math.floor(Math.random()*1000000000)+'.scp';
+      File.writeTextFile(shell,nativeWorkflowToolCommand(path,copy?copy.mainView.id:''));
+      var pid=ExternalProcess.startDetached(CoreApplication.filePath,['--execute='+CoreApplication.instance+':'+shell]);
+      if(!(pid>0))throw new Error('Could not queue the native tool.');
+      return {tool:tool,target:copy?copy.mainView.fullId:'',pid:String(pid)};
+   }catch(e){if(copy)copy.forceClose();if(shell&&File.exists(shell))File.remove(shell);throw e;}
+}
+function nativeMasterMeasurementRow(row,C) {
+   function read(name){var index=C['measurements_'+name];if(typeof index!=='number')throw new Error('ImageAnalysis lacks documented column '+name);return row[index];}
+   var flags=read('measurementFlags'),stars=read('measurementStars'),psfCount=read('measurementPSFCount');
+   function positive(name){var value=read(name);return isFinite(value)&&value>0?value:null;}
+   return {method:'Native ImageAnalysis; integrated-master snapshot',stars:stars,psfCount:psfCount,
+      fwhmPixels:stars>0?positive('measurementFWHMpx'):null,
+      eccentricity:stars>0?read('measurementEccentricity'):null,
+      psfResidual:stars>0?read('measurementPSFResidual'):null,noise:positive('measurementNoise'),
+      gradient:(flags&4)?read('measurementGradient'):null,
+      rowBanding:(flags&4)?read('measurementRowBanding'):null,columnBanding:(flags&4)?read('measurementColumnBanding'):null,
+      trails:(flags&8)?read('measurementTrails'):null,
+      fieldTilt:(flags&2)?read('measurementFWHMTilt'):null,fieldCurvature:(flags&2)?read('measurementFWHMCurvature'):null,
+      note:'Native measurements supplement the quick advisory. Integrated/resampled master metrics are not raw-subframe weights or true object SNR. No automatic rejection or score replacement.'};
+}
+function measureNativeMaster(view) {
+   if(typeof ImageAnalysis==='undefined'||CoreApplication.versionBuild<1718)throw new Error('Native master measurement requires PixInsight build 1718 or later.');
+   if(!view||view.isNull||view.isPreview)throw new Error('Select an open main master image.');
+   var path=File.systemTempDirectory+'/CCDASTRO_MeasureMaster_'+Date.now()+'_'+Math.floor(Math.random()*1000000000)+'.xisf',copy=null;
+   try{
+      copy=cloneHDRView(view,'_MeasurementSnapshot');
+      if(!copy.saveAs(path,false,false,false,false))throw new Error('Could not save the temporary measurement snapshot.');
+      copy.forceClose();copy=null;
+      var p=new ImageAnalysis;p.task=ImageAnalysis.Task_Measure;p.frames=[[true,path,'','']];
+      p.approvalExpression='true';p.weightingExpression='1';p.fileCache=false;p.extendedMeasurements=true;p.maxPSFFits=2000;p.onError=ImageAnalysis.OnError_Continue;
+      if(!p.executeGlobal()||!p.measurements.length)throw new Error('ImageAnalysis returned no measurements. Check the Process Console.');
+      var result=nativeMasterMeasurementRow(p.measurements[0],ImageAnalysis);
+      result.sourceId=view.fullId;result.width=view.image.width;result.height=view.image.height;
+      return result;
+   }finally{if(copy)copy.forceClose();if(File.exists(path))File.remove(path);}
+}
+function showNativeMasterMeasurements(result) {
+   var d=new Dialog;d.windowTitle='Native ImageAnalysis master measurements';d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=8;
+   var text=new TextBox(d);text.readOnly=true;text.setMinSize(700,450);text.text=JSON.stringify(result,null,2);d.sizer.add(text,100);
+   var close=new PushButton(d);close.text='Close';close.onClick=function(){d.ok();};d.sizer.add(close);d.adjustToContents();executeAdvancedDialog(d);
+}

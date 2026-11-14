@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.9',
+    [string] $Version = '1.10.0',
 
     # Explicit release ceiling: do not advertise compatibility with future releases.
     [Parameter()]
@@ -151,7 +151,7 @@ $manifest = @"
     <package fileName="$packageName" sha1="$sha1" type="script" releaseDate="$releaseDate">
       <title>CCDASTRO Workflow Manager $Version</title>
       <description>
-        <p>v1.9.9 expands advisory master assessment with sampled stellar width and shape, noise, stellar contrast, field consistency and background variation. A separate overall quality estimate and scrollable details accompany the data-integrity score.</p>
+        <p>v1.10.0 adds build 1718 wide-field/preview-region solving controls, local target lookup, optional native ImageAnalysis master measurements, FilterGenerator access and interactive annotation copies. ImageSolver dependencies and signatures are refreshed for build 1718.</p>
         <ul>
           <li>Scores are provisional heuristics. Widths are moment estimates, not fitted PSFs; true object SNR and calibration accuracy are not measured. Background variation is not penalized. Insufficient measurements leave the overall score unavailable. No new processing blocks.</li>
           <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>

@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "build": 1718,
+  "solverVersion": "6.6.1",
+  "filterTool": "C:/Program Files/PixInsight/src/scripts/FilterGenerator/FilterGenerator.js",
+  "annotationTool": "C:/Program Files/PixInsight/src/scripts/AnnotateImage/AnnotateImage.js",
+  "quintic": true,
+  "localSearch": true,
+  "plateUI": true,
+  "workflowUI": true,
+  "region": "Sky",
+  "skyRegion": true,
+  "native": {
+    "method": "Native ImageAnalysis; integrated-master snapshot",
+    "stars": 121,
+    "psfCount": 121,
+    "fwhmPixels": 3.4279839115675075,
+    "eccentricity": 0.021961524091720034,
+    "psfResidual": 0.009085774692613168,
+    "noise": 0.000029390810522977827,
+    "gradient": 0.10456078052105161,
+    "rowBanding": 0.09646259167240381,
+    "columnBanding": 0.09713910848743917,
+    "trails": null,
+    "fieldTilt": 0.0013028269541852189,
+    "fieldCurvature": 0.0013678550791622122,
+    "note": "Native measurements supplement the quick advisory. Integrated/resampled master metrics are not raw-subframe weights or true object SNR. No automatic rejection or score replacement.",
+    "sourceId": "Build1718Synthetic",
+    "width": 512,
+    "height": 512
+  },
+  "sourceUnchanged": true
+}

@@ -5,10 +5,10 @@
       <p>Configurable post-processing workflows for integrated color master images.</p>
    </description>
    <platform os="all" arch="noarch" version="1.9.4:1.9.6">
-      <package fileName="CCDASTROWorkflowManager-1.9.9.zip" sha1="6e7c59821f6ccf50191adc661f1c10ca8ae90d06" type="script" releaseDate="20261112015533">
-         <title>CCDASTRO Workflow Manager 1.9.9</title>
+      <package fileName="CCDASTROWorkflowManager-1.10.0.zip" sha1="857e74bb0d5d93d7a496d7c34553acdd78c501a0" type="script" releaseDate="20261114234613">
+         <title>CCDASTRO Workflow Manager 1.10.0</title>
          <description>
-            <p>v1.9.9 expands advisory master assessment with sampled stellar width and shape, noise, stellar contrast, field consistency and background variation. A separate overall quality estimate and scrollable details accompany the data-integrity score.</p>
+            <p>v1.10.0 adds build 1718 wide-field/preview-region solving controls, local target lookup, optional native ImageAnalysis master measurements, FilterGenerator access and interactive annotation copies. ImageSolver dependencies and signatures are refreshed for build 1718.</p>
             <ul>
                <li>Scores are provisional heuristics. Widths are moment estimates, not fitted PSFs; true object SNR and calibration accuracy are not measured. Background variation is not penalized. Insufficient measurements leave the overall score unavailable. No new processing blocks.</li>
                <li>MultiscaleTGVDenoise is available for linear processing, ordered passes and general-mode final cleanup; no model or icon required.</li>
@@ -23,4 +23,4 @@
       </package>
    </platform>
 </xri>
-<Signature developerId="CCDASTRO" timestamp="2026-11-12T01:57:12.648Z" encoding="Base64">KGuwtdqykbEjAea/rjYCC932CacQMZxThtBM6wr5Q/P1qhRp4qHb/lhhWIsMnyvSBGoJa+HKrw+4jKHrEZ3tAg==</Signature>
+<Signature developerId="CCDASTRO" timestamp="2026-11-14T23:47:56.499Z" encoding="Base64">JAFRV1lDmTXwv5x3By5JMkv5RC23reS2IHZOwCMI+byMH6+B5+bZ50QyYoPkoV/BbDLtbpxjCm00jQ/rz1JUCA==</Signature>

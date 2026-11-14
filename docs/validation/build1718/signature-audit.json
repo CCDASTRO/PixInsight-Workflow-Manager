@@ -1,0 +1,21 @@
+{
+  "build": 1718,
+  "stagedEngineMatches": true,
+  "installedManager": {
+    "valid": false,
+    "developerId": "CCDASTRO"
+  },
+  "developmentManager": {
+    "valid": false,
+    "developerId": "CCDASTRO"
+  },
+  "filterGenerator": {
+    "valid": true,
+    "developerId": "PTeam"
+  },
+  "annotateImage": {
+    "valid": true,
+    "developerId": "PTeam"
+  },
+  "note": "Development sources changed and require new signatures before packaging. Installed release signatures are reported as observed, not assumed compatible."
+}

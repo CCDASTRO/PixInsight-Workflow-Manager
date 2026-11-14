@@ -12,6 +12,9 @@
 
 #define SETTINGS_MODULE "CCDASTROWorkflowManager"
 #define SOLVER_SETTINGS_MODULE "ImageSolver"
+#ifgteq __PI_BUILD__ 1718
+#define VERSION "6.6.1"
+#else
 #ifgteq __PI_BUILD__ 1707
 #define VERSION "6.6.0"
 #else
@@ -21,13 +24,20 @@
 #define VERSION "6.4.2"
 #endif
 #endif
+#endif
 #include <pjsr/astrometry/AstrometricMetadata.js>
 #include <pjsr/astrometry/AstronomicalCatalogs.js>
+#ifgteq __PI_BUILD__ 1718
+#include <pjsr/astrometry/SearchCoordinatesDialog.js>
+#endif
 #include "../ImageSolver/ImageSolverEngine.js"
 #undef VERSION
 
+#ifdef TITLE
+#undef TITLE
+#endif
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.9.9"
+#define VERSION "1.10.0"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -141,6 +151,7 @@ function captureWorkflowState(dialog, resumeAfterCrop)
    var state = {
       schemaVersion: 13,
       blindSolverMode: plateSolveSettings.blindMode,
+      blindSkyRegion: plateSolveSettings.skyRegion,
       advanced: advancedCopy(advancedWorkflowSettings),
       native: dialog.nativeValues ? dialog.nativeValues() : null,
       blurX: dialog.blurXValues ? dialog.blurXValues() : null,
@@ -225,6 +236,9 @@ function restoreWorkflowState(dialog)
       var savedBlindMode=state.blindSolverMode===undefined?(state.plateSolve&&state.plateSolve.blindMode!==undefined?state.plateSolve.blindMode:"Automatic"):state.blindSolverMode;
       if(["Automatic","Always","Disabled"].indexOf(savedBlindMode)<0)throw new Error("Invalid saved blind solver mode.");
       plateSolveSettings.blindMode=savedBlindMode;
+      plateSolveSettings.skyRegion=state.blindSkyRegion===undefined?true:state.blindSkyRegion;
+      if(typeof plateSolveSettings.skyRegion!=="boolean")throw new Error("Invalid saved sky-region option.");
+      plateSolveSettings.roiPreviewId="";
       if (state.schemaVersion >= 5 && state.imageType >= 0 &&
           state.imageType < WORKFLOW_PROFILES.length)
          dialog.imageType.currentItem = state.imageType;
@@ -283,6 +297,7 @@ function restoreWorkflowState(dialog)
          var restoredMode=savedPlateSolve.blindMode===undefined?"Automatic":savedPlateSolve.blindMode;
          if (["Automatic","Always","Disabled"].indexOf(restoredMode)<0) throw new Error("Invalid saved blind solver mode.");
          plateSolveSettings.blindMode=restoredMode;
+
          plateSolveSettings.ra = finiteNumber(savedPlateSolve.ra) ? savedPlateSolve.ra : NaN;
          plateSolveSettings.dec = finiteNumber(savedPlateSolve.dec) ? savedPlateSolve.dec : NaN;
          plateSolveSettings.focal = finiteNumber(savedPlateSolve.focal) ? savedPlateSolve.focal : NaN;
@@ -316,6 +331,7 @@ function resetWorkflowControls(dialog)
    Settings.remove(WORKFLOW_REMEMBER_KEY);
    dialog.rememberSettings.checked = true;
    dialog.linearConfirmation.checked = false;
+   if(dialog.annotationAfter)dialog.annotationAfter.checked=false;
    dialog.imageType.currentItem = 0;
    dialog.applyImageType(true);
    for (var i = 0; i < dialog.rows.length; ++i)
@@ -334,6 +350,7 @@ function resetWorkflowControls(dialog)
    if (dialog.restoreNative) dialog.restoreNative(defaultNativeSettings());
    if (dialog.restoreBlurX) dialog.restoreBlurX(defaultBlurXSettings());
    plateSolveSettings.blindMode="Automatic";
+   plateSolveSettings.skyRegion=true;plateSolveSettings.roiPreviewId="";
    dialog.finishStarless.checked = false;
    dialog.starBrightness.value = 70;
    dialog.noisePlacement.currentItem = 1;
@@ -362,6 +379,8 @@ function PlateSolveSettings()
    this.source = "Not initialized";
    this.imageKey = "";
    this.blindMode = "Automatic";
+   this.skyRegion = true;
+   this.roiPreviewId = "";
 }
 
 PlateSolveSettings.prototype.autofill = function(window, preserveReviewed)
@@ -370,6 +389,7 @@ PlateSolveSettings.prototype.autofill = function(window, preserveReviewed)
       throw new Error("Open and select the integrated image before configuring plate solving.");
    var imageKey = window.filePath || (window.mainView ? window.mainView.fullId : "");
    if(preserveReviewed && this.source === "Reviewed in Plate Solve Setup" && this.imageKey === imageKey && this.complete())return;
+   if(this.imageKey!==imageKey)this.roiPreviewId="";
    this.imageKey = imageKey;
    var solver = new ImageSolver;
    solver.initialize(window, false /*prioritizeSettings*/);
@@ -408,6 +428,31 @@ PlateSolveSettings.prototype.complete = function()
    if (this.blindMode === "Always") return blindSolvingAvailable();
    return this.hasSeed() || blindSolvingAvailable();
 };
+
+function transferBlindPreview(source,target,settings) {
+   settings.regionTargetId="";
+   if(!settings.roiPreviewId)return;
+   if(settings.imageKey && settings.imageKey!==(source.window.filePath||source.fullId))throw new Error("Blind-solver preview is tied to another master. Review Plate Solve Setup.");
+   if(source.image.width!==target.image.width||source.image.height!==target.image.height)throw new Error("Image geometry changed. Recreate the blind-solver preview on the current master.");
+   var preview=(source.window.previews||[]).filter(function(p){return p.id===settings.roiPreviewId;})[0];
+   if(!preview)throw new Error("The selected blind-solver preview no longer exists. Review Plate Solve Setup.");
+   if(source.fullId!==target.fullId)target.window.createPreview(source.window.previewRect(preview),settings.roiPreviewId);
+   settings.regionTargetId=target.fullId;
+}
+
+function configureBlindRegion(solver,settings,view) {
+   var region=settings.roiPreviewId || "";
+   if(typeof solver.solverCfg.skyRegion==="boolean")solver.solverCfg.skyRegion=settings.skyRegion!==false;
+   else if(settings.skyRegion===false)throw new Error("Sky-region control requires PixInsight build 1718 or later.");
+   if(typeof solver.solverCfg.roiPreviewId!=="string") {if(region)throw new Error("Preview-region solving requires PixInsight build 1718 or later.");return;}
+   if(region){
+      if(!view||!view.window)throw new Error("Select a preview belonging to this master.");
+      var preview=(view.window.previews||[]).filter(function(p){return p.id===region;})[0];
+      if(!preview||preview.isNull)throw new Error("The selected blind-solver preview no longer exists in this master. Review Plate Solve Setup.");
+      if(settings.imageKey && settings.regionTargetId!==view.fullId && settings.imageKey!==(view.window.filePath||view.fullId))throw new Error("The selected preview belongs to a different input master. Review Plate Solve Setup.");
+   }
+   solver.solverCfg.roiPreviewId=region;
+}
 
 function PlateSolveAdapter(settings)
 {
@@ -470,6 +515,7 @@ PlateSolveAdapter.prototype.execute = function(view)
          ? this.settings.resolution
          : this.settings.pixelSize / this.settings.focal * 0.18 / Math.PI;
    }
+   configureBlindRegion(solver,this.settings,view);
    solver.solverCfg.autoMagnitude = true;
    solver.solverCfg.generateErrorImg = false;
    solver.solverCfg.showStars = false;
@@ -1739,6 +1785,10 @@ PreflightValidator.prototype.validate = function()
    var plateSolveRow = this.dialog.rowsById.plateSolve;
    var calibrationRow = this.dialog.rowsById.colorCalibration;
    var alreadySolved = imageHasAstrometricSolution(window);
+   if(!alreadySolved && typeof ImageSolver==="function" &&
+      (plateSolveRow.enabled.checked || (this.dialog.rowsById.gradient.enabled.checked && this.dialog.rowsById.gradient.adapterId()==="mgc")))
+      try { configureBlindRegion(new ImageSolver,plateSolveSettings,window.mainView); }
+      catch(e) { result.errors.push("Plate Solve region: "+errorMessage(e)); }
    var mgcSelected = usesMGC(this.dialog.rowsById);
    if (mgcSelected && !alreadySolved && !adapters.plateSolve.available())
       result.errors.push("MGC: " + adapters.plateSolve.requirement());
@@ -1867,7 +1917,9 @@ constructor(settings)
       pixelSize: settings.pixelSize,
       resolution: settings.resolution,
       source: settings.source,
-      blindMode: settings.blindMode
+      imageKey: settings.imageKey,
+      blindMode: settings.blindMode,
+      skyRegion: settings.skyRegion,roiPreviewId: settings.roiPreviewId
    };
 
    this.help = new Label(this);
@@ -1913,6 +1965,15 @@ constructor(settings)
    this.blindMode.currentItem=Math.max(0,this.blindModes.indexOf(settings.blindMode));
    this.blindMode.toolTip="Automatic uses seeds with blind fallback. Always ignores seeds and requires a local astrometric index on PI 1.9.6. Disabled requires valid seeds.";
 
+   this.skyRegion=new CheckBox(this);this.skyRegion.text="Find sky region automatically in wide-field / nightscape images";this.skyRegion.checked=settings.skyRegion!==false;
+   this.skyRegion.enabled=CoreApplication.versionBuild>=1718;
+   this.region=new ComboBox(this);this.region.addItem("Whole image / automatic region");this.region.regionIds=[""];
+   var regionWindow=ImageWindow.activeWindow;
+   if(!regionWindow.isNull){var previews=regionWindow.previews||[];for(var ri=0;ri<previews.length;ri++){this.region.addItem(previews[ri].id);this.region.regionIds.push(previews[ri].id);}}
+   this.region.currentItem=Math.max(0,this.region.regionIds.indexOf(settings.roiPreviewId||""));this.region.enabled=CoreApplication.versionBuild>=1718;
+   this.targetSearch=new PushButton(this);this.targetSearch.text="Find target (local catalogs)...";this.targetSearch.enabled=typeof SearchCoordinatesDialog!=="undefined"&&CoreApplication.versionBuild>=1718;
+   this.targetSearch.toolTip="Uses the installed local catalog name indexes. The native dialog also offers a separate online-search page.";
+   this.targetSearch.onClick=function(){try{var search=new SearchCoordinatesDialog(null,true,false);if(search.execute()&&search.object&&search.object.posEq){self.raRow.edit.text=formatNumber(search.object.posEq.x,7);self.decRow.edit.text=formatNumber(search.object.posEq.y,7);self.sourceLabel.text="Target coordinates selected; image scale and actual capture date are still required.";}}catch(e){new MessageBox(errorMessage(e),"Target search",StdIcon.Error,StdButton.Ok).execute();}};
    this.sourceLabel = new Label(this);
    this.sourceLabel.frameStyle = FrameStyle.Box;
    this.sourceLabel.margin = 5;
@@ -1929,6 +1990,7 @@ constructor(settings)
    this.buttonSizer = new HorizontalSizer;
    this.buttonSizer.spacing = 8;
    this.buttonSizer.add(this.autofillButton);
+   this.buttonSizer.add(this.targetSearch);
    this.buttonSizer.addStretch();
    this.buttonSizer.add(this.okButton);
    this.buttonSizer.add(this.cancelButton);
@@ -1943,6 +2005,7 @@ constructor(settings)
    this.sizer.add(this.pixelRow.sizer);
    this.sizer.add(this.resolutionRow.sizer);
    this.sizer.add(this.blindMode);
+   this.sizer.add(this.skyRegion);this.sizer.add(this.region);
    this.sizer.add(this.sourceLabel);
    this.sizer.add(this.buttonSizer);
 
@@ -1959,6 +2022,7 @@ constructor(settings)
    this.saveSettings = function()
    {
       settings.blindMode = self.blindModes[self.blindMode.currentItem];
+      settings.skyRegion=self.skyRegion.checked;settings.roiPreviewId=self.region.regionIds[self.region.currentItem];
       settings.ra = parseOptionalNumber(self.raRow.edit.text);
       settings.dec = parseOptionalNumber(self.decRow.edit.text);
       settings.focal = parseOptionalNumber(self.focalRow.edit.text);
@@ -1997,8 +2061,9 @@ constructor(settings)
       settings.focal = original.focal;
       settings.pixelSize = original.pixelSize;
       settings.resolution = original.resolution;
-      settings.source = original.source;
+      settings.source = original.source;settings.imageKey=original.imageKey;
       settings.blindMode = original.blindMode;
+      settings.skyRegion=original.skyRegion;settings.roiPreviewId=original.roiPreviewId;
       self.cancel();
    };
    this.adjustToContents();
@@ -2577,8 +2642,20 @@ constructor()
       d.windowTitle="Advisory input master quality";d.sizer=new VerticalSizer;d.sizer.margin=10;d.sizer.spacing=8;
       var report=new TextBox(d);report.readOnly=true;report.setMinSize(700,450);
       report.text=result.masterQuality.length?result.masterQuality.map(function(q){return q.assessment?masterQualityText(q.id,q.assessment):q.id+": assessment unavailable.";}).join("\n\n"):"No master available. Open and select an integrated master first.";
+      if(self.nativeMasterMeasurements&&self.nativeMasterMeasurements.length)report.text+="\n\nExplicit native snapshot measurements (not automatically refreshed):\n"+JSON.stringify(self.nativeMasterMeasurements,null,2);
       d.sizer.add(report,100);var close=new PushButton(d);close.text="Close";close.onClick=function(){d.ok();};d.sizer.add(close);d.adjustToContents();executeAdvancedDialog(d);
    };
+   this.nativeMasterMeasurements=[];
+   this.nativeMeasurement=new PushButton(this.content);this.nativeMeasurement.text="Measure active master with ImageAnalysis...";
+   this.nativeMeasurement.toolTip="Optional native PSF fitting and extended measurements on a temporary snapshot of the active master. May take longer than the quick advisory. No source file is modified.";
+   this.nativeMeasurement.enabled=CoreApplication.versionBuild>=1718&&typeof ImageAnalysis!=="undefined";
+   this.nativeMeasurement.onClick=function(){self.enabled=false;try{var window=ImageWindow.activeWindow;if(window.isNull)throw new Error("Open a master first.");var result=measureNativeMaster(window.mainView);result.measuredAt=new Date().toISOString();self.nativeMasterMeasurements.push(result);showNativeMasterMeasurements(result);}catch(e){new MessageBox(errorMessage(e),"Native master measurement",StdIcon.Error,StdButton.Ok).execute();}finally{self.enabled=true;}};
+   this.nativeFilterButton=new PushButton(this.content);this.nativeFilterButton.text="Create / edit filter response curves...";this.nativeFilterButton.enabled=CoreApplication.versionBuild>=1718;
+   this.nativeAnnotationButton=new PushButton(this.content);this.nativeAnnotationButton.text="Annotate a separate image copy...";this.nativeAnnotationButton.enabled=CoreApplication.versionBuild>=1718;
+   function requestNativeTool(tool){try{nativeWorkflowToolPath(tool);var source=null;if(tool==="annotate"){var window=ImageWindow.activeWindow;if(window.isNull||!imageHasAstrometricSolution(window))throw new Error("Open a plate-solved image before creating an annotated copy.");source=window.mainView;}saveWorkflowState(self,false);self.nativeToolRequest={tool:tool,source:source};self.ok();}catch(e){new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok).execute();}}
+   this.nativeFilterButton.onClick=function(){requestNativeTool("filter");};this.nativeAnnotationButton.onClick=function(){requestNativeTool("annotate");};
+   this.annotationAfter=new CheckBox(this.content);this.annotationAfter.text="Open AnnotateImage on a separate copy after final save";this.annotationAfter.checked=false;this.annotationAfter.enabled=CoreApplication.versionBuild>=1718;
+   this.annotationAfter.toolTip="Optional review handoff after processing exits. Requires a solved final image. The scientific result is preserved; save annotated output separately.";
    this.linearConfirmation = new CheckBox(this.content);
    this.linearConfirmation.text = "I confirm the workflow inputs are unstretched, integrated linear masters";
    this.linearConfirmation.toolTip = "Required safety confirmation: the selected workflow stages expect linear color data.";
@@ -2850,6 +2927,8 @@ constructor()
    this.content.sizer.add(this.inputLabel);
    this.content.sizer.add(this.inputQualityNote);
    this.content.sizer.add(this.inputQualityDetails);
+   this.content.sizer.add(this.nativeMeasurement);
+   this.content.sizer.add(this.nativeFilterButton);this.content.sizer.add(this.nativeAnnotationButton);this.content.sizer.add(this.annotationAfter);
    this.content.sizer.add(this.linearConfirmation);
    this.content.sizer.add(this.rememberSettings);
    // Use the available desktop width to avoid one long stack of expanded sections.
@@ -4638,7 +4717,13 @@ function executeWorkflow(self, quiet)
       var sourceId = workflowSourceId(view);
       advancedRunAudit={version:VERSION,started:new Date().toISOString(),sourcePath:sourcePath,sourceId:sourceId,configuration:captureWorkflowState(self,false),steps:[]};
       advancedRecord("Advisory input master quality",self.masterQualityAssessments || []);
+      if(self.nativeMasterMeasurements&&self.nativeMasterMeasurements.length)advancedRecord("Explicit native master snapshot measurements",self.nativeMasterMeasurements);
+      var solveSource=view;
       view = lrgbViews !== null && lrgbViews.R ? combineLinearRGB(lrgbViews) : cloneWorkflowInput(view);
+      if(typeof plateSolveSettings!=="undefined"&&plateSolveSettings.roiPreviewId){
+         var needsSolve=self.rowsById.plateSolve.enabled.checked || (self.rowsById.gradient.enabled.checked&&self.rowsById.gradient.adapterId()==="mgc");
+         if(needsSolve&&!imageHasAstrometricSolution(view.window))transferBlindPreview(solveSource,view,plateSolveSettings);
+      }
       if (lrgbViews !== null && !imageHasAstrometricSolution(view.window)) plateSolveSettings.autofill(view.window, true);
       clearDisplaySTF(view);
       checkAbortRequested();
@@ -4816,12 +4901,17 @@ function executeWorkflow(self, quiet)
          if(advancedWorkflowSettings.autoEnhanceEnabled)finalView=reviewAutoImageEnhance(finalView);
          if(advancedWorkflowSettings.colorToneEnabled)finalView=reviewColorTone(finalView);
          if(advancedRunAudit)advancedRunAudit.outputKind=advancedWorkflowSettings.saveBoth?"Starless":"Final";
-         completion += "\n\n" + saveFinalImage(finalView, sourcePath, sourceId,advancedWorkflowSettings.saveBoth?"Starless":undefined);
+         var finalSaveResult=saveFinalImage(finalView, sourcePath, sourceId,advancedWorkflowSettings.saveBoth?"Starless":undefined);
+         completion += "\n\n" + finalSaveResult;
          if(advancedWorkflowSettings.tiff) completion += "\n\n" + exportAdvancedTIFF(finalView);
          if(advancedWorkflowSettings.reports) completion += "\n\n" + saveAdvancedRunReport(finalView);
          if (self.finishingEnabled.checked)
             completion += "\n\n" + exportSharingImage(finalView, sourcePath, sourceId);
          if(advancedWorkflowSettings.saveBoth)completion += "\n\n"+saveRecombinedCompanion(finalView,branches,self,sourcePath,sourceId);
+         if(self.annotationAfter&&self.annotationAfter.checked){
+            if(finalSaveResult.indexOf("Final image saved:")===0){self.annotationHandoffView=finalView;completion+="\n\nAnnotateImage will open on a separate copy after this workflow exits. Save the annotation separately.";}
+            else completion+="\n\nAutomatic annotation handoff skipped because the final save was canceled. Use Annotate a separate image copy when ready.";
+         }
          completion += "\n\nOriginal unstretched input remains unchanged and open.";
       }
       else
@@ -4927,10 +5017,12 @@ function main()
    var dialog = new WorkflowDialog;
    for (;;)
    {
+      dialog.nativeToolRequest=null;dialog.annotationHandoffView=null;
       dialog.runRequested = false;
       dialog.lighthouseHandoffReady=false;advancedLighthouseHandoffView=null;
       dialog.launchCropRequested = false;
       dialog.execute();
+      if(dialog.nativeToolRequest){try{queueNativeWorkflowTool(dialog.nativeToolRequest.tool,dialog.nativeToolRequest.source);}catch(e){new MessageBox(errorMessage(e),TITLE,StdIcon.Error,StdButton.Ok).execute();}break;}
       if (dialog.launchCropRequested)
       {
          try
@@ -4951,6 +5043,7 @@ function main()
       }
       if (!dialog.runRequested) break;
       executeWorkflow(dialog);
+      if(dialog.annotationHandoffView){try{queueNativeWorkflowTool("annotate",dialog.annotationHandoffView);}catch(e){new MessageBox("Annotation handoff: "+errorMessage(e)+" The processed result remains unchanged.",TITLE,StdIcon.Warning,StdButton.Ok).execute();}if(!dialog.lighthouseHandoffReady)break;}
       if(dialog.lighthouseHandoffReady){
          if(advancedLighthouseHandoffView&&!advancedLighthouseHandoffView.isNull)advancedLighthouseHandoffView.window.bringToFront();
          if(advancedWorkflowSettings.lighthouseAutoLaunch){

@@ -1,0 +1,20 @@
+{
+  "build": 1718,
+  "saved": true,
+  "values": {
+    "useIcon": false,
+    "descentPathsInput": 50,
+    "tolerance": 1.7,
+    "overrideSampleRadius": false,
+    "defaultSampleRadius": 10,
+    "overrideSmoothing": false,
+    "smoothing": 0.25,
+    "enableSimplifiedInitialModelling": true,
+    "rigidlyFixCornerPoints": false,
+    "polynomialDegree": 1,
+    "correctionType": "Subtract"
+  },
+  "legacyDefaults": true,
+  "enginePrepared": true,
+  "ok": true
+}

@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CCDASTRO PixInsight Workflow Manager",
-    "softwareVersion": "1.10.0",
+    "softwareVersion": "1.10.1",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "url": "https://ccdastro.com/piworkflow.html",
@@ -160,7 +160,8 @@
   <div class="layout">
     <nav class="toc" aria-label="On this page"><strong>On this page</strong><div id="toc"></div></nav>
     <main id="content">
-<h1 id="ccdastro-pixinsight-workflow-manager-v1.10.0">CCDASTRO PixInsight Workflow Manager v1.10.0</h1>
+<h1 id="ccdastro-pixinsight-workflow-manager-v1.10.1">CCDASTRO PixInsight Workflow Manager v1.10.1</h1>
+<p><a href="https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.10.1/CCDASTROWorkflowManager-1.10.1-source.zip">Download the v1.10.1 source ZIP</a>. This archive includes source, documentation and tests. For installation, use PixInsight Update Manager or the signed release package.</p>
 <p>A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
 finishing adjustments before applying them.</p>
@@ -218,14 +219,18 @@ clipping, alignment, noise and integration borders before processing. The workfl
 does not calibrate, integrate, align or PSF-match masters. Identical dimensions do
 not prove registration. Later processing cannot recover clipped or missing detail.</p>
 <h2 id="color-camera-spfc-setup">Color-camera SPFC setup</h2>
-<p>SPFC offers <strong>Sony color camera – no external filter</strong> and <strong>Sony color camera – UV/IR cut</strong> presets. These supply installed Sony RGB sensor responses with Ideal QE. RGB masters require neither separate physical RGB filters nor a gray response. Choose UV/IR cut only when it matches your optical path. The presets use generic Sony responses, not a measured camera-specific profile.</p>
-<p>Custom RGB responses are preserved; grayscale inputs still require a gray response. Incomplete saved Sony configurations migrate to the color preset.</p>
+<p>SPFC setup now offers <strong>Sony color camera – no external filter</strong> and <strong>Sony color camera – UV/IR cut</strong> presets. These use installed Sony RGB sensor-response curves with Ideal QE; separate physical RGB filters and a gray response are not required for RGB masters. Choose the UV/IR-cut preset only when it matches the optical path. These are generic Sony responses, not a measured camera-specific profile. Custom RGB selections remain available, and grayscale inputs still require a gray response. Existing custom settings are preserved; incomplete saved Sony settings migrate to the color preset.</p>
 <h2 id="input-master-advisory">Input master advisory</h2>
-<p>Validate and Run report an advisory <strong>overall quality score alongside data integrity</strong>, using bounded interior samples. Measurements include Gaussian-equivalent stellar widths, eccentricity, elongated-star fraction, field consistency, local noise, stellar peak-to-noise contrast and background variation. <strong>Master quality details</strong> opens a scrollable report; enabled processing reports retain the measurements.</p>
-<p>Widths are moment estimates, not fitted PSFs. Scores are provisional heuristics, not universal grades across targets, filters or equipment. True object SNR and calibration accuracy are not established. Background variation may be nebulosity and is not penalized. Insufficient measurements leave the overall score unavailable. No new processing blocks.</p>
+<p>Validate and Run now report an advisory <strong>overall quality score alongside data integrity</strong>, using bounded interior samples. Measurements include Gaussian-equivalent stellar widths, eccentricity, elongated-star fraction, center-to-outer-field consistency, local noise, stellar peak-to-noise contrast and background variation. <strong>Master quality details</strong> opens a scrollable report. Widths are moment estimates, not fitted PSFs; true object SNR and calibration accuracy are not established. Background variation may be real nebulosity and is not penalized. Insufficient measurements leave the overall score unavailable. Scores are provisional heuristics, not universal grades across targets, filters or equipment. Enabled run reports retain all measurements. <a href="docs/MASTER-QUALITY-ADVISORY.md">Methods, thresholds and limitations</a>.</p>
 <h2 id="build-1718-additions">Build 1718 additions</h2>
-<p>Workflow Manager 1.10.0 adds sky-region and preview-region solving, local target lookup, optional native ImageAnalysis measurements on temporary master snapshots, FilterGenerator access and interactive AnnotateImage handoffs on separate copies. Native measurements supplement the quick score; editing curves and rendering annotations remain under your control. The after-save annotation option is off by default and is skipped when saving is canceled.</p>
-<p>New tools require build 1718. Preview regions are tied to the current image and are not restored from saved settings. Source pixels are preserved, temporary measurement files are cleaned up, and native snapshot results are recorded with their measurement time. Update the ImageSolver dependencies and matching signed release together after upgrading PixInsight.</p>
+<p>Version <strong>1.10.0</strong> refreshes ImageSolver dependencies and adds optional build-1718 tools. These additions require build 1718; existing older-build paths remain available.</p>
+<ul>
+<li><strong>Plate Solve Setup:</strong> automatic sky-region detection, selection of an image preview for blind solving, and local catalog target-name search. Region selection is image-specific and is not restored from saved workflow settings. The selected rectangle is transferred to the working copy; stale or mismatched previews are rejected. Capture date and scale requirements are unchanged.</li>
+<li><strong>Native ImageAnalysis:</strong> explicitly measure the active master on a temporary snapshot, with native PSF width/eccentricity/residual, noise, gradient/banding/trail and field-shape metrics. Source pixels and files are preserved; snapshots are deleted after measurement. Native measurements do not replace the quick heuristic score or claim true object SNR. Each snapshot result records its measurement time and is retained in enabled workflow reports; remeasure after editing pixels.</li>
+<li><strong>FilterGenerator:</strong> open the signed installed native tool to create or edit filter-response curves, then select/import the resulting responses in SPFC custom mode. The native tool controls library changes and backups.</li>
+<li><strong>Annotation:</strong> open AnnotateImage interactively on a separate, plate-solved copy, or select the optional handoff after final save. Annotation is never rendered automatically by the manager. Canceled final saves skip the automatic handoff. Save annotated output separately.</li>
+</ul>
+<p>Optional native additions require build 1718. Existing processing defaults and older seeded/blind paths are retained. The included solver provenance now selects 6.6.1 on build 1718+ and preserves earlier build mappings. <a href="docs/BUILD-1718-ADDITIONS.md">Implementation and validation</a>.</p>
 <h2 id="quick-start">Quick start</h2>
 <ol>
 <li>Open your unstretched color master, or registered linear L/R/G/B masters.</li>
@@ -451,13 +456,17 @@ AutoDBE 1.6 processing engine by Franklin Marek. It is covered by the workflow's
 signature, not read from an installed AutoDBE.js. It runs its gradient sampling,
 background neutralization, ABE and DBE on a temporary working copy; the accepted
 pixels are imported only after successful completion. Models are discarded.</p>
-<p>No icon is required for defaults. Optional custom settings can be read from a
-Script icon named <strong>CCDASTRO_AutoDBE</strong>. Only recognized numeric and boolean
-parameters are accepted; the icon's script is never executed and its saved
-settings are not modified. Replace target and discard model are enforced on the
-working copy. Manually drawn exclusion regions are not used. The gradient
-<strong>Setup...</strong> button explains these choices.</p>
-<p>This included engine is licensed <strong>CC BY-NC 4.0</strong>, including attribution and
+<p>Click gradient <strong>Setup...</strong> to edit sampling paths, tolerance, sample radius,
+smoothing, initial modelling, corner constraints, polynomial degree and
+subtraction/division. Radius and smoothing overrides are optional; disabled
+fields retain their saved values while automatic selection is active.
+<strong>Save settings</strong> commits the values; <strong>Cancel</strong> leaves them unchanged;
+<strong>Reset tool defaults</strong> restores the included engine defaults in the dialog.
+Settings are saved with the workflow when Remember settings is enabled.
+Older saved workflows start with AutoDBE defaults. AutoDBE does not read
+process icons. Replace target and discard model remain enforced on the working
+copy. Manually drawn exclusion regions are not used.
+This included engine is licensed <strong>CC BY-NC 4.0</strong>, including attribution and
 noncommercial conditions. See <a href="THIRD-PARTY-NOTICES.md">third-party notices</a>.
 It is a fixed adaptation, not a claim of endorsement or automatic vendor updates.
 Inspection remains necessary for fields dominated by nebulosity. Sampling,
@@ -993,14 +1002,20 @@ with execution and storage details in the <a href="SECURITY-AND-DEPENDENCIES.md"
 <p>External tools retain their own installation, licensing and model requirements. Inclusion in this credits list does not imply endorsement by their authors. Detailed notices for the included AutoDBE adaptation and other dependencies are in <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a>.</p>
 <p><a id="revision-history"></a></p>
 <h2 id="changelog">Changelog</h2>
+<h3 id="v1.10.1">v1.10.1</h3>
+<ul>
+<li>Replace the AutoDBE information popup and Script-icon settings with an editable workflow setup dialog. Persist validated parameters with the workflow, migrate older settings to defaults, and keep cancel/reset and automatic overrides explicit.</li>
+</ul>
 <h3 id="v1.10.0-build-1718-native-tools">v1.10.0 — Build 1718 native tools</h3>
-<p>Added region solving, local target search, native master snapshots, filter-curve editing and interactive annotation copies. Updated ImageSolver provenance and signing dependencies. Existing processing choices remain available; new native handoffs require build 1718.</p>
+<p>Adds preview-region/wide-field solving controls, local target search, native ImageAnalysis master snapshots, FilterGenerator access and interactive annotation copies. Native measurements remain separate from the heuristic score. Annotation and filter editing require user review. Updated ImageSolver provenance and signing dependencies for build 1718. See <a href="docs/BUILD-1718-ADDITIONS.md">implementation and validation</a>.</p>
 <h3 id="v1.9.9-expanded-advisory-master-quality">v1.9.9 — Expanded advisory master quality</h3>
-<p>Added sampled stellar width and shape, noise, stellar contrast, field consistency, background variation and an advisory overall score. A scrollable details report shows measurements and limitations. Insufficient data produces an unavailable score; no new processing blocks. All 38 automated regression suites pass.</p>
+<p>Validate and Run now report an advisory <strong>overall quality score alongside data integrity</strong>, using bounded interior samples. Measurements include Gaussian-equivalent stellar widths, eccentricity, elongated-star fraction, center-to-outer-field consistency, local noise, stellar peak-to-noise contrast and background variation. <strong>Master quality details</strong> opens a scrollable report. Widths are moment estimates, not fitted PSFs; true object SNR and calibration accuracy are not established. Background variation may be real nebulosity and is not penalized. Insufficient measurements leave the overall score unavailable. Scores are provisional heuristics, not universal grades across targets, filters or equipment. Enabled run reports retain all measurements. <a href="docs/MASTER-QUALITY-ADVISORY.md">Methods, thresholds and limitations</a>.</p>
+<p>All 38 automated regression suites pass. Native results and release checks are recorded in <a href="docs/SIGNING-v1.9.9.md">the signing record</a>.</p>
 <h3 id="v1.9.8-color-camera-spfc-correction">v1.9.8 — Color-camera SPFC correction</h3>
-<p>Color-camera presets automatically supply sensor responses with Ideal QE. The irrelevant gray-filter requirement is removed for RGB masters; custom RGB settings and grayscale validation are retained.</p>
+<p>SPFC setup now offers <strong>Sony color camera – no external filter</strong> and <strong>Sony color camera – UV/IR cut</strong> presets. These use installed Sony RGB sensor-response curves with Ideal QE; separate physical RGB filters and a gray response are not required for RGB masters. Choose the UV/IR-cut preset only when it matches the optical path. These are generic Sony responses, not a measured camera-specific profile. Custom RGB selections remain available, and grayscale inputs still require a gray response. Existing custom settings are preserved; incomplete saved Sony settings migrate to the color preset.</p>
 <h3 id="v1.9.7-advisory-input-master-assessment">v1.9.7 — Advisory input master assessment</h3>
-<p>Per-master advisory data-integrity scores now appear in Validate/Run and enabled processing reports, with an explanation of how input limitations affect the final image. No new processing blocks. All 37 automated regression suites pass; native interactive assessment validation remains pending.</p>
+<p>Validate and Run now show an advisory <strong>0–100 data-integrity score for each input master</strong>, including separate L/R/G/B masters. Enabled run reports retain the assessment and detected limitations. Processing cannot reliably recover clipped signal, missing detail or lost precision. The score does not add processing blocks; existing input safety checks remain. It measures sampled clipping, quantization, invalid and blank data—not focus, star shape, noise, gradients or final aesthetic quality. A high score means few detected integrity problems. <a href="docs/MASTER-QUALITY-ADVISORY.md">Assessment scope and scoring</a>.</p>
+<p>All 37 automated regression suites pass. Native PixInsight interactive assessment validation remains pending.</p>
 <p>Release history, newest first. Historical entries describe the behavior at that release and may mention tools or implementations later replaced or removed.</p>
 <h3 id="v1.9.6-preview-acceptance-across-workflow-reviews">v1.9.6 — Preview acceptance across workflow reviews</h3>
 <ul>
@@ -1235,7 +1250,7 @@ masters, emission nebulae, mapped narrowband images, galaxies, and star clusters
 </ul>
 
       <footer class="footer">CCDASTRO PixInsight Workflow Manager v1.1.1 · Chuck Faranda / CCDASTRO, Inc.</footer>
-    <p><a href="https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.10.0/CCDASTROWorkflowManager-1.10.0-source.zip">Download v1.10.0 source ZIP</a> (source, documentation and tests). Install through PixInsight Update Manager or the signed release package.</p></main>
+    </main>
   </div>
   <script>
     (() => {

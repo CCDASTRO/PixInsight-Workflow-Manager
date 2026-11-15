@@ -81,3 +81,10 @@ assert.equal(ctx.configuredNativeProcess('spfc').deviceQECurveName,'Ideal QE cur
 controls=[];action=()=>{const preset=controls.find(c=>c.values&&c.values.includes('SonyOSC'));assert(preset);const gray=controls.find(c=>c.values&&c.values.includes('Clear'));assert.equal(gray.enabled,false);preset.currentItem=preset.values.indexOf('Custom');preset.onItemSelected();assert.equal(gray.enabled,true);controls.find(c=>c.text==='Cancel').onClick();};
 ctx.configureNativeProcess('spfc');assert.equal(ctx.nativeSettings.spfc.responseMode,'SonyOSC');
 console.log('OSC presets, QE handling, RGB/mono requirements, legacy migration and preset UI passed.');
+// AutoDBE setup saves validated values, respects cancel/defaults and enables overrides explicitly.
+function control(label){const l=controls.find(c=>c.text===label+':');assert(l,label);return controls[controls.indexOf(l)+1];}
+controls=[];action=()=>{assert.equal(control('Sample radius (px)').enabled,false);assert.equal(control('Smoothing').enabled,false);const override=control('Override automatic sample radius');override.checked=true;override.onCheck();assert.equal(control('Sample radius (px)').enabled,true);control('Sample radius (px)').value=18;control('Sample tolerance').text='1.7';controls.find(c=>c.text==='Save settings').onClick();};
+assert.equal(ctx.configureNativeProcess('autoDBE'),true);assert.equal(ctx.nativeSettings.autoDBE.defaultSampleRadius,18);assert.equal(ctx.nativeSettings.autoDBE.tolerance,1.7);
+controls=[];action=()=>{control('Sample tolerance').text='3';controls.find(c=>c.text==='Cancel').onClick();};assert.equal(ctx.configureNativeProcess('autoDBE'),false);assert.equal(ctx.nativeSettings.autoDBE.tolerance,1.7);
+controls=[];action=()=>{controls.find(c=>c.text==='Reset tool defaults').onClick();assert.equal(control('Sample radius (px)').enabled,false);assert.equal(control('Sample tolerance').text,'2');controls.find(c=>c.text==='Save settings').onClick();};assert.equal(ctx.configureNativeProcess('autoDBE'),true);assert.equal(ctx.nativeSettings.autoDBE.tolerance,2);
+console.log('AutoDBE setup save/cancel/defaults and conditional controls passed.');

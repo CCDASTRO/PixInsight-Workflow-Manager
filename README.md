@@ -1,6 +1,6 @@
-# CCDASTRO PixInsight Workflow Manager v1.10.0
+# CCDASTRO PixInsight Workflow Manager v1.10.1
 
-[Download the v1.10.0 source ZIP](https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.10.0/CCDASTROWorkflowManager-1.10.0-source.zip). This archive includes source, documentation and tests. For installation, use PixInsight Update Manager or the signed release package.
+[Download the v1.10.1 source ZIP](https://github.com/CCDASTRO/PixInsight-Workflow-Manager/releases/download/v1.10.1/CCDASTROWorkflowManager-1.10.1-source.zip). This archive includes source, documentation and tests. For installation, use PixInsight Update Manager or the signed release package.
 
 A configurable PixInsight workflow for integrated linear color images or separate
 registered LRGB masters. Choose processing tools and review stretching, masks and
@@ -279,13 +279,16 @@ signature, not read from an installed AutoDBE.js. It runs its gradient sampling,
 background neutralization, ABE and DBE on a temporary working copy; the accepted
 pixels are imported only after successful completion. Models are discarded.
 
-No icon is required for defaults. Optional custom settings can be read from a
-Script icon named **CCDASTRO_AutoDBE**. Only recognized numeric and boolean
-parameters are accepted; the icon's script is never executed and its saved
-settings are not modified. Replace target and discard model are enforced on the
-working copy. Manually drawn exclusion regions are not used. The gradient
-**Setup...** button explains these choices.
-
+Click gradient **Setup...** to edit sampling paths, tolerance, sample radius,
+smoothing, initial modelling, corner constraints, polynomial degree and
+subtraction/division. Radius and smoothing overrides are optional; disabled
+fields retain their saved values while automatic selection is active.
+**Save settings** commits the values; **Cancel** leaves them unchanged;
+**Reset tool defaults** restores the included engine defaults in the dialog.
+Settings are saved with the workflow when Remember settings is enabled.
+Older saved workflows start with AutoDBE defaults. AutoDBE does not read
+process icons. Replace target and discard model remain enforced on the working
+copy. Manually drawn exclusion regions are not used.
 This included engine is licensed **CC BY-NC 4.0**, including attribution and
 noncommercial conditions. See [third-party notices](docs/THIRD-PARTY-NOTICES.md).
 It is a fixed adaptation, not a claim of endorsement or automatic vendor updates.
@@ -850,6 +853,11 @@ External tools retain their own installation, licensing and model requirements. 
 <a id="revision-history"></a>
 
 ## Changelog
+
+### v1.10.1
+
+- Replace the AutoDBE information popup and Script-icon settings with an editable workflow setup dialog. Persist validated parameters with the workflow, migrate older settings to defaults, and keep cancel/reset and automatic overrides explicit.
+
 
 ### v1.10.0 — Build 1718 native tools
 

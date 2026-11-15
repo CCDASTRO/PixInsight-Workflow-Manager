@@ -37,7 +37,7 @@
 #undef TITLE
 #endif
 #define TITLE "CCDASTRO Workflow Manager"
-#define VERSION "1.10.0"
+#define VERSION "1.10.1"
 #include "CCDASTROAdvancedWorkflow.jsh"
 
 var WORKFLOW_STATE_KEY = SETTINGS_MODULE + "/LastWorkflowState";
@@ -628,19 +628,19 @@ function autoDBEParameterBridge(rows)
 }
 function AutoDBEAdapter()
 {
-   this.id="autoDBE";this.label="Seti Astro Automatic DBE (included engine)";this.iconId="CCDASTRO_AutoDBE";
+   this.id="autoDBE";this.label="Seti Astro Automatic DBE (included engine)";
 }
 AutoDBEAdapter.prototype.available=function(){return resolveProcessClass(["DynamicBackgroundExtraction"])!==null && resolveProcessClass(["AutomaticBackgroundExtractor"])!==null && resolveProcessClass(["BackgroundNeutralization"])!==null;};
-AutoDBEAdapter.prototype.requirement=function(){return "Uses the included AutoDBE 1.6 engine under CC BY-NC 4.0 (noncommercial use). Optional settings icon: CCDASTRO_AutoDBE.";};
+AutoDBEAdapter.prototype.requirement=function(){return "Uses the included AutoDBE 1.6 engine under CC BY-NC 4.0 (noncommercial use). Configure parameters with the workflow Setup button.";};
 AutoDBEAdapter.prototype.prepare=function(view){
    if(!this.available())throw new Error("AutoDBE requires DBE, ABE and BackgroundNeutralization.");
    if(!view||!view.isMainView)throw new Error("AutoDBE requires a main image view.");
-   var rows=[];
-   if(ProcessInstance.icons().indexOf(this.iconId)>=0){var p=ProcessInstance.fromIcon(this.iconId);if(!p||p.processId()!=="Script"||!Array.isArray(p.parameters))throw new Error("AutoDBE override must be a settings Script icon.");rows=p.parameters;}
-   var allowed={descentPathsInput:[1,1000],tolerance:[0.1,10],defaultSampleRadius:[1,100],smoothing:[0,1],polynomialDegree:[1,6],correctionType:[0,1]},filtered=[];
-   for(var i=0;i<rows.length;++i){var key=rows[i][0],value=rows[i][1];
-      if(allowed[key]){var n=Number(value);if(!finiteNumber(n)||n<allowed[key][0]||n>allowed[key][1]||(["descentPathsInput","defaultSampleRadius","polynomialDegree","correctionType"].indexOf(key)>=0&&n!==Math.round(n)))throw new Error("Invalid AutoDBE "+key);filtered.push([key,n]);}
-      else if(["overrideSampleRadius","overrideSmoothing","enableSimplifiedInitialModelling","rigidlyFixCornerPoints"].indexOf(key)>=0){if(value!==true&&value!==false&&value!=="true"&&value!=="false")throw new Error("Invalid AutoDBE boolean "+key);filtered.push([key,value]);}
+   var values=nativeSettings.autoDBE,definition=nativeControlDefinitions().autoDBE;
+   validateNativeSettings("autoDBE",values);
+   var filtered=[];
+   for(var i=0;i<definition.fields.length;++i){var f=definition.fields[i],value=values[f.key];
+      if(f.key==="correctionType")value=value==="Subtract"?DynamicBackgroundExtraction.Subtract:DynamicBackgroundExtraction.Divide;
+      filtered.push([f.key,value]);
    }
    return createBundledAutoDBEEngine(autoDBEParameterBridge(filtered));
 };
@@ -678,6 +678,12 @@ function nativeControlDefinitions()
       spfc:{process:"SpectrophotometricFluxCalibration",icon:"CCDASTRO_SPFC",label:"SPFC camera / filters",fields:[
          t("library","Filter library (.xspd)","","file"),t("deviceQECurveName","Camera QE curve","","curveQ"),t("grayFilterName","Grayscale response (mono only)","","curveL"),t("redFilterName","Red channel response","","curveR"),t("greenFilterName","Green channel response","","curveG"),t("blueFilterName","Blue channel response","","curveB"),
          b("autoLimitMagnitude","Automatic limit magnitude",true),n("limitMagnitude","Limit magnitude",12,0,30),n("minMagnitude","Minimum magnitude",0,-10,30),n("rejectionLimit","Rejection limit",0.3,0,1),n("psfMinSNR","Minimum detection SNR",40,1,10000),e("responseMode","Camera response","SonyOSC",[["SonyOSC","Sony color camera - no external filter"],["SonyOSC_UVIR","Sony color camera - UV/IR cut"],["Custom","Custom / monochrome filter responses"]])]},
+      autoDBE:{label:"Seti Astro Automatic DBE",fields:[
+         n("descentPathsInput","Gradient descent paths",50,1,1000,true),n("tolerance","Sample tolerance",2,0.1,10),
+         b("overrideSampleRadius","Override automatic sample radius",false),n("defaultSampleRadius","Sample radius (px)",10,1,100,true),
+         b("overrideSmoothing","Override automatic smoothing",false),n("smoothing","Smoothing",0.25,0,1),
+         b("enableSimplifiedInitialModelling","Simplified initial modelling",true),b("rigidlyFixCornerPoints","Fix corner points",false),
+         n("polynomialDegree","Initial polynomial degree",1,1,6,true),e("correctionType","Correction","Subtract",[["Subtract","Subtraction"],["Divide","Division"]])]},
       mgc:{process:"MultiscaleGradientCorrection",icon:"CCDASTRO_MGC",label:"MGC / MARS database",fields:[t("databaseFiles","MARS database files (one per line)","","files"),t("grayMARSFilter","Gray MARS filter","L"),t("redMARSFilter","Red MARS filter","R"),t("greenMARSFilter","Green MARS filter","G"),t("blueMARSFilter","Blue MARS filter","B"),n("gradientScale","Gradient scale (px)",1024,32,65536,true),n("structureSeparation","Structure separation",3,0,16,true),n("modelSmoothness","Model smoothness",1,0,100),b("enforceFieldLimits","Enforce field limits",true),b("autoScaleFactors","Automatic scale factors (PI 1.9.6)",false),b("edgeCorrection","Edge correction (PI 1.9.6)",false),n("edgeAggressiveness","Edge aggressiveness",2,1,3,true),b("allowMARSMosaics","Allow MARS reference mosaics (fallback)",false)]},
       finalNoiseX:{process:"NoiseXTerminator",label:"Final NoiseXTerminator",fields:[n("denoise","Denoise strength (0-1)",0.25,0,1),n("detail","Detail",0.15,0,1),n("iterations","Iterations",2,1,10,true)]},
       finalMLD:{process:"MLDenoise",label:"Final MLDenoise",fields:ml()},
@@ -696,6 +702,7 @@ function validateNativeSettings(id,values)
 {
    var definition=nativeControlDefinitions()[id];
    if(!definition || !values || typeof values.useIcon!=="boolean")throw new Error("Invalid native workflow settings: "+id);
+   if(id==="autoDBE" && values.useIcon)throw new Error("AutoDBE uses workflow settings; icon overrides are not supported.");
    for(var i=0;i<definition.fields.length;++i){var f=definition.fields[i],v=values[f.key];
       if(f.type==="number"||f.type==="integer") {if(!finiteNumber(v)||v<f.low||v>f.high||(f.type==="integer"&&v!==Math.round(v)))throw new Error(f.label+" must be "+f.low+" to "+f.high+".");}
       else if(f.type==="boolean") {if(typeof v!=="boolean")throw new Error("Invalid "+f.label);}
@@ -788,7 +795,7 @@ function restoreNativeSettings(values)
 {
    var defaults=defaultNativeSettings(),copy=JSON.parse(JSON.stringify(values));
    for(var id in defaults){
-      if(!copy[id] && (id==="multiscaleTGV"||id==="finalTGV"))copy[id]=defaults[id];
+      if(!copy[id] && (id==="multiscaleTGV"||id==="finalTGV"||id==="autoDBE"))copy[id]=defaults[id];
       if(!copy[id])throw new Error("Missing saved native settings "+id);
       if(id==="mgc")["autoScaleFactors","edgeCorrection","edgeAggressiveness","allowMARSMosaics"].forEach(function(key){if(copy.mgc[key]===undefined)copy.mgc[key]=defaults.mgc[key];});
       if(id==="spfc" && copy[id].responseMode===undefined) {
@@ -809,7 +816,7 @@ function configureNativeProcess(id)
    var d=new Dialog;d.windowTitle=definition.label+" workflow setup";
    var root=new VerticalSizer;root.margin=10;root.spacing=8;d.sizer=root;
    var override=new CheckBox(d);override.text="Use "+(definition.icon||"")+" icon override (optional)";override.checked=current.useIcon;override.visible=!!definition.icon;root.add(override);
-   var hint=new Label(d);hint.wordWrapping=true;hint.text=id==="spfc"?"Sony color-camera presets configure the built-in sensor responses automatically; no separate RGB filters are required. Choose UV/IR cut only when present in your optical path. Presets use Ideal QE because the sensor curves already include QE. Disabled manual fields are ignored. Custom / monochrome mode uses manual responses; gray is only used for grayscale images. Narrowband uses an advanced icon override.":id==="pcc"?"White-reference color indices must match the named reference. Native defaults use Average Spiral Galaxy. Automatic catalog/limit options take precedence over manual values.":"Set workflow inputs below. Advanced parameters retain installed native defaults. Save settings does not apply the process to an image.";root.add(hint);
+   var hint=new Label(d);hint.wordWrapping=true;hint.text=id==="autoDBE"?"Configure the included AutoDBE 1.6 engine. Settings are saved with this workflow. Sample radius and smoothing use automatic values unless their overrides are enabled. Processing uses the workflow copy and discards model images. CC BY-NC 4.0 (noncommercial use).":id==="spfc"?"Sony color-camera presets configure the built-in sensor responses automatically; no separate RGB filters are required. Choose UV/IR cut only when present in your optical path. Presets use Ideal QE because the sensor curves already include QE. Disabled manual fields are ignored. Custom / monochrome mode uses manual responses; gray is only used for grayscale images. Narrowband uses an advanced icon override.":id==="pcc"?"White-reference color indices must match the named reference. Native defaults use Average Spiral Galaxy. Automatic catalog/limit options take precedence over manual values.":"Set workflow inputs below. Advanced parameters retain installed native defaults. Save settings does not apply the process to an image.";root.add(hint);
    var scroll=new ScrollBox(d);scroll.setMinSize(650,400);var content=new Control(scroll.viewport);content.sizer=new VerticalSizer;content.sizer.margin=8;content.sizer.spacing=6;var controls={},curves=null;
    if(id==="spfc"){try{curves=nativeFilterLibrary(current.library);}catch(e){curves=[];}}
    function addField(f){var row=new HorizontalSizer;row.spacing=8;var label=new Label(content);label.text=f.label+":";label.minWidth=235;row.add(label);var c;
@@ -841,9 +848,10 @@ function configureNativeProcess(id)
    function refresh(){for(var key in controls){
       var automatic=id==="spfc"&&controls.responseMode.control.values[controls.responseMode.control.currentItem]!=="Custom";
       var manualCurve=id==="spfc"&&controls[key].field.type.indexOf("curve")===0;
-      controls[key].control.enabled=!override.checked&&!(automatic&&manualCurve);
+      var autoDBEDisabled=id==="autoDBE"&&((key==="defaultSampleRadius"&&!controls.overrideSampleRadius.control.checked)||(key==="smoothing"&&!controls.overrideSmoothing.control.checked));
+      controls[key].control.enabled=!override.checked&&!(automatic&&manualCurve)&&!autoDBEDisabled;
       if(controls[key].browse)controls[key].browse.enabled=!override.checked;
-   }}override.onCheck=refresh;if(id==="spfc")controls.responseMode.control.onItemSelected=refresh;refresh();
+   }}override.onCheck=refresh;if(id==="autoDBE"){controls.overrideSampleRadius.control.onCheck=refresh;controls.overrideSmoothing.control.onCheck=refresh;}if(id==="spfc")controls.responseMode.control.onItemSelected=refresh;refresh();
    var buttons=new HorizontalSizer;buttons.spacing=8;buttons.addStretch();
    var defaults=new PushButton(d);defaults.text="Reset tool defaults";defaults.onClick=function(){for(var key in controls){var item=controls[key],f=item.field,c=item.control;if(f.type==="boolean")c.checked=f.value;else if(f.type==="integer")c.value=f.value;else if(f.type==="enum"||f.type.indexOf("curve")===0)c.currentItem=Math.max(0,c.values.indexOf(f.value));else c.text=String(f.value);}override.checked=false;if(id==="spfc")reloadSPFC();refresh();};buttons.add(defaults);
    var save=new PushButton(d);save.text="Save settings";save.onClick=function(){try{var v={useIcon:override.checked};for(var key in controls){var item=controls[key],c=item.control,f=item.field;v[key]=f.type==="boolean"?c.checked:f.type==="integer"?c.value:f.type==="number"?Number(c.text.trim()):f.type==="enum"||f.type.indexOf("curve")===0?c.values[c.currentItem]:c.text.trim();if(f.type==="number"&&!c.text.trim())throw new Error("Enter "+f.label);}
@@ -2166,7 +2174,7 @@ function WorkflowRow(parent, step, dialog)
          {
             if (self.step.id === "gradient" && self.adapterId() === "autoDBE")
             {
-               (new MessageBox(adapters.autoDBE.requirement()+"\n\nUses vendor defaults, replaces only the workflow copy and discards models. Custom settings can be read from CCDASTRO_AutoDBE; its script is never executed. No installed AutoDBE script is required.", "Automatic DBE Setup", StdIcon.Information, StdButton.Ok)).execute();
+               configureNativeProcess("autoDBE");
                self.refreshStatus(); return;
             }
             if (self.step.id === "gradient")

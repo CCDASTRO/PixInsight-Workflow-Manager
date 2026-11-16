@@ -1,19 +1,15 @@
-# Security, network and storage disclosure — v1.9.0
+# Security, network and storage disclosure
 
-PTeam's later response, supplied November 9, 2026, confirms the removal of external
-processing stages in 1.9.4 and warns that the next PixInsight build changes the
-included ImageSolver engine and requires re-signing. See the
-[follow-up and release course](PTEAM-FOLLOWUP-2026-11-09.md). The superseded
-October 13 response summary has been removed to avoid presenting obsolete
-permissions as current guidance.
+Updated November 16, 2026. See [current PTeam guidance](PTEAM-CURRENT-GUIDANCE.md) for the newest supplied answers. A signature establishes identity and integrity, not PTeam approval.
 
-This source revision removes external image-processing integrations for CPD rules 1.0.2. A signature establishes identity and integrity, not PTeam approval. Earlier correspondence is historical and does not override the current rules.
+The current workflow has no SyQon or GraXpert adapter. This describes implemented functionality; PTeam permits external programs under the conditions in the linked guidance. Legacy saved selections still require Reset Defaults.
 
 ## Distribution, settings and security
 
 Install through the signed PixInsight Update Manager repository or the standard
 manual Feature Script procedure. The package contains CCDASTROWorkflowManager.js,
-its XSGN signature and CCDASTROAutoDBEEngine.jsh under src/scripts/CCDASTRO. The
+its included CCDASTROAdvancedWorkflow.jsh and CCDASTROAutoDBEEngine.jsh files
+and the main script's XSGN signature under src/scripts/CCDASTRO. The
 engine is statically included and covered by the main script's signature.
 No executable, model, runtime or package manager is downloaded or installed by the
 workflow. It has no runtime updater, privilege-elevation request, telemetry client,
@@ -40,8 +36,8 @@ copy, not a runtime call to installed AutoDBE.js. No vendor settings are written
 Its engine uses installed BackgroundNeutralization, AutomaticBackgroundExtractor
 and DynamicBackgroundExtraction processes on a candidate image. The adapter
 forces replacement of that candidate and discards model output. Approved pixels
-are committed only after successful engine completion. Default settings need no
-icon; custom allowlisted numeric/boolean values may come from CCDASTRO_AutoDBE.
+are committed only after successful engine completion. The AutoDBE Setup dialog edits validated workflow parameters directly.
+The adapter does not read process icons; older settings use engine defaults.
 The engine has no network client, external program launch or disk-image exchange.
 It creates temporary PixInsight views, not a separate catalog/model cache.
 
@@ -80,9 +76,11 @@ invalidate the signature and require a re-signed workflow release. Never modify
 PixInsight's engine to repair a signature. The deprecated AdP/ImageSolver.js is
 not used. No copy of ImageSolver is redistributed in this package.
 
-## Lighthouse handoff and external execution
+## Deferred tool handoffs and external execution
 
-The only retained external launch invokes CoreApplication.filePath with the PixInsight core --execute instance IPC interface. A temporary CCDASTRO_LighthouseLaunch_*.scp command file is written under the system temporary directory; it may remain there after dispatch. It requests execution of the separately installed Lighthouse script with --require-signature and an explicit target view. There is no custom listener, watched directory, external image processor, language-runtime launch or image-processing round trip. Lighthouse performs its work inside PixInsight after this workflow exits.
+The deferred tool launches invoke CoreApplication.filePath with the PixInsight core --execute instance IPC interface. A temporary CCDASTRO_LighthouseLaunch_*.scp command file is written under the system temporary directory; it may remain there after dispatch. It requests execution of the separately installed Lighthouse script with --require-signature and an explicit target view. There is no custom listener, watched directory, external image processor, language-runtime launch or image-processing round trip. Lighthouse performs its work inside PixInsight after this workflow exits.
+
+Optional FilterGenerator and AnnotateImage handoffs use the same core interface and require valid installed signatures. Their command files use CCDASTRO_NativeTool_*.scp in the system temporary directory and may remain after dispatch. FilterGenerator opens interactively; AnnotateImage opens for review on a separate plate-solved annotation copy. Requests are deferred until the workflow exits. Signature preflight checks provide clear errors; the core independently verifies signed code when executing it. On PixInsight 1.9.6, valid also rejects revoked or suspended signatures.
 
 ## BlurlessAI native module
 

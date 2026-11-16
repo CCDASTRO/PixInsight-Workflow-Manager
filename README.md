@@ -806,9 +806,11 @@ with execution and storage details in the [security disclosure](docs/SECURITY-AN
 
 ## Security and CPD execution policy
 
+See [current PTeam guidance](docs/PTEAM-CURRENT-GUIDANCE.md), updated November 16, 2026. External programs are permitted under its stated conditions; the current workflow has no SyQon or GraXpert adapter. Historical release notes describe past behavior and are not current integration policy.
+
 Image processing runs inside PixInsight through installed processes and included PJSR code. External image-processing adapters have been removed. No executable code is downloaded, no general-purpose runtime is launched, and no custom server or watched-directory control channel is provided.
 
-The optional Lighthouse handoff uses the PixInsight core command-line/IPC interface with signature enforcement. It does not launch an external image processor.
+Optional Lighthouse, FilterGenerator and AnnotateImage handoffs use the PixInsight core command-line/IPC interface with signature enforcement. They run after the workflow exits. See the security disclosure for temporary command files and target handling.
 
 The included, attributed Automatic DBE engine uses PixInsight processes under CC BY-NC 4.0 (noncommercial use; commercial use requires author permission). Independently installed native modules retain their own licensing and model requirements.
 

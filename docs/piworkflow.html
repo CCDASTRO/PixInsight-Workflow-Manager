@@ -928,8 +928,9 @@ Model compatibility, licensing, catalogs and MARS coverage depend on the selecte
 Testing details are maintained in the <a href="docs/PIXINSIGHT-1.9.6.md">compatibility checklist</a>,
 with execution and storage details in the <a href="SECURITY-AND-DEPENDENCIES.md">security disclosure</a>.</p>
 <h2 id="security-and-cpd-execution-policy">Security and CPD execution policy</h2>
+<p>See <a href="PTEAM-CURRENT-GUIDANCE.md">current PTeam guidance</a>, updated November 16, 2026. External programs are permitted under its stated conditions; the current workflow has no SyQon or GraXpert adapter. Historical release notes describe past behavior and are not current integration policy.</p>
 <p>Image processing runs inside PixInsight through installed processes and included PJSR code. External image-processing adapters have been removed. No executable code is downloaded, no general-purpose runtime is launched, and no custom server or watched-directory control channel is provided.</p>
-<p>The optional Lighthouse handoff uses the PixInsight core command-line/IPC interface with signature enforcement. It does not launch an external image processor.</p>
+<p>Optional Lighthouse, FilterGenerator and AnnotateImage handoffs use the PixInsight core command-line/IPC interface with signature enforcement. They run after the workflow exits. See the security disclosure for temporary command files and target handling.</p>
 <p>The included, attributed Automatic DBE engine uses PixInsight processes under CC BY-NC 4.0 (noncommercial use; commercial use requires author permission). Independently installed native modules retain their own licensing and model requirements.</p>
 <p>See <a href="SECURITY-AND-DEPENDENCIES.md">security disclosure</a> and <a href="THIRD-PARTY-NOTICES.md">third-party notices</a>. This workflow assists use of PixInsight; it is not a replacement for its core, solving, preprocessing, update or security systems. PTeam determines CPD compliance; signing does not imply endorsement.</p>
 <h2 id="files">Files</h2>
